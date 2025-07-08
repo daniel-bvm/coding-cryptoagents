@@ -1,19 +1,15 @@
-from dotenv import load_dotenv
-
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-if not load_dotenv():
-    logger.warning("No .env file found")
-
 import os
 import sys
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from agent.anthropic_proxy import app as anthropic_proxy_app
 from agent.xterm_toolcalls import LOG_FILE, SCREEN_SESSION
 import asyncio
 from agent.apis import router as apis_app
+from agent.configs import settings
 
 async def lifespan(app: FastAPI):
     with open(os.path.expanduser('~/.screenrc'), 'a') as f:
@@ -21,27 +17,27 @@ async def lifespan(app: FastAPI):
 
     with open(os.path.expanduser('~/.bashrc'), 'a') as f:
         f.write('export TERM=xterm-256color\n')
-        
-        
+
     calls = [
-        ["screen", "-dmS", SCREEN_SESSION, "-s", "bash"]
-        ["screen", "-S", SCREEN_SESSION, "-X", "stuff", "history -c && clear\n"],
-        ["screen", "-S", SCREEN_SESSION, "-X", "logfile", LOG_FILE],
-        ["screen", "-S", SCREEN_SESSION, "-X", "log", "on"],
-        ["screen", "-S", SCREEN_SESSION, "-X", "deflog", "on"],
-        ["screen", "-S", SCREEN_SESSION, "-X", "logfile", "flush", "1"],
-        ["ttyd", "-p", "7681", "screen", "-x", SCREEN_SESSION],
-        ["ttyd", "-p", "7682", "--writable", "claude"]
+        # ["screen", "-dmS", SCREEN_SESSION, "-s", "bash"],
+        # ["screen", "-S", SCREEN_SESSION, "-X", "stuff", "history -c && clear\n"],
+        # ["screen", "-S", SCREEN_SESSION, "-X", "logfile", LOG_FILE],
+        # ["screen", "-S", SCREEN_SESSION, "-X", "log", "on"],
+        # ["screen", "-S", SCREEN_SESSION, "-X", "deflog", "on"],
+        # ["screen", "-S", SCREEN_SESSION, "-X", "logfile", "flush", "1"],
+        # ["ttyd", "-p", "7681", "screen", "-x", SCREEN_SESSION],
+        ["ttyd", "-p", "7681", "--writable", "env", f"ANTHROPIC_BASE_URL=http://localhost:{settings.port}", "claude", "--model", settings.llm_model_id]
     ]
-    
+
     processes: list[asyncio.subprocess.Process] = []
 
     for call in calls:
+        logger.info(f"Starting process: {call}")
         process = await asyncio.create_subprocess_exec(
             *call,
             stdout=sys.stderr,
             stderr=sys.stderr,
-            env=os.environ
+            env=dict(os.environ)
         )
         processes.append(process)
 
@@ -68,3 +64,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(anthropic_proxy_app)
 app.include_router(apis_app)
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    method = request.method
+    path = request.url.path
+    logger.debug(f"Request: {method} {path}")
+    response = await call_next(request)
+    
+    return response

@@ -9,6 +9,7 @@ import litellm
 import uuid
 import time
 import sys
+from agent.configs import settings
 
 # Configure logging
 logging.basicConfig(
@@ -17,7 +18,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-import uvicorn
 logging.getLogger("uvicorn").setLevel(logging.WARNING)
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
@@ -69,7 +69,7 @@ app = APIRouter()
 
 # Get API keys from environment
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_API_KEY = settings.llm_api_key
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 # Get preferred provider (default to openai)
@@ -93,7 +93,8 @@ OPENAI_MODELS = [
     "gpt-4o-mini",
     "gpt-4o-mini-audio-preview",
     "gpt-4.1",  # Added default big model
-    "gpt-4.1-mini" # Added default small model
+    "gpt-4.1-mini", # Added default small model
+    settings.llm_model_id
 ]
 
 # List of Gemini models
@@ -329,19 +330,84 @@ class MessagesResponse(BaseModel):
     stop_sequence: Optional[str] = None
     usage: Usage
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    # Get request details
-    method = request.method
-    path = request.url.path
+# Models for /v1/responses endpoint
+class ResponsesRequest(BaseModel):
+    model: str
+    instructions: Optional[str] = None
+    input: Union[str, List[Union[str, Dict[str, Any]]]]
+    temperature: Optional[float] = None
+    top_p: Optional[float] = None
+    num_outputs: Optional[int] = None
+    n: Optional[int] = None
+    max_output_tokens: Optional[int] = None
+    stream: Optional[bool] = False
     
-    # Log only basic request details at debug level
-    logger.debug(f"Request: {method} {path}")
-    
-    # Process the request and get the response
-    response = await call_next(request)
-    
-    return response
+    @field_validator('model')
+    def validate_responses_model(cls, v, info):
+        # Use the same model mapping logic as MessagesRequest
+        original_model = v
+        new_model = v
+
+        logger.debug(f"📋 RESPONSES MODEL VALIDATION: Original='{original_model}', Preferred='{PREFERRED_PROVIDER}', BIG='{BIG_MODEL}', SMALL='{SMALL_MODEL}'")
+
+        # Remove provider prefixes for easier matching
+        clean_v = v
+        if clean_v.startswith('anthropic/'):
+            clean_v = clean_v[10:]
+        elif clean_v.startswith('openai/'):
+            clean_v = clean_v[7:]
+        elif clean_v.startswith('gemini/'):
+            clean_v = clean_v[7:]
+
+        # Apply same mapping logic as MessagesRequest
+        mapped = False
+        if 'haiku' in clean_v.lower():
+            if PREFERRED_PROVIDER == "google" and SMALL_MODEL in GEMINI_MODELS:
+                new_model = f"gemini/{SMALL_MODEL}"
+                mapped = True
+            else:
+                new_model = f"openai/{SMALL_MODEL}"
+                mapped = True
+        elif 'sonnet' in clean_v.lower():
+            if PREFERRED_PROVIDER == "google" and BIG_MODEL in GEMINI_MODELS:
+                new_model = f"gemini/{BIG_MODEL}"
+                mapped = True
+            else:
+                new_model = f"openai/{BIG_MODEL}"
+                mapped = True
+        elif not mapped:
+            if clean_v in GEMINI_MODELS and not v.startswith('gemini/'):
+                new_model = f"gemini/{clean_v}"
+                mapped = True
+            elif clean_v in OPENAI_MODELS and not v.startswith('openai/'):
+                new_model = f"openai/{clean_v}"
+                mapped = True
+
+        if mapped:
+            logger.debug(f"📌 RESPONSES MODEL MAPPING: '{original_model}' ➡️ '{new_model}'")
+        else:
+            if not v.startswith(('openai/', 'gemini/', 'anthropic/')):
+                logger.warning(f"⚠️ No prefix or mapping rule for responses model: '{original_model}'. Using as is.")
+            new_model = v
+
+        return new_model
+
+class ResponseOutput(BaseModel):
+    id: str
+    role: str
+    content: str
+    type: str = "message"
+    finish_reason: Optional[str] = None
+
+class ResponsesResponse(BaseModel):
+    id: str
+    object: str = "response"
+    created_at: Optional[int] = None
+    model: str
+    output: List[ResponseOutput]
+    usage: Dict[str, int]
+    status: str = "completed"
+    text: Dict[str, Dict[str, str]] = {"format": {"type": "text"}}
 
 # Not using validation function as we're using the environment API key
 
@@ -651,7 +717,7 @@ def convert_litellm_to_anthropic(litellm_response: Union[Dict[str, Any], Any],
                     
             # Extract the content from the response dict
             choices = response_dict.get("choices", [{}])
-            message = choices[0].get("message", {}) if choices and len(choices) > 0 else {}
+            message = choices[0].get("message", {})
             content_text = message.get("content", "")
             tool_calls = message.get("tool_calls", None)
             finish_reason = choices[0].get("finish_reason", "stop") if choices and len(choices) > 0 else "stop"
@@ -1260,7 +1326,10 @@ async def create_message(
                 200  # Assuming success at this point
             )
             # Ensure we use the async version for streaming
-            response_generator = await litellm.acompletion(**litellm_request)
+            response_generator = await litellm.acompletion(
+                **litellm_request,
+                base_url=settings.llm_base_url
+            )
             
             return StreamingResponse(
                 handle_streaming(response_generator, request),
@@ -1395,6 +1464,202 @@ async def count_tokens(
         error_traceback = traceback.format_exc()
         logger.error(f"Error counting tokens: {str(e)}\n{error_traceback}")
         raise HTTPException(status_code=500, detail=f"Error counting tokens: {str(e)}")
+
+@app.post("/v1/responses")
+async def proxy_responses_to_chat(
+    request: ResponsesRequest,
+    raw_request: Request
+):
+    """
+    Proxy /v1/responses API to /v1/chat/completions format.
+    Maps legacy responses API input/instructions format to standard chat completions.
+    """
+    try:
+        # Parse the raw body to get original model for logging
+        body = await raw_request.body()
+        body_json = json.loads(body.decode('utf-8'))
+        original_model = body_json.get("model", "unknown")
+        
+        # Get display name for logging
+        display_model = original_model
+        if "/" in display_model:
+            display_model = display_model.split("/")[-1]
+        
+        logger.debug(f"📊 PROCESSING RESPONSES REQUEST: Model={request.model}")
+        
+        # 1️⃣ Map input/chat-style messages into legacy messages
+        messages = []
+        
+        # Add system message from instructions if present
+        if request.instructions:
+            messages.append({"role": "system", "content": request.instructions})
+        
+        # Support both str or array of user entries
+        if isinstance(request.input, str):
+            messages.append({"role": "user", "content": request.input})
+        elif isinstance(request.input, list):
+            # Inputs might be already {role, content} or nested formats
+            for elt in request.input:
+                # Legacy chat expects role/content structure
+                if isinstance(elt, dict) and all(k in elt for k in ("role", "content")):
+                    messages.append({"role": elt["role"], "content": elt["content"]})
+                else:
+                    # Fallback: consider full object as content
+                    messages.append({"role": "user", "content": str(elt)})
+        else:
+            raise HTTPException(status_code=400, detail="Invalid input field")
+        
+        # 2️⃣ Build chat completions payload using existing LiteLLM integration
+        # Create a standard MessagesRequest to leverage existing conversion logic
+        standard_messages = []
+        for msg in messages:
+            standard_messages.append(Message(role=msg["role"], content=msg["content"]))
+        
+        # Create MessagesRequest object to use existing conversion
+        messages_request = MessagesRequest(
+            model=request.model,
+            max_tokens=request.max_output_tokens or 4096,
+            messages=standard_messages,
+            temperature=request.temperature,
+            top_p=request.top_p,
+            stream=request.stream or False
+        )
+        
+        # Convert to LiteLLM format using existing function
+        litellm_request = convert_anthropic_to_litellm(messages_request)
+        
+        # Override the n parameter if specified
+        if request.num_outputs or request.n:
+            litellm_request["n"] = request.num_outputs or request.n
+        
+        # Determine which API key to use based on the model (reuse existing logic)
+        if request.model.startswith("openai/"):
+            litellm_request["api_key"] = OPENAI_API_KEY
+            logger.debug(f"Using OpenAI API key for responses model: {request.model}")
+        elif request.model.startswith("gemini/"):
+            litellm_request["api_key"] = GEMINI_API_KEY
+            logger.debug(f"Using Gemini API key for responses model: {request.model}")
+        else:
+            litellm_request["api_key"] = ANTHROPIC_API_KEY
+            logger.debug(f"Using Anthropic API key for responses model: {request.model}")
+        
+        # Apply OpenAI model fixes if needed (reuse existing logic)
+        if "openai" in litellm_request["model"] and "messages" in litellm_request:
+            for i, msg in enumerate(litellm_request["messages"]):
+                if "content" in msg and isinstance(msg["content"], list):
+                    # Convert complex content blocks to simple string
+                    text_content = ""
+                    for block in msg["content"]:
+                        if isinstance(block, dict) and block.get("type") == "text":
+                            text_content += block.get("text", "") + "\n"
+                    litellm_request["messages"][i]["content"] = text_content.strip() or "..."
+                elif msg.get("content") is None:
+                    litellm_request["messages"][i]["content"] = "..."
+        
+        # Log the request beautifully
+        log_request_beautifully(
+            "POST",
+            raw_request.url.path,
+            display_model,
+            litellm_request.get('model'),
+            len(litellm_request['messages']),
+            0,  # No tools in responses API
+            200  # Assuming success at this point
+        )
+        
+        # 3️⃣ Call LiteLLM completion (not streaming for now)
+        if request.stream:
+            # For streaming responses, we'd need to implement a similar streaming handler
+            # For now, let's handle non-streaming first
+            raise HTTPException(status_code=501, detail="Streaming not yet implemented for /v1/responses")
+        
+        start_time = time.time()
+        litellm_response = litellm.completion(**litellm_request)
+        logger.debug(f"✅ RESPONSES RECEIVED: Model={litellm_request.get('model')}, Time={time.time() - start_time:.2f}s")
+        
+        # 4️⃣ Map Chat response back to Responses API structure
+        outputs = []
+        
+        # Handle ModelResponse object from LiteLLM
+        if hasattr(litellm_response, 'choices') and hasattr(litellm_response, 'usage'):
+            choices = litellm_response.choices
+            usage_info = litellm_response.usage
+            response_id = getattr(litellm_response, 'id', f"resp_{uuid.uuid4()}")
+        else:
+            # Handle dict response
+            response_dict = litellm_response if isinstance(litellm_response, dict) else litellm_response.dict()
+            choices = response_dict.get("choices", [])
+            usage_info = response_dict.get("usage", {})
+            response_id = response_dict.get("id", f"resp_{uuid.uuid4()}")
+        
+        for idx, choice in enumerate(choices):
+            # Extract message content
+            if hasattr(choice, 'message'):
+                message = choice.message
+                content = getattr(message, 'content', '') or ''
+                role = getattr(message, 'role', 'assistant')
+                finish_reason = getattr(choice, 'finish_reason', None)
+            else:
+                message = choice.get("message", {})
+                content = message.get("content", '') or ''
+                role = message.get("role", "assistant")
+                finish_reason = choice.get("finish_reason", None)
+            
+            outputs.append(ResponseOutput(
+                id=f"msg_{idx}",
+                role=role,
+                content=content,
+                type="message",
+                finish_reason=finish_reason
+            ))
+        
+        # Extract usage information
+        if isinstance(usage_info, dict):
+            input_tokens = usage_info.get("prompt_tokens", 0)
+            output_tokens = usage_info.get("completion_tokens", 0)
+            total_tokens = usage_info.get("total_tokens", input_tokens + output_tokens)
+        else:
+            input_tokens = getattr(usage_info, "prompt_tokens", 0)
+            output_tokens = getattr(usage_info, "completion_tokens", 0)
+            total_tokens = getattr(usage_info, "total_tokens", input_tokens + output_tokens)
+        
+        # Get model name and created timestamp
+        if hasattr(litellm_response, 'model'):
+            response_model = litellm_response.model
+        else:
+            response_model = litellm_response.get("model", request.model) if isinstance(litellm_response, dict) else request.model
+        
+        if hasattr(litellm_response, 'created'):
+            created_at = litellm_response.created
+        else:
+            created_at = litellm_response.get("created") if isinstance(litellm_response, dict) else int(time.time())
+        
+        # Create responses API format
+        response = ResponsesResponse(
+            id=response_id,
+            object="response",
+            created_at=created_at,
+            model=response_model,
+            output=outputs,
+            usage={
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": total_tokens,
+            },
+            status="completed",
+            text={"format": {"type": "text"}}
+        )
+        
+        return response
+        
+    except HTTPException:
+        # Re-raise HTTPExceptions as-is
+        raise
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.error(f"Error processing responses request: {str(e)}\n{error_traceback}")
+        raise HTTPException(status_code=500, detail=f"Error processing responses request: {str(e)}")
 
 # Define ANSI color codes for terminal output
 class Colors:
