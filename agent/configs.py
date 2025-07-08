@@ -3,8 +3,8 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     llm_api_key: str = Field(alias="LLM_API_KEY", default="super-secret")
-    llm_base_url: str = Field(alias="LLM_BASE_URL", default="https://api.openai.com/v1")
-    llm_model_id: str = Field(alias="LLM_MODEL_ID", default="gpt-4o-mini")
+    llm_base_url: str = Field(alias="LLM_BASE_URL", default="http://localhost:65534/v1")
+    llm_model_id: str = Field(alias="LLM_MODEL_ID", default="local-model")
 
     # app state
     app_env: str = Field(alias="APP_ENV", default="development")
