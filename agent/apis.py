@@ -146,4 +146,10 @@ async def prompt(request: ChatCompletionRequest):
 
 @router.get("/processing-url")
 async def get_processing_url():
-    return {"message": "Hello, World!"}
+    return JSONResponse(
+        content={
+            "url": f"http://localhost:7681",
+            "status": "ready"
+        },
+        status_code=200
+    )

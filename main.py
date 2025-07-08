@@ -74,3 +74,13 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     
     return response
+
+if __name__ == "__main__":
+    test_app = FastAPI()
+    test_app.include_router(anthropic_proxy_app)
+    test_app.include_router(apis_app)
+
+    test_app.middleware("http")(log_requests)
+
+    import uvicorn
+    uvicorn.run(test_app, host="0.0.0.0", port=settings.port)
