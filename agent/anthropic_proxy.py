@@ -151,7 +151,7 @@ class SystemContent(BaseModel):
     text: str
 
 class Message(BaseModel):
-    role: Literal["user", "assistant"] 
+    role: Literal["user", "assistant", "system"] 
     content: Union[str, List[Union[ContentBlockText, ContentBlockImage, ContentBlockToolUse, ContentBlockToolResult]]]
 
 class Tool(BaseModel):
@@ -1477,15 +1477,15 @@ async def proxy_responses_to_chat(
     try:
         # Parse the raw body to get original model for logging
         body = await raw_request.body()
-        body_json = json.loads(body.decode('utf-8'))
-        original_model = body_json.get("model", "unknown")
+        body_json: dict = json.loads(body.decode('utf-8'))
+        original_model = body_json.get("model", settings.llm_model_id)
         
         # Get display name for logging
-        display_model = original_model
+        display_model: str = original_model
         if "/" in display_model:
             display_model = display_model.split("/")[-1]
         
-        logger.debug(f"📊 PROCESSING RESPONSES REQUEST: Model={request.model}")
+        logger.debug(f"📊 PROCESSING RESPONSES REQUEST: Model={original_model}")
         
         # 1️⃣ Map input/chat-style messages into legacy messages
         messages = []
