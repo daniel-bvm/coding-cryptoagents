@@ -9,7 +9,13 @@ from agent.anthropic_proxy import app as anthropic_proxy_app
 import asyncio
 from agent.apis import router as apis_app
 from agent.configs import settings
+import shlex
+import uvicorn
 
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
 async def lifespan(app: FastAPI):
     with open(os.path.expanduser('~/.screenrc'), 'a') as f:
         f.write('termcapinfo xterm* ti@:te@\n')
@@ -32,15 +38,19 @@ async def lifespan(app: FastAPI):
 
     for call in calls:
         logger.info(f"Starting process: {call}")
-        process = await asyncio.create_subprocess_exec(
-            *call,
+        process = await asyncio.create_subprocess_shell(
+            shlex.join(call),
             stdout=sys.stderr,
             stderr=sys.stderr,
+            shell=True,
             env=dict(os.environ)
         )
+
         processes.append(process)
+        logger.info(f"Process started: {process.pid}")
 
     try:
+        logger.info("Starting processes...")
         yield
 
     finally:
@@ -75,11 +85,4 @@ async def log_requests(request: Request, call_next):
     return response
 
 if __name__ == "__main__":
-    test_app = FastAPI()
-    test_app.include_router(anthropic_proxy_app)
-    test_app.include_router(apis_app)
-
-    test_app.middleware("http")(log_requests)
-
-    import uvicorn
-    uvicorn.run(test_app, host="0.0.0.0", port=settings.port)
+    uvicorn.run(app, host="0.0.0.0", port=settings.port)
