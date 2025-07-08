@@ -6,7 +6,6 @@ import os
 import sys
 from fastapi import FastAPI, Request
 from agent.anthropic_proxy import app as anthropic_proxy_app
-from agent.xterm_toolcalls import LOG_FILE, SCREEN_SESSION
 import asyncio
 from agent.apis import router as apis_app
 from agent.configs import settings
