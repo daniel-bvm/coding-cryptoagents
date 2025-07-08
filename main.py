@@ -15,6 +15,11 @@ import uvicorn
 CODEX_PROFILE = f'''
 approval_policy = "untrusted"
 skip_git_repo_check = true
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+writable_roots = ["/workspace"]
+network_access = true
 
 [model_providers.custom]
 name = "Custom"
