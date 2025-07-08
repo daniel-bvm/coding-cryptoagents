@@ -6,18 +6,22 @@ import os
 import sys
 from fastapi import FastAPI, Request
 from agent.anthropic_proxy import app as anthropic_proxy_app
-from agent.xterm_toolcalls import LOG_FILE, SCREEN_SESSION
 import asyncio
 from agent.apis import router as apis_app
 from agent.configs import settings
+import shlex
+import uvicorn
 
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
 async def lifespan(app: FastAPI):
     with open(os.path.expanduser('~/.screenrc'), 'a') as f:
         f.write('termcapinfo xterm* ti@:te@\n')
 
     with open(os.path.expanduser('~/.bashrc'), 'a') as f:
         f.write('export TERM=xterm-256color\n')
-
     calls = [
         # ["screen", "-dmS", SCREEN_SESSION, "-s", "bash"],
         # ["screen", "-S", SCREEN_SESSION, "-X", "stuff", "history -c && clear\n"],
@@ -33,15 +37,19 @@ async def lifespan(app: FastAPI):
 
     for call in calls:
         logger.info(f"Starting process: {call}")
-        process = await asyncio.create_subprocess_exec(
-            *call,
+        process = await asyncio.create_subprocess_shell(
+            shlex.join(call),
             stdout=sys.stderr,
             stderr=sys.stderr,
+            shell=True,
             env=dict(os.environ)
         )
+
         processes.append(process)
+        logger.info(f"Process started: {process.pid}")
 
     try:
+        logger.info("Starting processes...")
         yield
 
     finally:
@@ -74,3 +82,6 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     
     return response
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=settings.port)
