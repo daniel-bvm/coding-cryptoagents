@@ -13,7 +13,7 @@ run git clone https://github.com/tsl0922/ttyd.git \
     && make \
     && make install
 
-run npm install -g @openai/codex
+run npm install -g @anthropic-ai/claude-code
 copy requirements.txt requirements.txt
 run pip install -r requirements.txt
 

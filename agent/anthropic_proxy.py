@@ -1349,7 +1349,7 @@ async def create_message(
                 200  # Assuming success at this point
             )
             start_time = time.time()
-            litellm_response = litellm.completion(**litellm_request)
+            litellm_response = litellm.completion(**litellm_request, base_url=settings.llm_base_url)
             logger.debug(f"✅ RESPONSE RECEIVED: Model={litellm_request.get('model')}, Time={time.time() - start_time:.2f}s")
             
             # Convert LiteLLM response to Anthropic format

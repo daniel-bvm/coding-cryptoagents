@@ -21,7 +21,8 @@ async def lifespan(app: FastAPI):
         f.write('termcapinfo xterm* ti@:te@\n')
 
     with open(os.path.expanduser('~/.bashrc'), 'a') as f:
-        f.write('export TERM=xterm-256color\n')
+        f.write(f'export TERM=xterm-256color\nANTHROPIC_BASE_URL=http://localhost:{settings.port}/v1\n')
+
     calls = [
         # ["screen", "-dmS", SCREEN_SESSION, "-s", "bash"],
         # ["screen", "-S", SCREEN_SESSION, "-X", "stuff", "history -c && clear\n"],
@@ -30,7 +31,8 @@ async def lifespan(app: FastAPI):
         # ["screen", "-S", SCREEN_SESSION, "-X", "deflog", "on"],
         # ["screen", "-S", SCREEN_SESSION, "-X", "logfile", "flush", "1"],
         # ["ttyd", "-p", "7681", "screen", "-x", SCREEN_SESSION],
-        ["ttyd", "-p", "7681", "--writable", "env", f"ANTHROPIC_BASE_URL=http://localhost:{settings.port}", "claude", "--model", settings.llm_model_id]
+        ["ttyd", "-p", "7681", "--writable", "bash", "-c", f"claude --model {settings.llm_model_id}"]
+
     ]
 
     processes: list[asyncio.subprocess.Process] = []
