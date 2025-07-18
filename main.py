@@ -11,27 +11,58 @@ from agent.apis import router as apis_app
 from agent.configs import settings
 import shlex
 import uvicorn
-import json
 
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    with open(os.path.expanduser('~/.screenrc'), 'a') as f:
-        f.write('termcapinfo xterm* ti@:te@\n')
-
-    with open(os.path.expanduser('~/.bashrc'), 'a') as f:
-        f.write('export TERM=xterm-256color\n')
-
+    # Setup tmux session sequentially
+    logger.info("Setting up tmux session...")
+    
+    # Create playground directory
+    playground_dir = "/workspace/playground"
+    logger.info(f"Creating playground directory: {playground_dir}")
+    await asyncio.create_subprocess_shell(
+        f"mkdir -p {playground_dir}",
+        stdout=sys.stderr,
+        stderr=sys.stderr,
+        shell=True
+    )
+    
+    # Kill any existing session first
+    await asyncio.create_subprocess_shell(
+        "tmux kill-session -t main 2>/dev/null || true",
+        stdout=sys.stderr,
+        stderr=sys.stderr,
+        shell=True
+    )
+    
+    # Create new session with first command in playground directory
+    logger.info("Creating tmux session...")
+    process1 = await asyncio.create_subprocess_shell(
+        f"tmux -f .tmux.conf new-session -d -s main -c {playground_dir} '/bin/opencode || /bin/bash'",
+        stdout=sys.stderr,
+        stderr=sys.stderr,
+        shell=True,
+        env=dict(os.environ)
+    )
+    await process1.wait()
+    
+    # Split the window vertically and start bash in the new pane (also in playground directory)
+    logger.info("Splitting tmux window...")
+    process2 = await asyncio.create_subprocess_shell(
+        f"tmux split-window -h -t main -c {playground_dir} '/bin/bash'",
+        stdout=sys.stderr,
+        stderr=sys.stderr,
+        shell=True,
+        env=dict(os.environ)
+    )
+    await process2.wait()
+    
+    # Now start long-running processes
     calls = [
-        # ["screen", "-dmS", SCREEN_SESSION, "-s", "bash"],
-        # ["screen", "-S", SCREEN_SESSION, "-X", "stuff", "history -c && clear\n"],
-        # ["screen", "-S", SCREEN_SESSION, "-X", "logfile", LOG_FILE],
-        # ["screen", "-S", SCREEN_SESSION, "-X", "log", "on"],
-        # ["screen", "-S", SCREEN_SESSION, "-X", "deflog", "on"],
-        # ["screen", "-S", SCREEN_SESSION, "-X", "logfile", "flush", "1"],
-        # ["ttyd", "-p", "7681", "screen", "-x", SCREEN_SESSION],
-        ["ttyd", "-p", "7681", "--writable", "/bin/opencode"]
+        # Start ttyd to stream the tmux session
+        ["ttyd", "-p", "7681", "-W", "tmux", "attach-session", "-t", "main"]
     ]
 
     processes: list[asyncio.subprocess.Process] = []

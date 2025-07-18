@@ -1,6 +1,5 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse, JSONResponse
-from .xterm_toolcalls import mcp as xterm_mcp
 from .utils import (
     refine_chat_history,
     refine_assistant_message,
@@ -46,7 +45,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
     system_prompt = await get_system_prompt()
     messages: list[dict[str, Any]] = refine_chat_history(messages, system_prompt)
 
-    tools = await xterm_mcp.list_tools()
+    tools = []
     oai_tools = convert_mcp_tools_to_openai_format(tools)
     finished = False
     n_calls, max_calls = 0, 25
@@ -88,7 +87,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             _args = json.loads(_args)
 
             logger.info(f"Executing tool call: {_name} with args: {_args}")
-            _result = await execute_openai_compatible_toolcall(_name, _args, xterm_mcp)
+            _result = "hello world!"
             logger.info(f"Tool call {_name} result: {_result}")
 
             messages.append(
