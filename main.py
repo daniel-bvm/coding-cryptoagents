@@ -39,8 +39,9 @@ async def lifespan(app: FastAPI):
     
     # Create new session with first command in playground directory
     logger.info("Creating tmux session...")
+
     process1 = await asyncio.create_subprocess_shell(
-        f"tmux -f .tmux.conf new-session -d -s main -c {playground_dir} '/bin/opencode || /bin/bash'",
+        f"tmux -f .tmux.conf new-session -d -s main -c {playground_dir} 'export LLM_BASE_URL=http://localhost:{settings.port}/v1 && (/bin/opencode || /bin/bash)'",
         stdout=sys.stderr,
         stderr=sys.stderr,
         shell=True,

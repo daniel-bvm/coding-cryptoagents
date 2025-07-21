@@ -18,13 +18,12 @@ run git clone https://github.com/tsl0922/ttyd.git \
     && cmake .. \
     && make \
     && make install
+    
+copy requirements.txt requirements.txt
+run pip install -r requirements.txt
 
 copy --from=builder /bin/opencode /bin/opencode
 run chmod +x /bin/opencode
-
-copy requirements.txt requirements.txt
-
-run pip install -r requirements.txt
 
 workdir /workspace
 copy main.py main.py

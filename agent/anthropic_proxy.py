@@ -9,6 +9,7 @@ import litellm
 import uuid
 import time
 import sys
+import httpx
 from agent.configs import settings
 
 # Configure logging
@@ -1706,3 +1707,134 @@ def log_request_beautifully(method, path, claude_model, openai_model, num_messag
     logger.info(log_line)
     logger.info(model_line)
     sys.stdout.flush()
+
+from fastapi.responses import Response, StreamingResponse
+
+@app.post("/v1/chat/completions")
+async def proxy_chat_completions(raw_request: Request):
+    """
+    Forward /v1/chat/completions requests directly to LLM_BASE_URL with authorization.
+    """
+    try:
+        # Get the request body
+        body = await raw_request.body()
+
+        is_stream = False
+
+        try:
+            json_body = json.loads(body.decode('utf-8'))
+            json_body["chat_template_kwargs"] = {"enable_thinking": False}
+            body = json.dumps(json_body).encode('utf-8')
+            is_stream = json_body.get("stream", False)
+        except Exception as e:
+            logger.error(f"Error parsing JSON body: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Error parsing JSON body: {str(e)}")
+
+        # Prepare headers with authorization
+        headers = {
+            "Authorization": f"Bearer {settings.llm_api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Copy other headers from the original request (except authorization and host)
+        for key, value in raw_request.headers.items():
+            if key.lower() not in ["authorization", "content-type", "host", "content-length"]:
+                headers[key] = value
+        
+        # Forward the request to LLM_BASE_URL
+        if is_stream:
+            logger.info(f"Streaming response")
+
+            async def stream_response():
+                async with httpx.AsyncClient() as client:
+                    async with client.stream(
+                        "POST",
+                        f"{settings.llm_base_url.replace('/v1', '')}/v1/chat/completions",
+                        content=body,
+                        headers=headers,
+                        timeout=300.0  # 5 minute timeout
+                    ) as response:
+                        async for chunk in response.aiter_bytes(64):
+                            yield chunk
+
+            return StreamingResponse(
+                stream_response(),
+                status_code=200,
+                media_type="application/octet-stream"
+            )
+        else:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{settings.llm_base_url.replace('/v1', '')}/v1/chat/completions",
+                    content=body,
+                    headers=headers,
+                    timeout=300.0  # 5 minute timeout
+                )
+                for to_remove in ["content-length", "content-encoding", "content-type"]:
+                    response.headers.pop(to_remove, None)
+
+                return Response(
+                    content=response.content,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.headers.get("content-type", "application/json")
+                )
+            
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.error(f"Error forwarding chat completions request: {str(e)}\n{error_traceback}")
+        raise HTTPException(status_code=500, detail=f"Error forwarding request: {str(e)}")
+
+
+@app.get("/v1/models")
+async def proxy_models(raw_request: Request):
+    """
+    Forward /v1/models requests directly to LLM_BASE_URL with authorization.
+    """
+    try:
+        # Log the request beautifully
+        log_request_beautifully(
+            "GET",
+            "/v1/models",
+            "models",  # Use generic name for models endpoint
+            "models",
+            0,  # No messages for models endpoint
+            0,  # No tools for models endpoint
+            200
+        )
+        
+        # Prepare headers with authorization
+        headers = {
+            "Authorization": f"Bearer {settings.llm_api_key}",
+        }
+        
+        # Copy other headers from the original request (except authorization and host)
+        for key, value in raw_request.headers.items():
+            if key.lower() not in ["authorization", "host", "content-length"]:
+                headers[key] = value
+        
+        # Forward the request to LLM_BASE_URL
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{settings.llm_base_url.replace("/v1", "")}/v1/models",
+                headers=headers,
+                timeout=30.0  # 30 second timeout for models endpoint
+            )
+
+        for to_remove in ["content-length", "content-encoding", "content-type"]:
+            response.headers.pop(to_remove, None)
+
+        return Response(
+            content=response.content,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.headers.get("content-type", "application/json")
+        )
+            
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.error(f"Error forwarding models request: {str(e)}\n{error_traceback}")
+        raise HTTPException(status_code=500, detail=f"Error forwarding request: {str(e)}")
+
