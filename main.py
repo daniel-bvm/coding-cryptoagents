@@ -18,16 +18,33 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     # Setup tmux session sequentially
     logger.info("Setting up tmux session...")
-    
-    # Create playground directory
     playground_dir = "/workspace/playground"
-    logger.info(f"Creating playground directory: {playground_dir}")
-    await asyncio.create_subprocess_shell(
-        f"mkdir -p {playground_dir}",
-        stdout=sys.stderr,
-        stderr=sys.stderr,
-        shell=True
-    )
+
+    # check if the /storage folder exists, if yes, create a symlink /workspace/playground to /storage/playground
+    if os.path.exists("/storage"):
+        os.makedirs("/storage/playground", exist_ok=True)
+        
+        # check if playground_dir is a symlink, if yes, remove it
+        if os.path.islink(playground_dir):
+            try: os.remove(playground_dir)
+            except Exception as e: pass
+
+        await asyncio.create_subprocess_shell(
+            f"ln -sf /storage/playground {playground_dir}",
+            stdout=sys.stderr,
+            stderr=sys.stderr,
+            shell=True
+        )
+
+    else:
+        # Create playground directory
+        logger.info(f"Creating playground directory: {playground_dir}")
+        await asyncio.create_subprocess_shell(
+            f"mkdir -p {playground_dir}",
+            stdout=sys.stderr,
+            stderr=sys.stderr,
+            shell=True
+        )
     
     # Kill any existing session first
     await asyncio.create_subprocess_shell(
