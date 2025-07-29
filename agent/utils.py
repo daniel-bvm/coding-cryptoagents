@@ -244,3 +244,157 @@ def refine_assistant_message(
         assistant_message['content'] = strip_thinking_content(assistant_message['content'] or "")
 
     return assistant_message
+
+
+
+import regex
+import time
+from typing import Optional, AsyncGenerator
+from .oai_models import random_uuid, ChatCompletionStreamResponse, ErrorResponse
+
+
+def wrap_chunk(id: str, content: str, role: str) -> ChatCompletionStreamResponse:
+    return ChatCompletionStreamResponse(
+        id=id,
+        object='chat.completion.chunk',
+        created=int(time.time()),
+        model='unspecified',
+        choices=[
+            dict(
+                index=0,
+                delta=dict(
+                    content=content,
+                    role=role
+                ),
+            )
+        ]
+    )
+
+def get_file_extension(uri: str) -> str:
+    logger.info(f"received uri: {uri[:100]}")
+    if uri.startswith('data:'):
+        return uri.split(';')[0].split('/')[-1].lower()
+
+    if uri.startswith('http'):
+        return uri.split('.')[-1].lower()
+
+    if uri.startswith('file:'):
+        return uri.split('.')[-1].lower()
+
+    return None
+
+class Attachment:
+    def __init__(self, data_uri: str, name: Optional[str] = None, type: Optional[str] = None):
+        self.data_uri = data_uri
+        self.type = type or get_file_extension(data_uri) or "data"
+        self.name = name or f"attachment_{random_uuid()}.{self.type}"
+
+class AgentResourceManager:
+    def __init__(self):
+        self.resources: dict[str, str] = {}
+        self.attachments: list[Attachment] = []
+        self.data_uri_pattern = regex.compile(r'data:[^;,]+;base64,[A-Za-z0-9+/]+=*', regex.IGNORECASE | regex.DOTALL | regex.MULTILINE)
+        self.resource_citing_pattern = regex.compile(r'"([^"]+)"', regex.IGNORECASE | regex.DOTALL | regex.MULTILINE)
+
+    def embed_resource(self, content: str) -> str:
+        def replace_with_id(match: regex.Match[str]) -> str:
+            resource_id = random_uuid()
+            self.resources[resource_id] = match.group(0)
+            return resource_id
+
+        return self.data_uri_pattern.sub(replace_with_id, content)
+
+    def extract_resource(self, content: str) -> list[str]:
+        results: list[str] = []
+
+        for m in self.resource_citing_pattern.finditer(content):
+            resource_id: str = m.group(1)
+
+            if resource_id not in results and resource_id in self.resources:
+                results.append(resource_id)
+
+        for resource_id, _ in self.resources.items():
+            if resource_id in content and resource_id not in results:
+                results.append(resource_id)
+
+        return results
+
+    def get_resource_by_id(self, resource_id: str) -> Optional[str]:
+        return self.resources.get(resource_id)
+
+    def reveal_resource(self, content: str) -> str:
+        def replace_with_data_uri(match: regex.Match[str]) -> str:
+            resource_id = match.group(1)
+            return f'"{self.resources.get(resource_id, resource_id)}"'
+
+        return self.resource_citing_pattern.sub(replace_with_data_uri, content)
+
+    def add_attachment(self, data_uri: str, name: Optional[str] = None) -> Attachment:
+        attachment = Attachment(data_uri, name)
+        self.attachments.append(attachment)
+        return attachment
+
+    async def handle_streaming_response(
+        self, 
+        stream: AsyncGenerator[ChatCompletionStreamResponse | ErrorResponse, None], 
+        cut_tags: list[str] = [], 
+        cut_pats: list[str] = []
+    ) -> AsyncGenerator[ChatCompletionStreamResponse | ErrorResponse, None]:
+        buffer: str = ''
+
+        cut_tags_str = "|".join(cut_tags)
+        tags_str = "file|img|data|files"
+
+        pattern_template = r"<({tags_str})\b[^>]*>(.*?)</\1>|<({tags_str})\b[^>]*/>"
+
+        citing_pat_str = pattern_template.format(tags_str=tags_str)
+        cut_pat_str = pattern_template.format(tags_str=cut_tags_str) if len(cut_pats) else ""
+
+        if cut_pat_str:
+            cut_pats.append(cut_pat_str)
+
+        if cut_pats:
+            citing_pat = regex.compile("|".join([citing_pat_str, *cut_pats]), regex.DOTALL | regex.IGNORECASE | regex.MULTILINE)
+        else:
+            citing_pat = regex.compile(citing_pat_str, regex.DOTALL | regex.IGNORECASE | regex.MULTILINE)
+
+        cut_pat = regex.compile("|".join(cut_pats), regex.DOTALL | regex.IGNORECASE | regex.MULTILINE) if len(cut_pats) else None
+
+        logger.info("Watching for citing_pat: {}".format(citing_pat))
+        logger.info("Watching for cut_pat: {}".format(cut_pat))
+
+        async for chunk in stream:
+            if isinstance(chunk, ErrorResponse):
+                yield chunk
+                continue
+            
+            if not chunk.choices:
+                continue
+
+            if len(chunk.choices[0].delta.tool_calls) > 0:
+                yield chunk
+                continue
+
+            buffer += chunk.choices[0].delta.content or ''
+            partial_match = citing_pat.search(buffer, partial=True)
+            
+            if not partial_match or (partial_match.span()[0] == partial_match.span()[1]):
+                yield wrap_chunk(random_uuid(), buffer, 'assistant')
+                buffer = ''
+
+                continue
+
+            if partial_match.partial:
+                yield wrap_chunk(random_uuid(), buffer[:partial_match.span()[0]], 'assistant')
+                buffer = buffer[partial_match.span()[0]:]
+
+                continue
+
+            if cut_pat is not None and cut_pat.search(buffer) is None:
+                yield wrap_chunk(random_uuid(), self.reveal_resource(buffer), 'assistant')
+
+            buffer = ''
+
+        if buffer:
+            yield wrap_chunk(random_uuid(), buffer, 'assistant')
+

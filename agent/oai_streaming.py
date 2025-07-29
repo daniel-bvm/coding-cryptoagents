@@ -23,9 +23,10 @@ logger = logging.getLogger(__name__)
 def reconstruct_curl_request(
     base_url: str,
     api_key: str,
+    completion_path: str = "/chat/completions",
     **payload_to_call
 ) -> str:
-    return f'curl -X POST "{base_url}/chat/completions" -H "Authorization: Bearer {api_key}" -H "Content-Type: application/json" -d \'{json.dumps(payload_to_call)}\''
+    return f'curl -X POST "{base_url}/{completion_path}" -H "Authorization: Bearer {api_key}" -H "Content-Type: application/json" -d \'{json.dumps(payload_to_call)}\''
 
 class ChatCompletionResponseBuilder:
     def __init__(self):
@@ -40,6 +41,21 @@ class ChatCompletionResponseBuilder:
 
         elif choice.delta.tool_calls:
             for tool_call in choice.delta.tool_calls:
+                # call_idx = tool_call.index
+
+                # if call_idx not in self.calls_by_idx:
+                #     self.calls_by_idx[call_idx] = {
+                #         "id": tool_call.id,
+                #         "type": tool_call.type,
+                #         "function": {
+                #             "name": tool_call.function.name,
+                #             "arguments": tool_call.function.arguments or ""
+                #         }
+                #     }
+
+                # else:
+                #     self.calls_by_idx[call_idx]["function"]["arguments"] += tool_call.function.arguments
+                
                 if tool_call.function.name is not None:
                     self.calls.append({
                         "id": "call_" + random_uuid()[-20:],
@@ -95,21 +111,23 @@ class ChatCompletionResponseBuilder:
 
 async def create_streaming_response(
     base_url: str,
-    api_key: str,
+    headers: dict[str, str],
+    completion_path: str = "/chat/completions",
     **payload_to_call
 ) -> AsyncGenerator[ChatCompletionStreamResponse, None]:
+    completion_path = completion_path.strip("/")
+    logger.info(f"Streaming response to {base_url}/{completion_path}")
+    payload_to_call.pop("stream", None)
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         async with client.stream(
             "POST",
-            f"{base_url}/chat/completions",
+            f"{base_url}/{completion_path}",
             json={
                 **payload_to_call,
                 'stream': True
             },
-            headers={
-                'Authorization': f'Bearer {api_key}'
-            },
+            headers=headers,
             timeout=httpx.Timeout(60.0 * 10)
         ) as response:
 
@@ -134,25 +152,16 @@ async def create_streaming_response(
                         resp_json = json.loads(line)
 
                         if "error" in resp_json:
-                            yield ErrorResponse.model_validate(resp_json.get("error", {}))
+                            errr_obj = resp_json.get("error", {})
+                            
+                            if isinstance(errr_obj, dict):
+                                yield ErrorResponse.model_validate(errr_obj)
+
+                            else:
+                                yield ErrorResponse(message=errr_obj, type="unknown_error")
 
                     except Exception as e:
-
-                        curl_command = reconstruct_curl_request(
-                            base_url,
-                            api_key,
-                            **payload_to_call,
-                            stream=True
-                        )
-
-                        message = (
-                            f"<h2>STREAMING-ERROR</h2>\n"
-                            f"<p>Failed to parse chunk: {e}</p>\n"
-                            f"<p>line: {line}</p>\n"
-                            f"<pre>{curl_command}</pre>\n"
-                        )
-
-                        logger.error(message)
+                        logger.error(f"Failed to parse response: {e}; Raw response: {line}")
                         raise e
 
                     if resp_json.get('object', '') == 'chat.completion.chunk':
@@ -160,4 +169,14 @@ async def create_streaming_response(
 
             except Exception as e:
                 logger.error(f"Failed to stream response: {e}")
+
+                curl_command = reconstruct_curl_request(
+                    base_url,
+                    'hidden-api-key',
+                    completion_path,
+                    **payload_to_call,
+                    stream=True,
+                )
+
+                logger.error(f"Failed to stream response: {e}\n{curl_command}")
                 raise e

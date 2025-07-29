@@ -4,7 +4,7 @@ import json
 from pydantic import BaseModel, field_validator
 from typing import List, Dict, Any, Optional, Union, Literal
 import os
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 import litellm
 import uuid
 import time
@@ -1709,86 +1709,83 @@ def log_request_beautifully(method, path, claude_model, openai_model, num_messag
     sys.stdout.flush()
 
 from fastapi.responses import Response, StreamingResponse
+from agent.oai_streaming import ChatCompletionResponseBuilder, create_streaming_response, ChatCompletionStreamResponse, ErrorResponse
+from typing import AsyncGenerator, Callable
+from agent.utils import AgentResourceManager
+
+async def wrapstream(
+    streaming_iter: AsyncGenerator[ChatCompletionStreamResponse | ErrorResponse, None], 
+    callback: Callable[[ChatCompletionStreamResponse | ErrorResponse], None]
+):
+    async for chunk in streaming_iter:
+        callback(chunk)
+
+        if chunk.choices[0].delta.content:
+            yield chunk
+
+async def gen2bytes(generator: AsyncGenerator[ChatCompletionStreamResponse, None]) -> AsyncGenerator[str, None]:
+    try:
+        async for item in generator:
+            if item.choices and (item.choices[0].delta.content or item.choices[0].delta.tool_calls):
+                yield 'data: ' + item.model_dump_json() + "\n\n"
+    
+    except Exception as e:
+        logger.error(f"Error generating bytes: {e}")
+
+    finally:
+        yield "data: [DONE]\n\n"
 
 @app.post("/v1/chat/completions")
-async def proxy_chat_completions(raw_request: Request):
+async def proxy_v1_chat_completions(raw_request: Request):
     """
     Forward /v1/chat/completions requests directly to LLM_BASE_URL with authorization.
     """
-    try:
-        # Get the request body
-        body = await raw_request.body()
 
-        is_stream = False
+    body_json: dict[str, Any] = await raw_request.json()
+    streaming = body_json.pop("stream", False)
+    body_json["model"] = settings.llm_model_id
 
-        try:
-            json_body = json.loads(body.decode('utf-8'))
-            json_body["chat_template_kwargs"] = {"enable_thinking": False}
-            body = json.dumps(json_body).encode('utf-8')
-            is_stream = json_body.get("stream", False)
-        except Exception as e:
-            logger.error(f"Error parsing JSON body: {str(e)}")
-            raise HTTPException(status_code=400, detail=f"Error parsing JSON body: {str(e)}")
+    body_json["messages"] = [
+        (
+            e 
+            if e['role'] != 'assistant' 
+            else {
+                'role': 'assistant',
+                'content': e.get('content', '')
+            }
+        ) for e in body_json["messages"]
+    ]
 
-        # Prepare headers with authorization
-        headers = {
-            "Authorization": f"Bearer {settings.llm_api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        # Copy other headers from the original request (except authorization and host)
-        for key, value in raw_request.headers.items():
-            if key.lower() not in ["authorization", "content-type", "host", "content-length"]:
-                headers[key] = value
-        
-        # Forward the request to LLM_BASE_URL
-        if is_stream:
-            logger.info(f"Streaming response")
+    generator = create_streaming_response(
+        settings.llm_base_url,
+        headers={
+            'Authorization': f'Bearer {settings.llm_api_key}'
+        },
+        **body_json
+    )
 
-            async def stream_response():
-                async with httpx.AsyncClient() as client:
-                    async with client.stream(
-                        "POST",
-                        f"{settings.llm_base_url.replace('/v1', '')}/v1/chat/completions",
-                        content=body,
-                        headers=headers,
-                        timeout=300.0  # 5 minute timeout
-                    ) as response:
-                        async for chunk in response.aiter_bytes(64):
-                            yield chunk
+    if streaming:
+        return StreamingResponse(
+            gen2bytes(AgentResourceManager().handle_streaming_response(generator, cut_pats=[r"<(think)\b[^>]*>(.*?)</think>\s+"])), 
+            media_type="text/event-stream"
+        )
 
-            return StreamingResponse(
-                stream_response(),
-                status_code=200,
-                media_type="application/octet-stream"
-            )
-        else:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{settings.llm_base_url.replace('/v1', '')}/v1/chat/completions",
-                    content=body,
-                    headers=headers,
-                    timeout=300.0  # 5 minute timeout
-                )
-                for to_remove in ["content-length", "content-encoding", "content-type"]:
-                    response.headers.pop(to_remove, None)
+    builder = ChatCompletionResponseBuilder()
 
-                return Response(
-                    content=response.content,
-                    status_code=response.status_code,
-                    headers=dict(response.headers),
-                    media_type=response.headers.get("content-type", "application/json")
-                )
-            
-    except Exception as e:
-        import traceback
-        error_traceback = traceback.format_exc()
-        logger.error(f"Error forwarding chat completions request: {str(e)}\n{error_traceback}")
-        raise HTTPException(status_code=500, detail=f"Error forwarding request: {str(e)}")
+    async for chunk in generator:
+        builder.add_chunk(chunk)
+    
+    completions = await builder.build()
 
+    return JSONResponse(content=completions.model_dump())
+
+@app.post("/chat/completions")
+async def proxy_chat_completions(raw_request: Request):
+    # just call the /v1/chat/completions endpoint
+    return await proxy_v1_chat_completions(raw_request)
 
 @app.get("/v1/models")
-async def proxy_models(raw_request: Request):
+async def proxy_v1_models(raw_request: Request):
     """
     Forward /v1/models requests directly to LLM_BASE_URL with authorization.
     """
@@ -1838,3 +1835,6 @@ async def proxy_models(raw_request: Request):
         logger.error(f"Error forwarding models request: {str(e)}\n{error_traceback}")
         raise HTTPException(status_code=500, detail=f"Error forwarding request: {str(e)}")
 
+@app.post("/models")
+async def proxy_models(raw_request: Request):
+    return await proxy_v1_models(raw_request)
