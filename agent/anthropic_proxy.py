@@ -1757,7 +1757,7 @@ async def proxy_v1_chat_completions(raw_request: Request):
     ]
 
     generator = create_streaming_response(
-        settings.llm_base_url,
+        settings.llm_base_url.rstrip("/"),
         headers={
             'Authorization': f'Bearer {settings.llm_api_key}'
         },
@@ -1814,7 +1814,7 @@ async def proxy_v1_models(raw_request: Request):
         # Forward the request to LLM_BASE_URL
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{settings.llm_base_url.replace("/v1", "")}/v1/models",
+                f"{settings.llm_base_url.rstrip("/")}/v1/models",
                 headers=headers,
                 timeout=30.0  # 30 second timeout for models endpoint
             )
