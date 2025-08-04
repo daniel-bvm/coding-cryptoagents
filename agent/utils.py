@@ -169,18 +169,17 @@ def strip_thinking_content(content: str) -> str:
     return pat.sub("", content).lstrip()
 
 
-def refine_chat_history(messages: list[dict[str, str]], system_prompt: str) -> list[dict[str, str]]:
+def refine_chat_history(messages: list[dict[str, str]], system_prompt: str = "") -> list[dict[str, str]]:
     refined_messages = []
-
-    current_time_utc_str = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-    system_prompt += f'\nNote: Current time is {current_time_utc_str} UTC (only use this information when being asked or for searching purposes)'
 
     has_system_prompt = False
     for message in messages:
         message: dict[str, str]
 
         if isinstance(message, dict) and message.get('role', 'undefined') == 'system':
-            message['content'] += f'\n{system_prompt}'
+            if system_prompt:
+                message['content'] += f'\n{system_prompt}'
+
             has_system_prompt = True
             refined_messages.append(message)
             continue
@@ -191,20 +190,10 @@ def refine_chat_history(messages: list[dict[str, str]], system_prompt: str) -> l
 
             content = message['content']
             text_input = ''
-            attachments = []
 
             for item in content:
                 if item.get('type', 'undefined') == 'text':
                     text_input += item.get('text') or ''
-
-                elif item.get('type', 'undefined') == 'file':
-                    pass
-
-            if attachments:
-                text_input += '\nAttachments:\n'
-
-                for attachment in attachments:
-                    text_input += f'- {attachment}\n'
 
             refined_messages.append({
                 "role": "user",

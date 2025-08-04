@@ -11,6 +11,7 @@ import time
 import sys
 import httpx
 from agent.configs import settings
+from agent.utils import refine_chat_history
 
 # Configure logging
 logging.basicConfig(
@@ -1722,11 +1723,37 @@ async def wrapstream(
 
         if chunk.choices[0].delta.content:
             yield chunk
+            
+async def get_models_fn() -> list[dict[str, str]]:
+    models = []
 
-async def gen2bytes(generator: AsyncGenerator[ChatCompletionStreamResponse, None]) -> AsyncGenerator[str, None]:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{settings.llm_base_url.rstrip('/')}/models")
+
+        if response.status_code == 200:
+            data = response.json()
+            obj_type = data.get('object', '')
+
+            if obj_type == 'list':
+                for model in data.get('data', []):
+                    if model.get('id') and model.get('object') == 'model' and model.get('task', 'chat') == 'chat':
+                        models.append({
+                            "id": model.get('id'),
+                            "name": model.get('folder_name', model.get('id')),
+                        })
+                        
+    return models
+
+async def gen2bytes(generator: AsyncGenerator[ChatCompletionStreamResponse, None], model: str) -> AsyncGenerator[str, None]:
+    models = await get_models_fn()
+    model_name = next((m['name'] for m in models if m['id'] == model), model)
+
     try:
         async for item in generator:
             if item.choices and (item.choices[0].delta.content or item.choices[0].delta.tool_calls):
+                if item.model in ['', 'unknown', None]:
+                    item.model = model_name
+
                 yield 'data: ' + item.model_dump_json() + "\n\n"
     
     except Exception as e:
@@ -1743,11 +1770,10 @@ async def proxy_v1_chat_completions(raw_request: Request):
 
     body_json: dict[str, Any] = await raw_request.json()
     streaming = body_json.pop("stream", False)
-    body_json["model"] = settings.llm_model_id
 
     body_json["messages"] = [
         (
-            e 
+            e
             if e['role'] != 'assistant' 
             else {
                 'role': 'assistant',
@@ -1755,6 +1781,10 @@ async def proxy_v1_chat_completions(raw_request: Request):
             }
         ) for e in body_json["messages"]
     ]
+    
+    body_json["messages"] = refine_chat_history(body_json["messages"])
+    body_json.setdefault("model", settings.llm_model_id)
+    chosen_model = body_json.get("model", settings.llm_model_id)
 
     generator = create_streaming_response(
         settings.llm_base_url.rstrip("/"),
@@ -1766,7 +1796,7 @@ async def proxy_v1_chat_completions(raw_request: Request):
 
     if streaming:
         return StreamingResponse(
-            gen2bytes(AgentResourceManager().handle_streaming_response(generator, cut_pats=[r"<(think)\b[^>]*>(.*?)</think>\s+"])), 
+            gen2bytes(AgentResourceManager().handle_streaming_response(generator, cut_pats=[r"<(think)\b[^>]*>(.*?)</think>\s+"]), chosen_model), 
             media_type="text/event-stream"
         )
 
@@ -1814,7 +1844,7 @@ async def proxy_v1_models(raw_request: Request):
         # Forward the request to LLM_BASE_URL
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{settings.llm_base_url.rstrip("/")}/v1/models",
+                f"{settings.llm_base_url.rstrip("/")}/models",
                 headers=headers,
                 timeout=30.0  # 30 second timeout for models endpoint
             )
@@ -1828,7 +1858,7 @@ async def proxy_v1_models(raw_request: Request):
             headers=dict(response.headers),
             media_type=response.headers.get("content-type", "application/json")
         )
-            
+
     except Exception as e:
         import traceback
         error_traceback = traceback.format_exc()
