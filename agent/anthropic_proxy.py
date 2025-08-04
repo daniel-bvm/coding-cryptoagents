@@ -1796,7 +1796,7 @@ async def proxy_v1_chat_completions(raw_request: Request):
 
     if streaming:
         return StreamingResponse(
-            gen2bytes(AgentResourceManager().handle_streaming_response(generator, cut_pats=[r"<(think)\b[^>]*>(.*?)</think>\s+"]), chosen_model), 
+            gen2bytes(generator, chosen_model), 
             media_type="text/event-stream"
         )
 
