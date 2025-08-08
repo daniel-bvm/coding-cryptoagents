@@ -1,9 +1,7 @@
 from python:3.12-slim
 
 run apt-get update \
-    && apt-get install -y gnupg curl wget sudo build-essential cmake git libjson-c-dev libwebsockets-dev net-tools jq ripgrep fzf tmux xclip unzip \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y gnupg curl wget sudo build-essential cmake git libjson-c-dev libwebsockets-dev net-tools jq ripgrep fzf tmux xclip unzip
 
 run git clone https://github.com/tsl0922/ttyd.git \
     && cd ttyd \
@@ -16,8 +14,11 @@ run git clone https://github.com/tsl0922/ttyd.git \
 copy requirements.txt requirements.txt
 run pip install -r requirements.txt
 
-env OPENCODE_INSTALL_DIR=/bin
-run curl -fsSL https://opencode.ai/install | bash
+run curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -
+run apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+run npm install -g @qwen-code/qwen-code@latest
 
 workdir /workspace
 copy main.py main.py

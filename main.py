@@ -12,7 +12,6 @@ from agent.configs import settings
 import shlex
 import uvicorn
 import json
-import httpx 
 
 from contextlib import asynccontextmanager
 
@@ -22,45 +21,20 @@ async def lifespan(app: FastAPI):
     logger.info("Setting up tmux session...")
     playground_dir = "/workspace/playground"
 
-    wrapped_base_url = f"http://localhost:{settings.port}/v1"
-    config_path = os.path.expanduser("~/.config/opencode/opencode.json")
-    opencode_dir = os.path.expanduser("~/.config/opencode")
-    os.makedirs(opencode_dir, exist_ok=True)
+    config_path = os.path.expanduser("~/.qwen/settings.json")
+    qwen_dir = os.path.expanduser("~/.qwen")
+    os.makedirs(qwen_dir, exist_ok=True)
+    
+    with open(config_path, "w") as f:
+        json.dump(
+            {
+                "sessionTokenLimit": 32000
+            }, 
+            f,
+            indent=2,
+            ensure_ascii=False
+        )
 
-    async def update_config_task(repeat_interval=0): # non-positive --> no repeat
-        while True:
-            try:
-                models = await get_models_fn()
-
-                config = {
-                    "$schema": "https://opencode.ai/config.json",
-                        "provider": {
-                            "edge-ai": {
-                                "npm": "@ai-sdk/openai-compatible",
-                                "name": "LocalAI",
-                                "options": {
-                                    "baseURL": wrapped_base_url
-                                },
-                                "models": {
-                                    e['id']: {
-                                        "name": e['name']
-                                    }
-                                    for e in models
-                                }
-                            }
-                        }
-                    }
-
-                with open(config_path, "w") as f:
-                    json.dump(config, f, indent=2, ensure_ascii=False)
-
-            except Exception as e:
-                logger.error(f"Error updating config: {e}")
-
-            if repeat_interval <= 0:
-                break
-
-            await asyncio.sleep(repeat_interval)
 
     # check if the /storage folder exists, if yes, create a symlink /workspace/playground to /storage/playground
     if os.path.exists("/storage"):
@@ -98,9 +72,10 @@ async def lifespan(app: FastAPI):
     
     # Create new session with first command in playground directory
     logger.info("Creating tmux session...")
+    models = await get_models_fn()
 
     process1 = await asyncio.create_subprocess_shell(
-        f"tmux -f .tmux.conf new-session -d -s main -c {playground_dir} 'export LLM_BASE_URL=http://localhost:{settings.port}/v1 && (opencode; /bin/bash)'",
+        f"tmux -f .tmux.conf new-session -d -s main -c {playground_dir} 'export OPENAI_BASE_URL=http://localhost:{settings.port}/v1 OPENAI_API_KEY=\"your_api_key_here\" OPENAI_MODEL={models[0]['id']} && (bash -c qwen; /bin/bash)'",
         stdout=sys.stderr,
         stderr=sys.stderr,
         shell=True,
@@ -141,13 +116,11 @@ async def lifespan(app: FastAPI):
         logger.info(f"Process started: {process.pid}")
 
     try:
-        task = asyncio.create_task(update_config_task(10))
         logger.info("Starting processes...")
         yield
 
     finally:
         waiting_task = []
-        task.cancel()
 
         for process in processes:
             process.terminate()
