@@ -12,7 +12,6 @@ from agent.configs import settings
 import shlex
 import uvicorn
 import json
-import httpx 
 
 from contextlib import asynccontextmanager
 
@@ -100,7 +99,7 @@ async def lifespan(app: FastAPI):
     logger.info("Creating tmux session...")
 
     process1 = await asyncio.create_subprocess_shell(
-        f"tmux -f .tmux.conf new-session -d -s main -c {playground_dir} 'export LLM_BASE_URL=http://localhost:{settings.port}/v1 && (opencode; /bin/bash)'",
+        f"tmux -f .tmux.conf new-session -d -s main -c {playground_dir} 'export LLM_BASE_URL=http://localhost:{settings.port}/v1 && (/root/.opencode/bin/opencode; /bin/bash)'",
         stdout=sys.stderr,
         stderr=sys.stderr,
         shell=True,
