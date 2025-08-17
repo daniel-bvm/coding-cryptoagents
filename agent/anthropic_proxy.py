@@ -11,7 +11,7 @@ import time
 import sys
 import httpx
 from agent.configs import settings
-from agent.utils import refine_chat_history
+from agent.utils import refine_chat_history_v1
 
 # Configure logging
 logging.basicConfig(
@@ -1728,7 +1728,12 @@ async def get_models_fn() -> list[dict[str, str]]:
     models = []
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{settings.llm_base_url.rstrip('/')}/models")
+        response = await client.get(
+            f"{settings.llm_base_url.rstrip('/')}/models", 
+            headers={
+                "Authorization": f"Bearer {settings.llm_api_key}"
+            }
+        )
 
         if response.status_code == 200:
             data = response.json()
@@ -1741,7 +1746,7 @@ async def get_models_fn() -> list[dict[str, str]]:
                             "id": model.get('id'),
                             "name": model.get('folder_name', model.get('id')),
                         })
-                        
+    
     return models
 
 async def gen2bytes(generator: AsyncGenerator[ChatCompletionStreamResponse, None], model: str) -> AsyncGenerator[str, None]:
@@ -1762,6 +1767,8 @@ async def gen2bytes(generator: AsyncGenerator[ChatCompletionStreamResponse, None
     finally:
         yield "data: [DONE]\n\n"
 
+from openai import AsyncOpenAI
+
 @app.post("/v1/chat/completions")
 async def proxy_v1_chat_completions(raw_request: Request):
     """
@@ -1771,28 +1778,27 @@ async def proxy_v1_chat_completions(raw_request: Request):
     body_json: dict[str, Any] = await raw_request.json()
     streaming = body_json.pop("stream", False)
 
-    body_json["messages"] = [
-        (
-            e
-            if e['role'] != 'assistant' 
-            else {
-                'role': 'assistant',
-                'content': e.get('content', '')
-            }
-        ) for e in body_json["messages"]
-    ]
-    
-    body_json["messages"] = refine_chat_history(body_json["messages"])
+    body_json["messages"] = refine_chat_history_v1(body_json["messages"])
     body_json.setdefault("model", settings.llm_model_id)
     chosen_model = body_json.get("model", settings.llm_model_id)
 
-    generator = create_streaming_response(
-        settings.llm_base_url.rstrip("/"),
-        headers={
-            'Authorization': f'Bearer {settings.llm_api_key}'
-        },
-        **body_json
-    )
+    async def oai_stream() -> AsyncGenerator[ChatCompletionStreamResponse, None]:
+        body_json.pop("model", None), body_json.pop("stream", None)
+        async with AsyncOpenAI(api_key=settings.llm_api_key, base_url=settings.llm_base_url.rstrip("/")) as client:
+            generator = await client.chat.completions.create(
+                model=chosen_model,
+                stream=True,
+                messages=body_json["messages"],
+                tools=body_json.get("tools", []),
+                tool_choice=body_json.get("tool_choice", None),
+                temperature=body_json.get("temperature", 1.0),
+                n=body_json.get("n", 1)
+            )
+
+            async for chunk in generator:
+                yield chunk
+
+    generator = oai_stream()
 
     if streaming:
         return StreamingResponse(

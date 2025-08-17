@@ -222,6 +222,52 @@ def refine_chat_history(messages: list[dict[str, str]], system_prompt: str = "")
 
     return refined_messages
 
+
+def refine_chat_history_v1(messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    refined_messages = []
+
+    for message in messages:
+        message: dict[str, str]
+        content: str | list[dict[str, Any]] = message.get('content', '')
+        role: str = message.get('role', 'assistant')
+        tool_calls: list[dict[str, Any]] = message.get('tool_calls', [])
+
+        if role == 'tool':
+            refined_messages.append(message)
+            continue
+
+        if isinstance(content, list):
+            refined_content: list[dict[str, Any]] = []
+
+            for item in content:
+                item: dict[str, Any]
+
+                if item.get('type', 'undefined') == 'text':
+                    refined_content.append({
+                        'type': 'text',
+                        'text': strip_toolcall_noti(strip_thinking_content(item.get('text', '')))
+                    })
+
+                else:
+                    refined_content.append(item)
+
+            content = refined_content
+
+        elif isinstance(content, str):
+            content = strip_toolcall_noti(strip_thinking_content(content))
+
+        new_message = {
+            'role': role,
+            'content': content
+        }
+
+        if tool_calls is not None and len(tool_calls) > 0:
+            new_message['tool_calls'] = tool_calls
+
+        refined_messages.append(new_message)
+
+    return refined_messages
+
 def refine_assistant_message(
     assistant_message: Union[dict[str, str], BaseModel]
 ) -> dict[str, str]:

@@ -57,11 +57,13 @@ async def lifespan(app: FastAPI):
                 logger.error(f"Error updating config: {e}")
 
             if repeat_interval <= 0:
+                logger.info("Config updated, stopping config update task")
                 break
 
             await asyncio.sleep(repeat_interval)
 
     # check if the /storage folder exists, if yes, create a symlink /workspace/playground to /storage/playground
+    await update_config_task() # ensure the configfile created before starting opencode
     if os.path.exists("/storage"):
         os.makedirs("/storage/playground", exist_ok=True)
         
