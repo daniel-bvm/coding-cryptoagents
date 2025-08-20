@@ -5,6 +5,7 @@ import json
 import logging
 from agent.app_models import StepV2
 from agent.utils import strip_thinking_content
+from json_repair import repair_json
 
 logger = logging.getLogger(__name__)
 
@@ -48,13 +49,15 @@ async def make_plan(title: str, user_request: str, max_steps: int = 15) -> list[
             reasoning = None
 
             if 'reason' in response_text.lower():
+                l, r = response_text.find('{'), response_text.rfind('}')+1
+                no_thinking_text = response_text[l:r]
+
                 try:
-                    l, r = response_text.find('{'), response_text.rfind('}')+1
-                    resp_json: dict[str, Any] = json.loads(response_text[l:r])
+                    resp_json: dict[str, Any] = json.loads(repair_json(no_thinking_text))
                     reasoning = resp_json.get('reason')
 
                 except Exception as err:
-                    logger.error(f"Error parsing JSON: {err}; Response: {response}")
+                    logger.error(f"Error parsing JSON: {err}; Response: {no_thinking_text}")
 
             if not reasoning:
                 reasoning = response_text.strip()
@@ -63,12 +66,12 @@ async def make_plan(title: str, user_request: str, max_steps: int = 15) -> list[
 
         try:
             l, r = response_text.find('{'), response_text.rfind('}')+1
-            step_data: dict = json.loads(response_text[l:r])
+            step_data: dict = json.loads(repair_json(response_text[l:r]))
             step = StepV2(**step_data)
             list_of_steps.append(step)
             logger.info(f"Added step: {step.task} (Reason: {step.reason}; Expectation: {step.expectation})")
         except Exception as e:
-            logger.error(f"Failed to parse response: {e}")
+            logger.error(f"[1] Failed to parse response: {e}")
 
     return list_of_steps
 
@@ -94,19 +97,20 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 15) -> AsyncG
             messages=[{"role": "user", "content": prompt}]
         )
 
-        response_text = response.choices[0].message.content
+        response_text = strip_thinking_content(response.choices[0].message.content)
 
         if "<done/>" in response_text.strip().lower():
             reasoning = None
 
             if 'reason' in response_text.lower():
+                l, r = response_text.find('{'), response_text.rfind('}')+1
+                no_thinking_text = response_text[l:r]
                 try:
-                    l, r = response_text.find('{'), response_text.rfind('}')+1
-                    resp_json: dict[str, Any] = json.loads(response_text[l:r])
+                    resp_json: dict[str, Any] = json.loads(repair_json(no_thinking_text))
                     reasoning = resp_json.get('reason')
 
                 except Exception as err:
-                    logger.error(f"Error parsing JSON: {err}; Response: {response}")
+                    logger.error(f"Error parsing JSON: {err}; Response: {no_thinking_text}")
 
             if not reasoning:
                 reasoning = response_text.strip()
@@ -115,10 +119,10 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 15) -> AsyncG
 
         try:
             l, r = response_text.find('{'), response_text.rfind('}')+1
-            step_data: dict = json.loads(response_text[l:r])
+            step_data: dict = json.loads(repair_json(response_text[l:r]))
             step = StepV2(**step_data)
             list_of_steps.append(step)
             logger.info(f"Added step: {step.task} (Reason: {step.reason}; Expectation: {step.expectation})")
             yield step
         except Exception as e:
-            logger.error(f"Failed to parse response: {e}")
+            logger.error(f"[2] Failed to parse response: {e}")
