@@ -129,7 +129,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
     # steps: List[StepV2] = await make_plan(title, expectation)
     steps: List[StepV2] = []
     
-    async for step in gen_plan(title, expectation, 15):
+    async for step in gen_plan(title, expectation, 3):
         steps.append(step)
 
         yield wrap_chunk(random_uuid(), f"<action>{step.reason}</action>\n")
@@ -257,14 +257,23 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             _args = json.loads(_args)
 
             logger.info(f"Executing tool call: {_name} with args: {_args}")
-            _result_gen: AsyncGenerator[ChatCompletionStreamResponse | str, None] = build(**_args)
+            _result = ''
 
-            async for chunk in _result_gen:
-                if isinstance(chunk, ChatCompletionStreamResponse):
-                    yield chunk
-                else:
-                    _result = chunk
+            try:
+                _result_gen: AsyncGenerator[ChatCompletionStreamResponse | str, None] = build(**_args)
 
+                async for chunk in _result_gen:
+                    if isinstance(chunk, ChatCompletionStreamResponse):
+                        yield chunk
+                    else:
+                        _result = chunk
+
+            except Exception as e:
+                logger.error(f"Error executing tool call: {_name} with args: {_args}")
+                logger.error(f"Error: {e}")
+                _result = f"Error: {e}"
+
+            _result = _result or 'No output'
             logger.info(f"Tool call {_name} result: {_result}")
 
             messages.append(

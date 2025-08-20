@@ -101,13 +101,16 @@ class OpenCodeSDKClient:
 
     async def connect(self):
         port = await pick_random_available_port()
+        
+        logger.info(f"Starting OpenCode server on port {port}")
         self.process = await asyncio.create_subprocess_exec(
-            "opencode",
-            "serve",
-            f"--port={port}",
-            cwd=self.working_dir
+            "/root/.opencode/bin/opencode", "serve", f"--port={port}",
+            cwd=self.working_dir,
         )
-        await wait_until_port_is_ready_to_connect(port)
+
+        if not await wait_until_port_is_ready_to_connect(port):
+            raise RuntimeError("Failed to start OpenCode server")
+
         self.port = port
 
     async def disconnect(self):

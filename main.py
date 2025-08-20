@@ -122,7 +122,6 @@ async def lifespan(app: FastAPI):
     await update_config_task()
     yield
 
-
 app = FastAPI(lifespan=lifespan)
 app.include_router(apis_app)
 app.include_router(anthropic_proxy_app)
