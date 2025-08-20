@@ -52,12 +52,3 @@ async def prompt(request: ChatCompletionRequest):
         logger.info(f"Request {req_id} - TTFT: {ttft:.2f}s, TPS: {tps:.2f} tokens/s")
         return JSONResponse(chunk.model_dump())
 
-@router.get("/processing-url")
-async def get_processing_url():
-    return JSONResponse(
-        content={
-            "url": f"http://localhost:7681",
-            "status": "ready"
-        },
-        status_code=200
-    )

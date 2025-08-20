@@ -16,7 +16,7 @@ RECEPTIONIST_TOOLS = [
                         "description": "Describe what to build as much detail as possible.",
                     }
                 },
-                "required": ["expectation"]
+                "required": ["title", "expectation"]
             }
         }
     }
@@ -31,7 +31,7 @@ In other cases, you are free to guess what they want and call the build tool. We
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse
-from agent.utils import refine_chat_history
+from agent.utils import refine_chat_history, refine_assistant_message
 from agent.configs import settings
 from agent.oai_streaming import create_streaming_response, ChatCompletionResponseBuilder
 from typing import AsyncGenerator, Any, List
@@ -243,7 +243,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
         if (completion.choices[0].message.tool_calls or []):
             completion.choices[0].message.tool_calls = completion.choices[0].message.tool_calls[:1]
 
-        messages.append(completion.choices[0].message.model_dump())
+        messages.append(refine_assistant_message(completion.choices[0].message.model_dump()))
 
         for call in (completion.choices[0].message.tool_calls or []):
             _id, _name, _args = call.id, call.function.name, call.function.arguments

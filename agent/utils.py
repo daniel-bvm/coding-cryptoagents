@@ -438,7 +438,7 @@ import aiofiles
 import asyncio
 
 # create one file html
-async def inline_html(index_html_file: str) -> str | None:
+async def inline_html(index_html_file: str, output_file: str = None) -> str | None:
     if not os.path.exists(index_html_file):
         return None
 
@@ -446,24 +446,21 @@ async def inline_html(index_html_file: str) -> str | None:
         return None
 
     folder = os.path.dirname(index_html_file)
-    output_file = os.path.join(folder, "index.html")
-    tmp_file = index_html_file.replace(".html", ".old.html")
-    os.rename(index_html_file, tmp_file)
+    output_file = output_file or index_html_file
+
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
     process = await asyncio.create_subprocess_exec(
         "inliner",
         index_html_file,
-        cwd=folder,
-        env=os.environ.copy(),
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        shell=True
+        stderr=asyncio.subprocess.PIPE
     )
 
-    if await process.wait() == 0:
-        stdout, stderr = await process.communicate()
+    stdout, stderr = await process.communicate()
 
+    if await process.wait() == 0:
         async with aiofiles.open(output_file, "wb") as f:
             await f.write(stdout)
-    
+
     return output_file
