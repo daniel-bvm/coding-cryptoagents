@@ -142,7 +142,7 @@ async def create_streaming_response(
                         continue
                     
                     # check if the line is ping 
-                    if line.startswith(": ping"):
+                    if line.startswith(":"):
                         continue
 
                     if line == "[DONE]": 

@@ -1,9 +1,7 @@
 from python:3.12-slim
 
 run apt-get update \
-    && apt-get install -y gnupg curl wget sudo build-essential cmake git libjson-c-dev libwebsockets-dev net-tools jq ripgrep fzf tmux xclip unzip \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y gnupg curl wget sudo build-essential cmake git libjson-c-dev libwebsockets-dev net-tools jq ripgrep fzf tmux xclip unzip
 
 run git clone https://github.com/tsl0922/ttyd.git \
     && cd ttyd \
@@ -16,6 +14,12 @@ run git clone https://github.com/tsl0922/ttyd.git \
 copy requirements.txt requirements.txt
 run pip install -r requirements.txt
 
+run curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash - \
+    && apt-get install -y nodejs \
+    && npm install -g inliner \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 env OPENCODE_INSTALL_DIR=/bin
 run curl -fsSL https://opencode.ai/install | bash
 
@@ -23,6 +27,7 @@ workdir /workspace
 copy main.py main.py
 copy agent agent
 copy .tmux.conf .tmux.conf
+copy mcps mcps
 
 expose 7681
 

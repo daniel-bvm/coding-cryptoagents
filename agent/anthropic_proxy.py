@@ -96,7 +96,6 @@ OPENAI_MODELS = [
     "gpt-4o-mini-audio-preview",
     "gpt-4.1",  # Added default big model
     "gpt-4.1-mini", # Added default small model
-    settings.llm_model_id
 ]
 
 # List of Gemini models
@@ -1734,18 +1733,18 @@ async def get_models_fn() -> list[dict[str, str]]:
                 "Authorization": f"Bearer {settings.llm_api_key}"
             }
         )
-
+        
         if response.status_code == 200:
             data = response.json()
-            obj_type = data.get('object', '')
-
-            if obj_type == 'list':
-                for model in data.get('data', []):
-                    if model.get('id') and model.get('object') == 'model' and model.get('task', 'chat') == 'chat':
-                        models.append({
-                            "id": model.get('id'),
-                            "name": model.get('folder_name', model.get('id')),
-                        })
+            for model in data.get('data', []):
+                if model.get('id') and model.get('task', 'chat') == 'chat':
+                    models.append({
+                        "id": model.get('id'),
+                        "name": model.get('folder_name', model.get('id')),
+                    })
+                        
+        else:
+            logger.error(f"Error getting models: {response.status_code} {response.text}")
     
     return models
 
@@ -1781,7 +1780,7 @@ async def proxy_v1_chat_completions(raw_request: Request):
     body_json["messages"] = refine_chat_history_v1(body_json["messages"])
     body_json.setdefault("model", settings.llm_model_id)
     chosen_model = body_json.get("model", settings.llm_model_id)
-
+    
     async def oai_stream() -> AsyncGenerator[ChatCompletionStreamResponse, None]:
         body_json.pop("model", None), body_json.pop("stream", None)
         async with AsyncOpenAI(api_key=settings.llm_api_key, base_url=settings.llm_base_url.rstrip("/")) as client:

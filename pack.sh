@@ -1,4 +1,4 @@
 find . | grep -E "(/__pycache__$|\.pyc$|\.pyo$)" | xargs rm -rf
 
-rm -rf coding-cryptoagent-opencode.zip
-zip -r coding-cryptoagent-opencode.zip agent Dockerfile requirements.txt main.py .tmux.conf
+rm -rf prompt-based-opencode.zip
+zip -r prompt-based-opencode.zip agent Dockerfile requirements.txt main.py mcps
