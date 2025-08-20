@@ -23,12 +23,3 @@ run curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash - \
 env OPENCODE_INSTALL_DIR=/bin
 run curl -fsSL https://opencode.ai/install | bash
 
-workdir /workspace
-copy main.py main.py
-copy agent agent
-copy .tmux.conf .tmux.conf
-copy mcps mcps
-
-expose 7681
-
-cmd ["python", "main.py"]
