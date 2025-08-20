@@ -69,7 +69,7 @@ async def make_plan(title: str, user_request: str, max_steps: int = 15) -> list[
             step_data: dict = json.loads(repair_json(response_text[l:r]))
             step = StepV2(**step_data)
             list_of_steps.append(step)
-            logger.info(f"Added step: {step.task} (Reason: {step.reason}; Expectation: {step.expectation})")
+            logger.info(f"Added {step.step_type} step: {step.task} (Reason: {step.reason}; Expectation: {step.expectation})")
         except Exception as e:
             logger.error(f"[1] Failed to parse response: {e}")
 
@@ -122,7 +122,7 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 15) -> AsyncG
             step_data: dict = json.loads(repair_json(response_text[l:r]))
             step = StepV2(**step_data)
             list_of_steps.append(step)
-            logger.info(f"Added step: {step.task} (Reason: {step.reason}; Expectation: {step.expectation})")
+            logger.info(f"Added {step.step_type} step: {step.task} (Reason: {step.reason}; Expectation: {step.expectation})")
             yield step
         except Exception as e:
             logger.error(f"[2] Failed to parse response: {e}")

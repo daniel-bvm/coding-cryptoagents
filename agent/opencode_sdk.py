@@ -2,6 +2,7 @@ from agent.configs import settings
 import httpx
 from typing import Literal
 import logging
+import json
 
 logger = logging.getLogger(__name__) 
 
@@ -39,11 +40,14 @@ async def call_opencode_api_query(
             parts = response_json.get("parts", [])
             
             for item in parts:
-                if item.get("type") == "text":
+                if item.get("type") == "text" and item.get("text"):
                     response_text = item.get("text") # get the last
 
+            if not response_text:
+                logger.warning(f"No text in response: {json.dumps(response_json, indent=2)} (Session: {session_id})")
+
         else:
-            logger.error(f"Failed to call OpenCode API: {response.status_code} {response.text}")
+            logger.error(f"Failed to call OpenCode API: {response.status_code} {response.text} (Session: {session_id})")
 
     return response_text.strip()
 
@@ -80,7 +84,8 @@ async def wait_until_port_is_ready_to_connect(port: int, timeout: float = 60) ->
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
-                await client.get(f"http://localhost:{port}/", timeout=httpx.Timeout(1, connect=1))
+                resp = await client.get(f"http://localhost:{port}/app", timeout=httpx.Timeout(1, connect=1))
+                assert resp.status_code == 200, f"Failed to connect to OpenCode: {resp.status_code} {resp.text}"
                 return True
             except Exception as e:
                 pass

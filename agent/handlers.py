@@ -129,7 +129,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
     # steps: List[StepV2] = await make_plan(title, expectation)
     steps: List[StepV2] = []
     
-    async for step in gen_plan(title, expectation):
+    async for step in gen_plan(title, expectation, 3):
         steps.append(step)
 
         yield wrap_chunk(random_uuid(), f"<action>{step.reason}</action>\n")
