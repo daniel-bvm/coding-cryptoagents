@@ -7,9 +7,9 @@ from agent.opencode_sdk import OpenCodeSDKClient
 logger = logging.getLogger(__name__)
 from typing import Optional, Literal
 
-PLANNING_SYSTEM_PROMPT = """Your task is to collect any information that needed to respond to the user request. Do not ask again for confirmation, just do it your way. Do not take any extra steps. Your output should include what you have found related to the request."""
+PLANNING_SYSTEM_PROMPT = """Your task is to collect information that needed to respond to the user request. Do not ask again for confirmation, just do it your way. Do not take any extra steps. Your output should include what you have found related to the request. You dont need to plan or write any code, just collect information."""
 
-BUILD_SYSTEM_PROMPT = """Your task is to build the project, a static site or a blog post based on the plan. Strictly, follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Your output should be short, talk about what you have done."""
+BUILD_SYSTEM_PROMPT = """Your task is to build the project, a static site or a blog post based on the plan. Strictly, follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Your final output should be short, talk about what you have done (no code explanation in detail is required)."""
 
 async def execute_plan_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None) -> ClaudeCodeStepOutput:
 

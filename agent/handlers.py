@@ -82,7 +82,7 @@ def segment_steps_by_type(steps: list[StepV2]) -> List[List[StepV2]]:
         seg.append(steps[it])
         it += 1
 
-        while it < len(steps) and steps[it].step_type == steps[it-1].step_type and len(seg) < 2:
+        while it < len(steps) and steps[it].step_type == steps[it-1].step_type and len(seg) < 4:
             seg.append(steps[it])
             it += 1
 
@@ -195,6 +195,13 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
         recap += "File index.html has been sent to the user."
         index_html = await inline_html(found[0])
         yield wrap_chunk(random_uuid(), construct_file_response([index_html]))
+
+    with open('debug.json', 'w') as f:
+        json.dump({
+            "recap": recap,
+            "steps": [step.model_dump() for step in steps],
+            "output": [step_output.model_dump() for step_output in steps_output]
+        }, f, indent=2)
 
     yield recap
 
