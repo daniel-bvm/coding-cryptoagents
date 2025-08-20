@@ -137,7 +137,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
         yield wrap_chunk(random_uuid(), f"<details><summary>Expected</summary>{step.expectation}</details>\n")
 
     if not steps:
-        yield "Planner is quite tired now, he's sleeping"
+        yield "Planner is quite tired now, he's sleeping. The task can not be completed at this moment, please come back later."
         return
 
     task_id = os.urandom(4).hex()
