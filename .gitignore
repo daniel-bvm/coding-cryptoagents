@@ -19,3 +19,7 @@ venv/
 .vscode/
 opencode-workspace/
 data/
+
+.env
+chat_history.json
+tasks.db

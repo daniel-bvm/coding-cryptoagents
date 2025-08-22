@@ -100,7 +100,7 @@ html {
     overflow: hidden;
 }
 
-.progress-bar::after {
+.progress-bar.active::after {
     content: '';
     position: absolute;
     top: 0;
