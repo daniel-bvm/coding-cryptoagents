@@ -10,7 +10,7 @@ async def call_opencode_api_query(
     session_id: str,
     agent: Literal["plan", "build"],
     system: str,
-    message: str,
+    message: str | list[dict],
     model_provider: str,
     model_id: str, 
     opencode_host: str = settings.opencode_host,
@@ -22,9 +22,13 @@ async def call_opencode_api_query(
         "modelID": model_id,
         "agent": agent,
         "system": system,
-        "parts": [{"type": "text", "text": message}]
     }
-    
+
+    if isinstance(message, list):
+        message_data["parts"] = message
+    else:
+        message_data["parts"] = [{"type": "text", "text": message}]
+
     response_text = ''
 
     async with httpx.AsyncClient() as client:
@@ -128,7 +132,7 @@ class OpenCodeSDKClient:
         self, 
         agent: Literal["plan", "build"], 
         system: str,
-        message: str,
+        message: str | list[dict],
         model_provider: str = settings.llm_model_provider,
         model_id: str = settings.llm_model_id_code,
         session_id: str | None = None

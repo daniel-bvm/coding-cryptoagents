@@ -30,13 +30,14 @@ Your task is to first communicate with the user and determine the next step, bui
 In other cases, you are free to guess what they want and call the build tool. We can solve any problems. Any valid request, send it to us, then the user will get what they want.
 """
 
-from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse
+from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
 from agent.utils import refine_chat_history, refine_assistant_message
 from agent.configs import settings
 from agent.oai_streaming import create_streaming_response, ChatCompletionResponseBuilder
 from typing import AsyncGenerator, Any, List
 import logging
 import json
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ from agent.app_models import StepOutput, ClaudeCodeStepOutput
 from agent.executor import execute_steps_v2
 from agent.opencode_sdk import OpenCodeSDKClient
 from agent.oai_models import ChatCompletionStreamResponse
-from agent.utils import wrap_chunk, random_uuid, inline_html
+from agent.utils import wrap_chunk, random_uuid, inline_html, compress_output
 import glob
 import base64
 from mimetypes import guess_type
@@ -129,7 +130,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
     # steps: List[StepV2] = await make_plan(title, expectation)
     steps: List[StepV2] = []
     
-    async for step in gen_plan(title, expectation, 3):
+    async for step in gen_plan(title, expectation, 8):
         steps.append(step)
 
         yield wrap_chunk(random_uuid(), f"<action>{step.reason}</action>\n")
@@ -185,23 +186,47 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
         recap += f"Task: {composed_step.task}\n"
         recap += f"Output: {step_output.full}\n\n"
 
-    found = glob.glob(os.path.join(workdir, "**", "index.html"), recursive=True)
+    # found = glob.glob(os.path.join(workdir, "**", "index.html"), recursive=True)
+    found_all = glob.glob(os.path.join(workdir, "**"), recursive=True)
 
-    if len(found) > 1:
-        logger.warning(f"Multiple index.html files found in {workdir}: {found}. Picking the first one.")
-        found = [found[0]]
+    # if found:
 
-    if found:
-        recap += "File index.html has been sent to the user."
-        index_html = await inline_html(found[0])
-        yield wrap_chunk(random_uuid(), construct_file_response([index_html]))
+    #     inline_html_files = [
+    #         await inline_html(file, file.replace('.html', '.inline.html'))
+    #         for file in found
+    #     ]
 
-    with open('debug.json', 'w') as f:
-        json.dump({
-            "recap": recap,
-            "steps": [step.model_dump() for step in steps],
-            "output": [step_output.model_dump() for step_output in steps_output]
-        }, f, indent=2)
+    #     # remove empty file
+    #     inline_html_files = [
+    #         file for file in inline_html_files 
+    #         if file and os.path.exists(file) and os.path.getsize(file) > 0
+    #     ]
+
+    #     if len(inline_html_files) > 0:
+    #         yield wrap_chunk(random_uuid(), construct_file_response(inline_html_files))
+    #         recap += "File output has been sent to the user."
+    
+    if found_all:
+        output_file = f"output_{task_id}.zip"
+
+        try:
+            zip_output = await compress_output(workdir, output_file)
+
+            if zip_output and os.path.exists(zip_output) and os.path.getsize(zip_output) > 0:
+                logger.info(f"Output file: {zip_output}; Size: {os.path.getsize(zip_output)}")
+                yield wrap_chunk(random_uuid(), construct_file_response([zip_output]))
+
+            recap += f"Output has been sent to the user.\n"
+
+        except Exception as e:
+            logger.error(f"Error compressing output: {e}")
+
+        finally:
+            if os.path.exists(output_file):
+                os.remove(output_file)
+
+            # if os.path.exists(workdir): # disable for easier debugging
+            #     shutil.rmtree(workdir, ignore_errors=True)
 
     yield recap
 
@@ -242,8 +267,12 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
         async for chunk in streaming_iter:
             completion_builder.add_chunk(chunk)
 
-            if chunk.choices[0].delta.content or chunk.choices[0].delta.reasoning_content:
+            if isinstance(chunk, ChatCompletionStreamResponse) and (chunk.choices[0].delta.content or chunk.choices[0].delta.reasoning_content):
                 yield chunk
+
+            if isinstance(chunk, ErrorResponse):
+                yield chunk
+                return
 
         completion = await completion_builder.build()
         

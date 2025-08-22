@@ -102,7 +102,8 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                     "permission": {
                         "*": "allow"
                     },
-                    "mcp": mcp_config
+                    "mcp": mcp_config,
+                    "autoupdate": False
                 }
 
             with open(config_path, "w") as f:

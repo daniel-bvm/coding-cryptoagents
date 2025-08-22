@@ -3,7 +3,8 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from .oai_models import (
     ChatCompletionRequest, 
     ChatCompletionStreamResponse,
-    random_uuid
+    random_uuid,
+    ErrorResponse
 )
 from typing import AsyncGenerator
 import logging
@@ -25,30 +26,36 @@ async def prompt(request: ChatCompletionRequest):
         async def to_bytes(gen: AsyncGenerator) -> AsyncGenerator[bytes, None]:
             nonlocal ttft, tps, n_tokens
 
-            async for chunk in gen:
+            try:
+                async for chunk in gen:
+                    current_time = time.time()
+
+                    n_tokens += 1
+                    ttft = min(ttft, current_time - enqueued)
+                    tps = n_tokens / (current_time - enqueued)
+
+                    if isinstance(chunk, ChatCompletionStreamResponse):
+                        data = chunk.model_dump_json()
+                        yield "data: " + data + "\n\n"
+
+                logger.info(f"Request {req_id} - TTFT: {ttft:.2f}s, TPS: {tps:.2f} tokens/s")
+
+            finally:
+                yield "data: [DONE]\n\n"
+
+        return StreamingResponse(to_bytes(generator), media_type="text/event-stream")
+    
+    else:
+        try:
+            async for chunk in generator:
                 current_time = time.time()
 
                 n_tokens += 1
                 ttft = min(ttft, current_time - enqueued)
                 tps = n_tokens / (current_time - enqueued)
 
-                if isinstance(chunk, ChatCompletionStreamResponse):
-                    data = chunk.model_dump_json()
-                    yield "data: " + data + "\n\n"
-
             logger.info(f"Request {req_id} - TTFT: {ttft:.2f}s, TPS: {tps:.2f} tokens/s")
-            yield "data: [DONE]\n\n"
+            return JSONResponse(chunk.model_dump()) # use the last chunk
 
-        return StreamingResponse(to_bytes(generator), media_type="text/event-stream")
-    
-    else:
-        async for chunk in generator:
-            current_time = time.time()
-
-            n_tokens += 1
-            ttft = min(ttft, current_time - enqueued)
-            tps = n_tokens / (current_time - enqueued)
-
-        logger.info(f"Request {req_id} - TTFT: {ttft:.2f}s, TPS: {tps:.2f} tokens/s")
-        return JSONResponse(chunk.model_dump())
-
+        except Exception as e:
+            return JSONResponse(ErrorResponse(message="Unknown error", type="unknown_error", code=500).model_dump())

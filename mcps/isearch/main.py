@@ -53,7 +53,7 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
                 )
                 
                 if response.status_code != 200:
-                    logger.warning(f"Tavily API returned status code {response.status_code}")
+                    logger.warning(f"Tavily API returned status code {response.status_code}; {response.text}")
                     return []
 
                 response_json: dict = response.json()
@@ -61,7 +61,7 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
             
             except Exception as e:
                 logger.error(f"Error searching web: {e}")
-                return []
+                return [{"error": str(e)}]
     
     if ETERNALAI_MCP_PROXY_URL:
         full_body = {
@@ -90,13 +90,17 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
                     ETERNALAI_MCP_PROXY_URL,
                     json=data
                 )
-                
+
+                if response.status_code != 200:
+                    logger.warning(f"Tavily API returned status code {response.status_code}; {response.text}")
+                    return []
+
                 response_json: dict = response.json()
                 return parse_tavily_response(response_json)
                 
             except Exception as e:
                 logger.error(f"Error searching web: {e}")
-                return []
+                return [{"error": str(e)}]
 
     logger.error("No API key or keyless provider configured")
     return []

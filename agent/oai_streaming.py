@@ -33,13 +33,16 @@ class ChatCompletionResponseBuilder:
         self.msg, self.calls_by_idx, self.finished_reason, self.model_id, self.completion_id = '', {}, '', '', ''
         self.calls = []
 
-    def add_chunk(self, chunk: ChatCompletionStreamResponse):
+    def add_chunk(self, chunk: ChatCompletionStreamResponse | ErrorResponse) -> ChatCompletionStreamResponse | ErrorResponse:
+        if isinstance(chunk, ErrorResponse):
+            return chunk
+
         choice = chunk.choices[0]
 
         if choice.delta.content:
             self.msg += choice.delta.content
 
-        elif choice.delta.tool_calls:
+        elif choice.delta.tool_calls:   
             for tool_call in choice.delta.tool_calls:
                 # call_idx = tool_call.index
 
@@ -116,7 +119,7 @@ async def create_streaming_response(
     **payload_to_call
 ) -> AsyncGenerator[ChatCompletionStreamResponse, None]:
     completion_path = completion_path.strip("/")
-    logger.info(f"Streaming response to {base_url}/{completion_path}")
+    logger.info(f"Streaming response from {base_url}/{completion_path}")
     payload_to_call.pop("stream", None)
 
     async with httpx.AsyncClient(follow_redirects=True) as client:

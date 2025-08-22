@@ -164,8 +164,13 @@ def strip_toolcall_noti(content: str) -> str:
     return cleaned.strip()
 
 
-def strip_thinking_content(content: str) -> str:
+def strip_thinking_content(content: str, logging: bool=False) -> str:
     pat = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+
+    # if logging:
+    #     if pat.search(content):
+    #         logger.info(f"Thinking content found in the content: {content}")
+
     return pat.sub("", content).lstrip()
 
 
@@ -193,7 +198,7 @@ def refine_chat_history(messages: list[dict[str, str]], system_prompt: str = "")
 
             for item in content:
                 if item.get('type', 'undefined') == 'text':
-                    text_input += item.get('text') or ''
+                    text_input += strip_thinking_content(item.get('text') or '', logging=True)
 
             refined_messages.append({
                 "role": "user",
@@ -203,7 +208,7 @@ def refine_chat_history(messages: list[dict[str, str]], system_prompt: str = "")
         else:
             _message = {
                 "role": message.get('role', 'assistant'),
-                "content": strip_toolcall_noti(strip_thinking_content(message.get("content", "")))
+                "content": strip_toolcall_noti(strip_thinking_content(message.get("content", ""), logging=True))
             }
 
             refined_messages.append(_message)
@@ -233,6 +238,7 @@ def refine_chat_history_v1(messages: list[dict[str, str]]) -> list[dict[str, str
         tool_calls: list[dict[str, Any]] = message.get('tool_calls', [])
 
         if role == 'tool':
+            message['content'] = strip_thinking_content(message['content']) or 'Successfully executed (no output)'
             refined_messages.append(message)
             continue
 
@@ -434,8 +440,9 @@ class AgentResourceManager:
             yield wrap_chunk(random_uuid(), buffer, 'assistant')
 
 import os
-import aiofiles
 import asyncio
+import shlex
+import zipfile
 
 # create one file html
 async def inline_html(index_html_file: str, output_file: str = None) -> str | None:
@@ -445,22 +452,35 @@ async def inline_html(index_html_file: str, output_file: str = None) -> str | No
     if not os.path.isfile(index_html_file):
         return None
 
-    folder = os.path.dirname(index_html_file)
     output_file = output_file or index_html_file
-
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-    process = await asyncio.create_subprocess_exec(
-        "inliner",
-        index_html_file,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
+    quoted_index_html_file = shlex.quote(index_html_file)
+    quoted_output_file = shlex.quote(output_file)
 
-    stdout, stderr = await process.communicate()
+    process = await asyncio.create_subprocess_shell(f"npx single-file-cli {quoted_index_html_file} -o {quoted_output_file}")
+    code = await process.wait()
 
-    if await process.wait() == 0:
-        async with aiofiles.open(output_file, "wb") as f:
-            await f.write(stdout)
+    if code != 0:
+        logger.warning(f"Error inlining HTML file {index_html_file}")
+
+    return output_file
+
+
+# create one file html
+async def compress_output(folder: str, output_file: str = None) -> str | None:
+    if not os.path.exists(folder):
+        return None
+
+    if not os.path.isdir(folder):
+        return None
+
+    with zipfile.ZipFile(output_file, 'w') as zipf:
+        for root, dirs, files in os.walk(folder):
+            for file in files:
+                zipf.write(
+                    os.path.join(root, file), 
+                    os.path.relpath(os.path.join(root, file), folder)
+                )
 
     return output_file

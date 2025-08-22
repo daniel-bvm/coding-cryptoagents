@@ -1748,25 +1748,25 @@ async def get_models_fn() -> list[dict[str, str]]:
     
     return models
 
-async def gen2bytes(generator: AsyncGenerator[ChatCompletionStreamResponse, None], model: str) -> AsyncGenerator[str, None]:
-    models = await get_models_fn()
-    model_name = next((m['name'] for m in models if m['id'] == model), model)
 
-    try:
-        async for item in generator:
-            if item.choices and (item.choices[0].delta.content or item.choices[0].delta.tool_calls):
-                if item.model in ['', 'unknown', None]:
-                    item.model = model_name
-
-                yield 'data: ' + item.model_dump_json() + "\n\n"
-    
-    except Exception as e:
-        logger.error(f"Error generating bytes: {e}")
-
-    finally:
-        yield "data: [DONE]\n\n"
-
-from openai import AsyncOpenAI
+async def make_stream_completion(
+    base_url: str, 
+    api_key: str, 
+    payload: dict[str, Any], 
+) -> AsyncGenerator[str, None]:
+    async with httpx.AsyncClient() as client:
+        async with client.stream(
+            "POST",
+            f"{base_url.rstrip('/')}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}"
+            },
+            json=payload,
+            timeout=httpx.Timeout(60.0 * 10)
+        ) as response:
+            async for line in response.aiter_lines():
+                if line:
+                    yield (line + '\n\n').encode('utf-8')
 
 @app.post("/v1/chat/completions")
 async def proxy_v1_chat_completions(raw_request: Request):
@@ -1775,44 +1775,37 @@ async def proxy_v1_chat_completions(raw_request: Request):
     """
 
     body_json: dict[str, Any] = await raw_request.json()
-    streaming = body_json.pop("stream", False)
+    streaming = body_json.setdefault("stream", False)
 
     body_json["messages"] = refine_chat_history_v1(body_json["messages"])
+
+    with open(f'opencode-workspace/{int(time.time())}.json', 'w') as f:
+        json.dump(body_json["messages"], f, indent=2)
+
     body_json.setdefault("model", settings.llm_model_id)
-    chosen_model = body_json.get("model", settings.llm_model_id)
-    
-    async def oai_stream() -> AsyncGenerator[ChatCompletionStreamResponse, None]:
-        body_json.pop("model", None), body_json.pop("stream", None)
-        async with AsyncOpenAI(api_key=settings.llm_api_key, base_url=settings.llm_base_url.rstrip("/")) as client:
-            generator = await client.chat.completions.create(
-                model=chosen_model,
-                stream=True,
-                messages=body_json["messages"],
-                tools=body_json.get("tools", []),
-                tool_choice=body_json.get("tool_choice", None),
-                temperature=body_json.get("temperature", 1.0),
-                n=body_json.get("n", 1)
+
+    if not streaming:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{settings.llm_base_url.rstrip('/')}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {settings.llm_api_key}"
+                },
+                json=body_json,
+                timeout=httpx.Timeout(60.0 * 10)
             )
 
-            async for chunk in generator:
-                yield chunk
-
-    generator = oai_stream()
-
-    if streaming:
-        return StreamingResponse(
-            gen2bytes(generator, chosen_model), 
-            media_type="text/event-stream"
-        )
-
-    builder = ChatCompletionResponseBuilder()
-
-    async for chunk in generator:
-        builder.add_chunk(chunk)
+            return JSONResponse(content=response.json())
     
-    completions = await builder.build()
+    return StreamingResponse(
+        content=make_stream_completion(
+            base_url=settings.llm_base_url,
+            api_key=settings.llm_api_key,
+            payload=body_json,
+        )
+    )
 
-    return JSONResponse(content=completions.model_dump())
+
 
 @app.post("/chat/completions")
 async def proxy_chat_completions(raw_request: Request):
