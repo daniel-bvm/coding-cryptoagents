@@ -17,5 +17,5 @@ Archive.zip
 venv/
 
 .vscode/
-.opencode-workspace/
+opencode-workspace/
 data/
