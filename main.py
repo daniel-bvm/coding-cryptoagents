@@ -22,7 +22,8 @@ CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 os.makedirs(opencode_dir, exist_ok=True)
 
 async def update_config_task(repeat_interval=0): # non-positive --> no repeat
-    isearch_path = os.path.join(CURRENT_DIRECTORY, "mcps", "isearch", "main.py")
+    isearch_path = os.path.join(CURRENT_DIRECTORY, "mcps", "tavily_search", "main.py")
+    financial_datasets_path = os.path.join(CURRENT_DIRECTORY, "mcps", "financial_datasets", "main.py")
 
     while True:
         try:
@@ -34,13 +35,22 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 
             if settings.tavily_api_key:
                 mcp_env["TAVILY_API_KEY"] = settings.tavily_api_key
-                
+
+            if settings.financial_datasets_api_key:
+                mcp_env["FINANCIAL_DATASETS_API_KEY"] = settings.financial_datasets_api_key
+
             logger.info(f"MCP Environment: {mcp_env}")
 
             mcp_config = {
-                "isearch": {
+                "tavily_search": {
                     "type": "local",
                     "command": [sys.executable, isearch_path],
+                    "enabled": True,
+                    "environment": mcp_env
+                },
+                "financial_datasets": {
+                    "type": "local",
+                    "command": [sys.executable, financial_datasets_path],
                     "enabled": True,
                     "environment": mcp_env
                 }
@@ -78,7 +88,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "todowrite": True,
                                 "todoread": True,
                                 "webfetch": False,
-                                "isearch_*": False
+                                "tavily_search_*": False
                             }
                         },
                         "plan": {
@@ -95,7 +105,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "todowrite": True,
                                 "todoread": True,
                                 "webfetch": True,
-                                "isearch_*": True
+                                "tavily_search_*": True
                             }
                         }
                     },
@@ -120,8 +130,12 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await update_config_task()
-    yield
+    task = asyncio.create_task(update_config_task(repeat_interval=30))
+
+    try:
+        yield
+    finally:
+        task.cancel()
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(apis_app)
