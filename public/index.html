@@ -143,7 +143,7 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div class="bg-white rounded-2xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300">
                 <div class="flex items-center">
-                    <div class="bg-blue-100 p-3 rounded-full">
+                    <div class="bg-blue-100 rounded-full w-12 h-12 grid place-items-center">
                         <i class="fas fa-tasks text-blue-600"></i>
                     </div>
                     <div class="ml-4">
@@ -155,7 +155,7 @@
 
             <div class="bg-white rounded-2xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300">
                 <div class="flex items-center">
-                    <div class="bg-green-100 p-3 rounded-full">
+                    <div class="bg-green-100  w-12 h-12 grid place-items-center rounded-full">
                         <i class="fas fa-check-circle text-green-600"></i>
                     </div>
                     <div class="ml-4">
@@ -167,7 +167,7 @@
 
             <div class="bg-white rounded-2xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300">
                 <div class="flex items-center">
-                    <div class="bg-yellow-100 p-3 rounded-full">
+                    <div class="bg-yellow-100  w-12 h-12 grid place-items-center rounded-full">
                         <i class="fas fa-clock text-yellow-600"></i>
                     </div>
                     <div class="ml-4">
@@ -179,7 +179,7 @@
 
             <div class="bg-white rounded-2xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300">
                 <div class="flex items-center">
-                    <div class="bg-red-100 p-3 rounded-full">
+                    <div class="bg-red-100  w-12 h-12 grid place-items-center rounded-full">
                         <i class="fas fa-exclamation-triangle text-red-600"></i>
                     </div>
                     <div class="ml-4">
@@ -221,7 +221,7 @@
 
         <!-- Task List -->
         <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 w-full">
                 <h2 class="text-2xl font-bold flex items-center">
                     <i class="fas fa-list mr-3"></i> Recent Tasks
                 </h2>
@@ -316,11 +316,11 @@
 
     <!-- Task Detail Modal -->
     <div x-show="selectedTask" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" @click.self="closeTaskModal()" <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" x-show="selectedTask" x-transition:enter="transition ease-out duration-300"
+        class="fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4 z-50" @click.self="closeTaskModal()" <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" x-show="selectedTask" x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-100 transform scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform scale-100" x-transition:leave-end="opacity-0 transform scale-95">
 
         <!-- Modal Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 w-full">
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-2xl font-bold" x-text="selectedTask?.title"></h2>
@@ -348,9 +348,9 @@
         </div>
 
         <!-- Modal Content -->
-        <div class="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-100px)] bg-white">
             <template x-if="selectedTask?.status === 'completed' && selectedTask?.has_index_html">
-                    <!-- Website Preview -->
+                    <!-- Website Preview --> 
                     <div class="mb-6">
                         <h3 class="text-lg font-bold mb-4 flex items-center">
                             <i class="fas fa-globe mr-2 text-green-600"></i>
@@ -366,7 +366,7 @@
             <template x-if="selectedTask?.status !== 'completed'">
                     <!-- Progress Section -->
                     <div class="mb-6">
-                        <h3 class="text-lg font-bold mb-4 flex items-center">
+                        <h3 class="text-lg text-black font-bold mb-4 flex items-center">
                             <i class="fas fa-tasks mr-2 text-blue-600"></i>
                             Progress
                         </h3>
@@ -392,10 +392,10 @@
 
     <!-- Task Steps -->
     <div class="mb-6" x-show="taskSteps.length > 0">
-        <h3 class="text-lg font-bold mb-4 flex items-center">
+        <h3 class="text-lg font-bold mb-4 flex items-center text-black">
             <i class="fas fa-list-ol mr-2 text-purple-600"></i> Execution Steps
         </h3>
-        <div class="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+        <div class="bg-gray-50 rounded-lg p-4">
             <template x-for="(step, index) in taskSteps" :key="step.id">
                             <div class="mb-4 p-4 border rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-md"
                                  :class="getStepStatusColor(step.status)">
