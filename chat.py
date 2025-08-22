@@ -5,7 +5,7 @@ import time
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--address", type=str, default="http://localhost:8001/prompt")
+    parser.add_argument("--address", type=str, default="http://localhost:8000/prompt")
     args = parser.parse_args()
 
     user_messages = [
