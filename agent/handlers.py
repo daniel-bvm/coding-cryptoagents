@@ -48,6 +48,8 @@ from agent.executor import execute_steps_v2
 from agent.opencode_sdk import OpenCodeSDKClient
 from agent.oai_models import ChatCompletionStreamResponse
 from agent.utils import wrap_chunk, random_uuid, inline_html, compress_output
+from agent.database import get_task_repository
+from agent.pubsub import EventHandler, EventPayload, EventType
 import glob
 import base64
 from mimetypes import guess_type
@@ -102,6 +104,22 @@ def create_data_uri(file_path: str) -> str:
     mime_type = guess_type(file_path)[0] or "application/octet-stream"
     return f"data:{mime_type};base64,{encoded_data}"
 
+async def publish_task_update(task, event_type: str = "task_updated"):
+    """Publish real-time task updates via pubsub"""
+    try:
+        from agent.task_api import task_to_response
+        event = EventPayload(
+            type=EventType.MESSAGE,
+            data={
+                "event_type": event_type,
+                "task": task_to_response(task).model_dump()
+            },
+            channel="tasks"
+        )
+        await EventHandler.event_handler().publish(event)
+    except Exception as e:
+        logger.error(f"Error publishing task update: {e}")
+
 def construct_file_response(file_paths: list[str]) -> str:
     files_xml = ""
 
@@ -125,6 +143,29 @@ def construct_file_response(file_paths: list[str]) -> str:
 
 async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionStreamResponse | ChatCompletionResponse, None]: # recap
     assert expectation is not None, "No task definition provided"
+    
+    # Create task in database
+    task_id = os.urandom(4).hex()
+    repo = get_task_repository()
+    try:
+        task = repo.create_task(
+            task_id=task_id,
+            title=title,
+            expectation=expectation
+        )
+        
+        # Publish task creation event
+        await publish_task_update(task, "task_created")
+        
+        # Update task to processing
+        task = repo.update_task_status(task_id, "processing")
+        await publish_task_update(task, "task_status")
+        
+    except Exception as e:
+        logger.error(f"Error creating task: {e}")
+    finally:
+        repo.db.close()
+    
     yield wrap_chunk(random_uuid(), f"<action>Planning...</action>\n")
 
     # steps: List[StepV2] = await make_plan(title, expectation)
@@ -133,17 +174,104 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
     async for step in gen_plan(title, expectation, 8):
         steps.append(step)
 
+        # Create step in database
+        repo = get_task_repository()
+        try:
+            db_step = repo.create_task_step(
+                step_id=step.id,
+                task_id=task_id,
+                step_number=len(steps),
+                step_type=step.step_type,
+                task_description=step.task,
+                expectation=step.expectation,
+                reason=step.reason
+            )
+        except Exception as e:
+            logger.error(f"Error creating step in database: {e}")
+        finally:
+            repo.db.close()
+
+        # Publish plan step creation event
+        try:
+            event = EventPayload(
+                type=EventType.INFO,
+                data={
+                    "event_type": "plan_step_created",
+                    "task_id": task_id,
+                    "step": {
+                        "id": step.id,
+                        "step_type": step.step_type,
+                        "task": step.task,
+                        "expectation": step.expectation,
+                        "reason": step.reason
+                    },
+                    "step_number": len(steps),
+                    "title": title
+                },
+                channel="tasks"
+            )
+            await EventHandler.event_handler().publish(event)
+        except Exception as e:
+            logger.error(f"Error publishing plan step event: {e}")
+
         yield wrap_chunk(random_uuid(), f"<action>{step.reason}</action>\n")
         yield wrap_chunk(random_uuid(), f"<details><summary>Todo</summary>{step.task}</details>\n")
         yield wrap_chunk(random_uuid(), f"<details><summary>Expected</summary>{step.expectation}</details>\n")
 
     if not steps:
+        # Update task as failed
+        repo = get_task_repository()
+        try:
+            task = repo.update_task_status(task_id, "failed", "Planner could not generate steps")
+            await publish_task_update(task, "task_status")
+        except Exception as e:
+            logger.error(f"Error updating task status: {e}")
+        finally:
+            repo.db.close()
+        
         yield "Planner is quite tired now, he's sleeping. The task can not be completed at this moment, please come back later."
         return
 
-    task_id = os.urandom(4).hex()
     workdir = os.path.abspath(os.path.join(settings.opencode_directory, task_id))
     os.makedirs(workdir, exist_ok=True)
+    
+    # Publish plan completion event
+    try:
+        event = EventPayload(
+            type=EventType.INFO,
+            data={
+                "event_type": "plan_completed",
+                "task_id": task_id,
+                "title": title,
+                "total_steps": len(steps),
+                "plan_summary": {
+                    "plan_steps": len([s for s in steps if s.step_type == "plan"]),
+                    "build_steps": len([s for s in steps if s.step_type == "build"]),
+                    "steps": [
+                        {
+                            "id": step.id,
+                            "step_type": step.step_type,
+                            "task": step.task[:100] + "..." if len(step.task) > 100 else step.task,
+                            "reason": step.reason
+                        } for step in steps
+                    ]
+                }
+            },
+            channel="tasks"
+        )
+        await EventHandler.event_handler().publish(event)
+    except Exception as e:
+        logger.error(f"Error publishing plan completion event: {e}")
+
+    # Update task with total steps
+    repo = get_task_repository()
+    try:
+        task = repo.update_task_progress(task_id, 10, "Planning completed", 0, len(steps))
+        await publish_task_update(task, "task_progress")
+    except Exception as e:
+        logger.error(f"Error updating task progress: {e}")
+    finally:
+        repo.db.close()
 
     segmented_steps: List[List[StepV2]] = segment_steps_by_type(steps)
     steps_output: list[StepOutput] = []
@@ -167,6 +295,40 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
         composed_step = compose_steps(steps, task_offset_1)
         logger.info(f"Task {task_id}; Executing step: {composed_step.task}")
 
+        # Update progress
+        progress = 10 + int((i / len(segmented_steps)) * 80)  # 10% to 90%
+        repo = get_task_repository()
+        try:
+            task = repo.update_task_progress(task_id, progress, f"Executing: {composed_step.task[:50]}...", i, len(segmented_steps))
+            await publish_task_update(task, "task_progress")
+        except Exception as e:
+            logger.error(f"Error updating task progress: {e}")
+        finally:
+            repo.db.close()
+
+        # Update step statuses to executing
+        for step in steps:
+            repo = get_task_repository()
+            try:
+                repo.update_step_status(step.id, "executing")
+                
+                # Publish step status update
+                event = EventPayload(
+                    type=EventType.MESSAGE,
+                    data={
+                        "event_type": "step_status_updated",
+                        "task_id": task_id,
+                        "step_id": step.id,
+                        "status": "executing"
+                    },
+                    channel="tasks"
+                )
+                await EventHandler.event_handler().publish(event)
+            except Exception as e:
+                logger.error(f"Error updating step status to executing: {e}")
+            finally:
+                repo.db.close()
+
         step_output: ClaudeCodeStepOutput = await execute_steps_v2(
             composed_step.step_type, 
             composed_step, 
@@ -176,6 +338,30 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
 
         logger.info(f"Task {task_id} ({expectation[:128]}...); Step output: {step_output.full}")
         steps_output.append(step_output)
+
+        # Update step statuses to completed
+        for step in steps:
+            repo = get_task_repository()
+            try:
+                repo.update_step_status(step.id, "completed", step_output.full)
+                
+                # Publish step status update
+                event = EventPayload(
+                    type=EventType.MESSAGE,
+                    data={
+                        "event_type": "step_status_updated",
+                        "task_id": task_id,
+                        "step_id": step.id,
+                        "status": "completed",
+                        "output": step_output.full
+                    },
+                    channel="tasks"
+                )
+                await EventHandler.event_handler().publish(event)
+            except Exception as e:
+                logger.error(f"Error updating step status to completed: {e}")
+            finally:
+                repo.db.close()
 
     recap = 'These step(s) have been executed:\n'
 
@@ -227,6 +413,29 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
 
             # if os.path.exists(workdir): # disable for easier debugging
             #     shutil.rmtree(workdir, ignore_errors=True)
+
+    # Update task as completed
+    repo = get_task_repository()
+    try:
+        # Check if index.html exists
+        has_index_html = False
+        if os.path.exists(workdir):
+            index_files = glob.glob(os.path.join(workdir, "**/index.html"), recursive=True)
+            has_index_html = len(index_files) > 0
+        
+        task = repo.update_task_output(task_id, workdir, has_index_html)
+        task = repo.update_task_status(task_id, "completed")
+        await publish_task_update(task, "task_completed")
+    except Exception as e:
+        logger.error(f"Error completing task: {e}")
+        # Mark as failed if we can't update
+        try:
+            task = repo.update_task_status(task_id, "failed", f"Error completing task: {e}")
+            await publish_task_update(task, "task_status")
+        except:
+            pass
+    finally:
+        repo.db.close()
 
     yield recap
 
@@ -299,7 +508,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
 
             except Exception as e:
                 logger.error(f"Error executing tool call: {_name} with args: {_args}")
-                logger.error(f"Error: {e}")
+                logger.error(f"Error: {e}", exc_info=True)
                 _result = f"Error: {e}"
 
             _result = _result or 'No output'

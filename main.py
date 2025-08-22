@@ -127,5 +127,21 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(apis_app)
 app.include_router(anthropic_proxy_app)
 
+# Include task management and pubsub routers
+from agent.task_api import router as task_router
+from agent.pubsub import api_router as pubsub_router
+app.include_router(task_router)
+app.include_router(pubsub_router)
+
+# Static file serving
+from fastapi.staticfiles import StaticFiles
+app.mount("/static", StaticFiles(directory="public"), name="static")
+
+# Serve dashboard at root
+from fastapi.responses import FileResponse
+@app.get("/")
+async def dashboard():
+    return FileResponse("public/index.html")
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=settings.port)

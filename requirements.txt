@@ -9,3 +9,5 @@ mcp==1.13.0
 json-repair==0.49.0
 fastmcp==2.11.3
 aiofiles==24.1.0
+sqlalchemy==2.0.35
+sse-starlette==2.1.3

@@ -6,6 +6,21 @@ import json
 
 logger = logging.getLogger(__name__) 
 
+async def find_opencode_binary() -> str:
+    user = os.getenv("USER")
+
+    for path in [
+        "/root/.opencode/bin/opencode",
+        f"/home/{user}/.opencode/bin/opencode",
+        "/usr/bin/opencode",
+        "/usr/local/bin/opencode",
+        "/bin/opencode",
+    ]:
+        if os.path.exists(path):
+            return path
+
+    raise RuntimeError("OpenCode binary not found")
+
 async def call_opencode_api_query(
     session_id: str,
     agent: Literal["plan", "build"],
@@ -108,7 +123,7 @@ class OpenCodeSDKClient:
         
         logger.info(f"Starting OpenCode server on port {port}")
         self.process = await asyncio.create_subprocess_exec(
-            "/root/.opencode/bin/opencode", "serve", f"--port={port}",
+            await find_opencode_binary(), "serve", f"--port={port}",
             cwd=self.working_dir,
         )
 
