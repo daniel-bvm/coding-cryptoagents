@@ -192,6 +192,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
             break
 
         await asyncio.sleep(repeat_interval)
+        
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -210,11 +211,20 @@ async def lifespan(app: FastAPI):
     
     # Start the config update task
     task = asyncio.create_task(update_config_task(repeat_interval=30))
+    PROXY_PORT = 12345
+
+    logger.info(f"Starting socat proxy on port {PROXY_PORT}")
+    command = f"socat TCP-LISTEN:{PROXY_PORT},fork TCP:localhost:{settings.port}"
+    process = await asyncio.create_subprocess_shell(command, stdout=sys.stdout, stderr=sys.stderr)
 
     try:
         yield
     finally:
         task.cancel()
+
+        if process:
+            process.terminate()
+            await process.wait()
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(apis_app)

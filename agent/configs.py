@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
+import os
 
 class Settings(BaseSettings):
     llm_api_key: str = Field(alias="LLM_API_KEY", default="super-secret")
@@ -17,7 +18,10 @@ class Settings(BaseSettings):
 
     opencode_host: str = Field(alias="OPENCODE_HOST", default="localhost")
     opencode_port: int = Field(alias="OPENCODE_PORT", default=4096)
-    opencode_directory: str = Field(alias="OPENCODE_DIRECTORY", default="./opencode-workspace")
+    opencode_directory: str = Field(
+        alias="OPENCODE_DIRECTORY", 
+        default="./opencode-workspace" if not os.path.exists("/storage") else "/storage/opencode-workspace"
+    )
     
     tavily_api_key: str = Field(alias="TAVILY_API_KEY", default="")
     financial_datasets_api_key: str = Field(alias="FINANCIAL_DATASETS_API_KEY", default="")

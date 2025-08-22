@@ -59,3 +59,10 @@ async def prompt(request: ChatCompletionRequest):
 
         except Exception as e:
             return JSONResponse(ErrorResponse(message="Unknown error", type="unknown_error", code=500).model_dump())
+
+@router.get("/processing-url")
+def get_processing_url() -> dict:
+    return {
+        "url": f"http://localhost:12345/",
+        "status": "ready"
+    }

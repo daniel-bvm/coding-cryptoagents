@@ -288,20 +288,23 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
     for i in range(len(steps_output), len(segmented_steps)):
         logger.info(f"Task {task_id} ({expectation[:128]}); Progress: {len(steps_output)}/{len(segmented_steps)}")
         
-        steps = segmented_steps[i]
+        ssteps = segmented_steps[i]
 
-        for step in steps:
+        for step in ssteps:
             yield wrap_chunk(random_uuid(), f"<action>{step.task}</action>\n")
 
         task_offset_1 = sum(len(e) for e in segmented_steps[:i]) + 1
-        composed_step = compose_steps(steps, task_offset_1)
+        nsteps = ', '.join([f"{task_offset_1 + j}" for j in range(len(ssteps))])
+
+        composed_step = compose_steps(ssteps, task_offset_1)
         logger.info(f"Task {task_id}; Executing step: {composed_step.task}")
 
         # Update progress
-        progress = 10 + int((task_offset_1 / len(steps)) * 80)  # 10% to 90%
+        progress = 10 + int(((task_offset_1 - 1) / len(steps)) * 80)  # 10% to 90%
         repo = get_task_repository()
+
         try:
-            task = repo.update_task_progress(task_id, progress, f"Executing: {composed_step.task[:50]}...", task_offset_1, len(steps))
+            task = repo.update_task_progress(task_id, progress, f"Executing steps {nsteps}", task_offset_1, len(steps))
             await publish_task_update(task, "task_progress")
         except Exception as e:
             logger.error(f"Error updating task progress: {e}")
@@ -309,7 +312,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
             repo.db.close()
 
         # Update step statuses to executing
-        for step in steps:
+        for step in ssteps:
             repo = get_task_repository()
             try:
                 repo.update_step_status(step.id, "executing")
@@ -342,7 +345,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
         steps_output.append(step_output)
 
         # Update step statuses to completed
-        for step in steps:
+        for step in ssteps:
             repo = get_task_repository()
             try:
                 repo.update_step_status(step.id, "completed", step_output.full)
@@ -367,9 +370,9 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
 
     recap = 'These step(s) have been executed:\n'
 
-    for i, (step_output, steps) in enumerate(zip(steps_output, segmented_steps)):
+    for i, (step_output, ssteps) in enumerate(zip(steps_output, segmented_steps)):
         task_offset_1 = sum(len(e) for e in segmented_steps[:i]) + 1
-        composed_step = compose_steps(steps, task_offset_1)
+        composed_step = compose_steps(ssteps, task_offset_1)
 
         recap += f"Task: {composed_step.task}\n"
         recap += f"Output: {step_output.full}\n\n"
