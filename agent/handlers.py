@@ -171,8 +171,9 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
 
     # steps: List[StepV2] = await make_plan(title, expectation)
     steps: List[StepV2] = []
+    max_steps = 5
     
-    async for step in gen_plan(title, expectation, 5):
+    async for step in gen_plan(title, expectation, max_steps):
         steps.append(step)
 
         # Create step in database
@@ -373,26 +374,8 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
         recap += f"Task: {composed_step.task}\n"
         recap += f"Output: {step_output.full}\n\n"
 
-    # found = glob.glob(os.path.join(workdir, "**", "index.html"), recursive=True)
     found_all = glob.glob(os.path.join(workdir, "**"), recursive=True)
 
-    # if found:
-
-    #     inline_html_files = [
-    #         await inline_html(file, file.replace('.html', '.inline.html'))
-    #         for file in found
-    #     ]
-
-    #     # remove empty file
-    #     inline_html_files = [
-    #         file for file in inline_html_files 
-    #         if file and os.path.exists(file) and os.path.getsize(file) > 0
-    #     ]
-
-    #     if len(inline_html_files) > 0:
-    #         yield wrap_chunk(random_uuid(), construct_file_response(inline_html_files))
-    #         recap += "File output has been sent to the user."
-    
     if found_all:
         output_file = f"output_{task_id}.zip"
 
@@ -427,6 +410,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
         task = repo.update_task_output(task_id, workdir, has_index_html)
         task = repo.update_task_status(task_id, "completed")
         await publish_task_update(task, "task_completed")
+
     except Exception as e:
         logger.error(f"Error completing task: {e}")
         # Mark as failed if we can't update
@@ -435,6 +419,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
             await publish_task_update(task, "task_status")
         except:
             pass
+
     finally:
         repo.db.close()
 
