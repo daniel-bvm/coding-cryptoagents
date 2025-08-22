@@ -1778,10 +1778,6 @@ async def proxy_v1_chat_completions(raw_request: Request):
     streaming = body_json.setdefault("stream", False)
 
     body_json["messages"] = refine_chat_history_v1(body_json["messages"])
-
-    with open(f'opencode-workspace/{int(time.time())}.json', 'w') as f:
-        json.dump(body_json, f, indent=2)
-
     body_json.setdefault("model", settings.llm_model_id)
 
     if not streaming:

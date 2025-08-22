@@ -171,7 +171,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "permission": {
                                 "edit": "allow"
                             },
-                            "prompt": "You are the **Developer**. Build a polished, multi-page, responsive site/report from the prepared content. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic.\n\nInput: `content/*.md`, `content/images.json`, `content/data/*.json`.\nOutput: `reports/*.html`, `assets/styles.css`, `assets/main.js`, optional `docs/styleguide.html`, `reports/README.md`.\n\nWorkflow: parse outline → map pages → build pages → apply styles → add scripts → validate accessibility/responsiveness.\n\nReturn in chat: plan, file tree, next steps."
+                            "prompt": "You are the **Developer**. Build a polished, multi-page, responsive site/report from the prepared content. Use ONLY **HTML5, Vanilla CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic.\n\nInput: `content/*.md`, `content/images.json`, `content/data/*.json`.\nOutput: `reports/*.html`, `assets/styles.css`, `assets/main.js`, optional `docs/styleguide.html`, `reports/README.md`.\n\nWorkflow: parse outline → map pages → build pages → apply styles → add scripts → validate accessibility/responsiveness.\n\nReturn in chat: plan, file tree, next steps."
                         }
                     },
                     "permission": {
@@ -195,6 +195,20 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup: Mark incomplete tasks as failed
+    try:
+        from agent.database import get_task_repository
+        task_repo = get_task_repository()
+        failed_count = task_repo.mark_incomplete_tasks_as_failed()
+        task_repo.db.close()  # Close the database connection
+        if failed_count > 0:
+            logger.info(f"Marked {failed_count} incomplete tasks as failed during startup")
+        else:
+            logger.info("No incomplete tasks found during startup")
+    except Exception as e:
+        logger.error(f"Error cleaning up incomplete tasks during startup: {e}")
+    
+    # Start the config update task
     task = asyncio.create_task(update_config_task(repeat_interval=30))
 
     try:

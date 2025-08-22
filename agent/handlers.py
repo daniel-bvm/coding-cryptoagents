@@ -85,7 +85,7 @@ def segment_steps_by_type(steps: list[StepV2]) -> List[List[StepV2]]:
         seg.append(steps[it])
         it += 1
 
-        while it < len(steps) and steps[it].step_type == steps[it-1].step_type and len(seg) < 4:
+        while it < len(steps) and steps[it].step_type == steps[it-1].step_type and len(seg) < 2:
             seg.append(steps[it])
             it += 1
 
@@ -163,6 +163,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
         
     except Exception as e:
         logger.error(f"Error creating task: {e}")
+
     finally:
         repo.db.close()
     
@@ -171,7 +172,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
     # steps: List[StepV2] = await make_plan(title, expectation)
     steps: List[StepV2] = []
     
-    async for step in gen_plan(title, expectation, 6):
+    async for step in gen_plan(title, expectation, 5):
         steps.append(step)
 
         # Create step in database
@@ -296,10 +297,10 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
         logger.info(f"Task {task_id}; Executing step: {composed_step.task}")
 
         # Update progress
-        progress = 10 + int((i / len(segmented_steps)) * 80)  # 10% to 90%
+        progress = 10 + int((task_offset_1 / len(steps)) * 80)  # 10% to 90%
         repo = get_task_repository()
         try:
-            task = repo.update_task_progress(task_id, progress, f"Executing: {composed_step.task[:50]}...", i, len(segmented_steps))
+            task = repo.update_task_progress(task_id, progress, f"Executing: {composed_step.task[:50]}...", task_offset_1, len(steps))
             await publish_task_update(task, "task_progress")
         except Exception as e:
             logger.error(f"Error updating task progress: {e}")

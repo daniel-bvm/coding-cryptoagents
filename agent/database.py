@@ -78,7 +78,8 @@ class TaskRepository:
         return self.db.query(Task).filter(Task.id == task_id).first()
     
     def get_all_tasks(self, limit: int = 100, offset: int = 0) -> List[Task]:
-        return self.db.query(Task).order_by(Task.created_at.desc()).offset(offset).limit(limit).all()
+        res = self.db.query(Task).order_by(Task.created_at.desc()).offset(offset).limit(limit).all()
+        return res
     
     def update_task_status(self, task_id: str, status: str, error_message: str = None) -> Optional[Task]:
         task = self.get_task(task_id)
@@ -171,6 +172,33 @@ class TaskRepository:
     
     def get_step(self, step_id: str) -> Optional[TaskStep]:
         return self.db.query(TaskStep).filter(TaskStep.id == step_id).first()
+    
+    def mark_incomplete_tasks_as_failed(self) -> int:
+        """Mark all incomplete tasks (pending, processing) as failed at startup"""
+        incomplete_statuses = ["pending", "processing"]
+        incomplete_tasks = self.db.query(Task).filter(Task.status.in_(incomplete_statuses)).all()
+        
+        count = 0
+        for task in incomplete_tasks:
+            task.status = "failed"
+            task.error_message = "Task marked as failed due to application restart"
+            task.updated_at = datetime.utcnow()
+            count += 1
+        
+        # Also mark any executing or pending steps as failed
+        incomplete_steps = self.db.query(TaskStep).filter(
+            TaskStep.status.in_(["pending", "executing"])
+        ).all()
+        
+        for step in incomplete_steps:
+            step.status = "failed"
+            step.error_message = "Step marked as failed due to application restart"
+            if not step.started_at and step.status == "executing":
+                step.started_at = datetime.utcnow()
+            step.completed_at = datetime.utcnow()
+        
+        self.db.commit()
+        return count
 
 def get_task_repository() -> TaskRepository:
     db = get_db()
