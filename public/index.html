@@ -140,13 +140,13 @@
     <!-- Main Content -->
     <main class="container mx-auto px-6 py-8">
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div class="bg-white rounded-2xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300">
                 <div class="flex items-center">
                     <div class="bg-blue-100 rounded-full w-12 h-12 grid place-items-center">
                         <i class="fas fa-tasks text-blue-600"></i>
                     </div>
-                    <div class="ml-4">
+                    <div class="ml-4 flex-1">
                         <p class="text-gray-600 text-sm">Total Tasks</p>
                         <p class="text-2xl font-bold text-gray-800" x-text="tasks.length"></p>
                     </div>
@@ -158,7 +158,7 @@
                     <div class="bg-green-100  w-12 h-12 grid place-items-center rounded-full">
                         <i class="fas fa-check-circle text-green-600"></i>
                     </div>
-                    <div class="ml-4">
+                    <div class="ml-4 flex-1">
                         <p class="text-gray-600 text-sm">Completed</p>
                         <p class="text-2xl font-bold text-gray-800" x-text="completedTasks"></p>
                     </div>
@@ -170,7 +170,7 @@
                     <div class="bg-yellow-100  w-12 h-12 grid place-items-center rounded-full">
                         <i class="fas fa-clock text-yellow-600"></i>
                     </div>
-                    <div class="ml-4">
+                    <div class="ml-4 flex-1">
                         <p class="text-gray-600 text-sm">In Progress</p>
                         <p class="text-2xl font-bold text-gray-800" x-text="inProgressTasks"></p>
                     </div>
@@ -182,7 +182,7 @@
                     <div class="bg-red-100  w-12 h-12 grid place-items-center rounded-full">
                         <i class="fas fa-exclamation-triangle text-red-600"></i>
                     </div>
-                    <div class="ml-4">
+                    <div class="ml-4 flex-1">
                         <p class="text-gray-600 text-sm">Failed</p>
                         <p class="text-2xl font-bold text-gray-800" x-text="failedTasks"></p>
                     </div>
@@ -270,7 +270,7 @@
                     <span class="text-sm text-gray-500" x-text="task.progress + '%'"></span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="progress-bar h-2 rounded-full transition-all duration-500 ease-out" :class="getProgressColor(task.status)" :style="`width: ${task.progress}%`"></div>
+                    <div class="progress-bar h-2 rounded-full transition-all duration-500 ease-out" :class="[getProgressColor(task.status), { 'active': task.status !== 'completed' && task.status !== 'failed' }]" :style="`width: ${task.progress}%`"></div>
                 </div>
             </div>
 
@@ -293,10 +293,10 @@
                             </template>
 
             <!-- Features -->
-            <div class="flex items-center space-x-4 text-sm">
+            <div class="flex items-center text-sm gap-x-4">
                 <template x-if="task.has_index_html">
                                     <span class="flex items-center text-green-600">
-                                        <i class="fas fa-globe mr-1"></i>
+                                        <i class="fas fa-globe  mr-1"></i>
                                         Website
                                     </span>
                                 </template>
@@ -376,8 +376,8 @@
                                 <span class="text-lg font-bold" x-text="selectedTask?.progress + '%'"></span>
                             </div>
                             <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
-                                <div class="h-3 rounded-full transition-all duration-500"
-                                     :class="getProgressColor(selectedTask?.status)"
+                                <div class="progress-bar h-3 rounded-full transition-all duration-500"
+                                     :class="[getProgressColor(selectedTask?.status), { 'active': selectedTask?.status !== 'completed' && selectedTask?.status !== 'failed' }]"
                                      :style="`width: ${selectedTask?.progress}%`"></div>
                             </div>
                             <template x-if="selectedTask?.current_step">

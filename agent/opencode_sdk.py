@@ -15,6 +15,7 @@ async def find_opencode_binary() -> str:
         "/usr/bin/opencode",
         "/usr/local/bin/opencode",
         "/bin/opencode",
+        f"/Users/{user}/.opencode/bin/opencode"
     ]:
         if os.path.exists(path):
             return path
