@@ -83,14 +83,27 @@ class TaskRepository:
     
     def update_task_status(self, task_id: str, status: str, error_message: str = None) -> Optional[Task]:
         task = self.get_task(task_id)
+
         if task:
             task.status = status
             task.updated_at = datetime.utcnow()
+
             if error_message:
                 task.error_message = error_message
+
             if status == "completed":
                 task.completed_at = datetime.utcnow()
                 task.progress = 100
+
+            elif status == "failed":
+                incomplete_steps = self.db.query(TaskStep).filter(
+                    (TaskStep.status.in_(["pending", "executing"])) & (TaskStep.task_id == task_id)
+                ).all()
+
+                for step in incomplete_steps:
+                    step.status = "failed"
+                    step.error_message = "Task failed, incomplete steps marked as failed also"
+
             self.db.commit()
             self.db.refresh(task)
         return task
@@ -181,7 +194,7 @@ class TaskRepository:
         count = 0
         for task in incomplete_tasks:
             task.status = "failed"
-            task.error_message = "Task marked as failed due to application restart"
+            task.error_message = "Task marked as failed due to unhandled events"
             task.updated_at = datetime.utcnow()
             count += 1
         
@@ -192,7 +205,7 @@ class TaskRepository:
         
         for step in incomplete_steps:
             step.status = "failed"
-            step.error_message = "Step marked as failed due to application restart"
+            step.error_message = "Step marked as failed due to unhandled events"
             if not step.started_at and step.status == "executing":
                 step.started_at = datetime.utcnow()
             step.completed_at = datetime.utcnow()

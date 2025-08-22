@@ -48,11 +48,12 @@ from agent.executor import execute_steps_v2
 from agent.opencode_sdk import OpenCodeSDKClient
 from agent.oai_models import ChatCompletionStreamResponse
 from agent.utils import wrap_chunk, random_uuid, inline_html, compress_output
-from agent.database import get_task_repository
+from agent.database import get_task_repository, TaskStep, Task
 from agent.pubsub import EventHandler, EventPayload, EventType
 import glob
 import base64
 from mimetypes import guess_type
+import datetime
 
 def compose_steps(steps: List[StepV2], task_offset_1: int = 1) -> StepV2:
     step_type, task, expectation, reason = steps[0].step_type, '', '', ''
@@ -141,11 +142,10 @@ def construct_file_response(file_paths: list[str]) -> str:
 
     return f"<files>{files_xml}</files>"
 
-async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionStreamResponse | ChatCompletionResponse, None]: # recap
+async def build(task_id: str, title: str, expectation: str) -> AsyncGenerator[ChatCompletionStreamResponse | ChatCompletionResponse, None]: # recap
     assert expectation is not None, "No task definition provided"
     
     # Create task in database
-    task_id = os.urandom(4).hex()
     repo = get_task_repository()
     try:
         task = repo.create_task(
@@ -304,7 +304,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
         repo = get_task_repository()
 
         try:
-            task = repo.update_task_progress(task_id, progress, f"Executing steps {nsteps}", task_offset_1, len(steps))
+            task = repo.update_task_progress(task_id, progress, f"Executing steps {nsteps}", task_offset_1 - 1, len(steps))
             await publish_task_update(task, "task_progress")
         except Exception as e:
             logger.error(f"Error updating task progress: {e}")
@@ -485,8 +485,11 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
 
             logger.info(f"Executing tool call: {_name} with args: {_args}")
             _result = ''
+            task_id = os.urandom(4).hex()
+            _args["task_id"] = task_id
 
             try:
+                repo = get_task_repository()
                 _result_gen: AsyncGenerator[ChatCompletionStreamResponse | str, None] = build(**_args)
 
                 async for chunk in _result_gen:
@@ -499,6 +502,20 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
                 logger.error(f"Error executing tool call: {_name} with args: {_args}")
                 logger.error(f"Error: {e}", exc_info=True)
                 _result = f"Error: {e}"
+                
+                try:
+                    task = repo.update_task_status(
+                        task_id, 
+                        "failed", 
+                        f"Error executing tool call."
+                    )
+
+                    await publish_task_update(task, "task_status")
+                except Exception as e:
+                    logger.error(f"Error updating task status: {e}", exc_info=True)
+
+            finally:
+                repo.db.close()
 
             _result = _result or 'No output'
             logger.info(f"Tool call {_name} result: {_result}")

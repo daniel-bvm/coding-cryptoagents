@@ -37,7 +37,7 @@ async def call_opencode_api_query(
         "providerID": model_provider,
         "modelID": model_id,
         "agent": agent,
-        "system": system,
+        # "system": system,
     }
 
     if isinstance(message, list):
