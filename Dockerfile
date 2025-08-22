@@ -15,4 +15,5 @@ copy agent agent
 copy mcps mcps
 copy public public
 
+expose 12345
 cmd ["python", "main.py"]

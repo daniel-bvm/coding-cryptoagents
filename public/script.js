@@ -65,7 +65,7 @@ function dashboard() {
         async refreshTasks() {
             this.loading = true;
             try {
-                const response = await fetch("/api/tasks/");
+                const response = await fetch("./api/tasks/");
                 if (response.ok) {
                     this.tasks = await response.json();
                 } else {
@@ -245,7 +245,7 @@ function dashboard() {
         // Load files for a task
         async loadTaskFiles(taskId) {
             try {
-                const response = await fetch(`/api/tasks/${taskId}/files`);
+                const response = await fetch(`./api/tasks/${taskId}/files`);
                 if (response.ok) {
                     const data = await response.json();
                     this.taskFiles = data.files;
@@ -258,7 +258,7 @@ function dashboard() {
         // Load steps for a task
         async loadTaskSteps(taskId) {
             try {
-                const response = await fetch(`/api/tasks/${taskId}/steps`);
+                const response = await fetch(`./api/tasks/${taskId}/steps`);
                 if (response.ok) {
                     this.taskSteps = await response.json();
                 } else {
@@ -273,7 +273,7 @@ function dashboard() {
         // Download task as ZIP
         async downloadTask(taskId) {
             try {
-                const response = await fetch(`/api/tasks/${taskId}/download`);
+                const response = await fetch(`./api/tasks/${taskId}/download`);
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
@@ -296,7 +296,7 @@ function dashboard() {
 
         // Preview a file
         previewFile(taskId, filePath) {
-            const url = `/api/tasks/${taskId}/preview/${filePath}`;
+            const url = `./api/tasks/${taskId}/preview/${filePath}`;
             window.open(url, "_blank");
         },
 
