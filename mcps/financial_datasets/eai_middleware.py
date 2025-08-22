@@ -16,7 +16,6 @@ The function translate(PATTERN) returns a regular expression
 corresponding to PATTERN.  (It does not compile it.)
 """
 import os
-import posixpath
 import re
 import functools
 
@@ -178,7 +177,7 @@ def _join_translated_parts(inp, STAR):
     res = "".join(res)
     return fr'(?s:{res})\Z'
 
-ETERNALAI_MCP_PROXY_URL = os.getenv("ETERNALAI_MCP_PROXY_URL", "http://localhost:33030/84532-proxy/prompt") 
+ETERNALAI_MCP_PROXY_URL = os.getenv("ETERNALAI_MCP_PROXY_URL") 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() in "true1yes"
 
 PROXY_SCOPE: list[str] = os.getenv("PROXY_SCOPE", "*").split(',')

@@ -39,16 +39,16 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
             if settings.financial_datasets_api_key:
                 mcp_env["FINANCIAL_DATASETS_API_KEY"] = settings.financial_datasets_api_key
 
-            logger.info(f"MCP Environment: {mcp_env}")
+            # logger.info(f"MCP Environment: {mcp_env}")
 
             mcp_config = {
-                "tavily_search": {
+                "tavily": {
                     "type": "local",
                     "command": [sys.executable, isearch_path],
                     "enabled": True,
                     "environment": mcp_env
                 },
-                "financial_datasets": {
+                "finance": {
                     "type": "local",
                     "command": [sys.executable, financial_datasets_path],
                     "enabled": True,
@@ -74,6 +74,10 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                         }
                     },
                     "agent":  {
+                        "general": {
+                            "mode": "subagent",
+                            "enabled": False
+                        },
                         "build": {
                             "mode": "primary",
                             "tools": {
@@ -88,15 +92,18 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "todowrite": True,
                                 "todoread": True,
                                 "webfetch": False,
-                                "tavily_search_*": False
-                            }
+                                "tavily_search": False,
+                                "tavily_fetch": True,
+                                "finance_*": False
+                            },
+                            "prompt": "Your task is to build the project, a static site or a blog post based on the plan. Strictly, follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Code and assets must be written into files. Your final output should be short, talk about what you have done (no code explanation in detail is required). Ask the developer for edge-task if needed."
                         },
                         "plan": {
                             "mode": "primary",
                             "tools": {
                                 "bash": False,
                                 "edit": False,
-                                "write": True,
+                                "write": False,
                                 "read": True,
                                 "grep": True,
                                 "glob": True,
@@ -104,9 +111,67 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "patch": False,
                                 "todowrite": True,
                                 "todoread": True,
-                                "webfetch": True,
-                                "tavily_search_*": True
-                            }
+                                "webfetch": False,
+                                "tavily_search": True
+                            },
+                            "permission": {
+                                "task": {
+                                    "*": "allow",
+                                    "developer": "ask"
+                                }
+                            },
+                            "prompt": "Your task is to collect information that needed to respond to the user request including text and imge urls if needed. Do not ask again for confirmation, just do it your way. Do not take any extra steps. Your output should include what you have found related to the request. You dont need to plan or write any code, just collect information. You are not allowed to call the developer agent."
+                        },
+                        "fin-analyst": {
+                            "description": "Financial expert for equities, crypto, and macro; fetches structured data via Finance MCP tools and context via Tavily; runs advanced analysis, and provides actionable investment insights.",
+                            "mode": "subagent",
+                            "temperature": 0.1,
+                            "tools": {
+                                "write": True,
+                                "edit": False,
+                                "finance_*": True,
+                                "tavily_*": True,
+                                "todowrite": True,
+                                "todoread": True
+                            },
+                            "prompt": "You are 'Fin Analyst', a professional financial expert who:\n- Calls Finance MCP tools to fetch equities, crypto, and macro data.\n- Calls Tavily tools to fetch contextual news, filings, and reports.\n- Stores results in `financial/data/*.json`.\n- Runs quant, valuation, and portfolio methods; generates Python when useful.\n- Provides buy/sell/hold recommendations with reasoning, scenarios, and Markdown reports.\n\nDeliverables: `financial/plan.md`, `financial/data/*.json`, `financial/analysis.md`, `financial/recommendations.md`.\n\nWorkflow: define scope → fetch datasets → fetch context → store raw → analyze → report → recommend.\n\nReturn in chat: summary of findings, created files, caveats."
+                        },
+                        "general-analyst": {
+                            "description": "General analyst for any topic; fetches structured data via Tavily; runs advanced analysis, and provides actionable investment insights.",
+                            "mode": "subagent",
+                            "temperature": 0.1,
+                            "tools": {
+                                "write": True,
+                                "edit": False,
+                                "tavily_*": True,
+                                "todowrite": True,
+                                "todoread": True
+                            },
+                            "prompt": "You are 'General Analyst', a professional analyst who:\n- Calls Tavily tools to fetch contextual news, filings, and reports.\n- Stores results in `general/data/*.json`.\n- Runs advanced analysis; generates Python when useful.\n- Provides actionable insights.\n\nDeliverables: `general/plan.md`, `general/data/*.json`, `general/analysis.md`, `general/recommendations.md`.\n\nWorkflow: define scope → fetch datasets → fetch context → store raw → analyze → report → recommend.\n\nReturn in chat: summary of findings, created files, caveats."
+                        },
+                        "developer": {
+                            "description": "Turn prepared content into a visually stunning, responsive, accessible report/website, page by page and section by section, using HTML/CSS/JS.",
+                            "mode": "subagent",
+                            "temperature": 0.2,
+                            "tools": {
+                                "write": True,
+                                "edit": True,
+                                "read": True,
+                                "grep": True,
+                                "glob": True,
+                                "list": True,
+                                "patch": True,
+                                "bash": True,
+                                "finance_*": False,
+                                "tavily_search": False,
+                                "tavily_fetch": True,
+                                "todowrite": True,
+                                "todoread": True
+                            },
+                            "permission": {
+                                "edit": "allow"
+                            },
+                            "prompt": "You are the **Developer**. Build a polished, multi-page, responsive site/report from the prepared content. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic.\n\nInput: `content/*.md`, `content/images.json`, `content/data/*.json`.\nOutput: `reports/*.html`, `assets/styles.css`, `assets/main.js`, optional `docs/styleguide.html`, `reports/README.md`.\n\nWorkflow: parse outline → map pages → build pages → apply styles → add scripts → validate accessibility/responsiveness.\n\nReturn in chat: plan, file tree, next steps."
                         }
                     },
                     "permission": {
