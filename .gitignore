@@ -15,3 +15,7 @@ Archive.zip
 *.whl
 # ignore Python virtual environment directories
 venv/
+
+.vscode/
+.opencode-workspace/
+data/
