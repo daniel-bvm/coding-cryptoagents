@@ -75,7 +75,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "glob": True,
                                 "list": True,
                                 "patch": True,
-                                "todowrite": False,
+                                "todowrite": True,
                                 "todoread": True,
                                 "webfetch": False,
                                 "isearch_*": False
@@ -86,7 +86,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "tools": {
                                 "bash": False,
                                 "edit": False,
-                                "write": False,
+                                "write": True,
                                 "read": True,
                                 "grep": True,
                                 "glob": True,

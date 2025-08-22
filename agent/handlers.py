@@ -171,7 +171,7 @@ async def build(title: str, expectation: str) -> AsyncGenerator[ChatCompletionSt
     # steps: List[StepV2] = await make_plan(title, expectation)
     steps: List[StepV2] = []
     
-    async for step in gen_plan(title, expectation, 8):
+    async for step in gen_plan(title, expectation, 6):
         steps.append(step)
 
         # Create step in database
