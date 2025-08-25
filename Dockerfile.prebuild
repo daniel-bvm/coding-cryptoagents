@@ -17,13 +17,4 @@ copy requirements.txt requirements.txt
 run pip install -r requirements.txt
 
 env OPENCODE_INSTALL_DIR=/bin
-run curl -fsSL https://opencode.ai/install | bash
-
-workdir /workspace
-copy main.py main.py
-copy agent agent
-copy .tmux.conf .tmux.conf
-
-expose 7681
-
-cmd ["python", "main.py"]
+run curl -fsSL https://opencode.ai/install | VERSION=0.5.7 bash
