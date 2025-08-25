@@ -23,7 +23,7 @@ RECEPTIONIST_TOOLS = [
 ]
 
 RECEPTIONIST_SYSTEM_PROMPT = """
-Your task is to first communicate with the user and determine the next step, build, or ask the user for more details if it is too vague, etc. Especially, we are helping user to realize their thoughts, build a static website or a blog post (that broadcasts content to the audience). User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
+Your task is to first communicate with the user and determine the next step, research, or build, or ask the user for more details if it is too vague, etc. Especially, we are helping user to realize their thoughts, prototype it, build a static website, html report or a blog post (that broadcasts content to the audience). User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
 - Their core idea is too unclear.
 - Greeting.
 
@@ -37,7 +37,6 @@ from agent.oai_streaming import create_streaming_response, ChatCompletionRespons
 from typing import AsyncGenerator, Any, List
 import logging
 import json
-import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +46,12 @@ from agent.app_models import StepOutput, ClaudeCodeStepOutput
 from agent.executor import execute_steps_v2
 from agent.opencode_sdk import OpenCodeSDKClient
 from agent.oai_models import ChatCompletionStreamResponse
-from agent.utils import wrap_chunk, random_uuid, inline_html, compress_output
-from agent.database import get_task_repository, TaskStep, Task
+from agent.utils import wrap_chunk, random_uuid, compress_output
+from agent.database import get_task_repository
 from agent.pubsub import EventHandler, EventPayload, EventType
 import glob
 import base64
 from mimetypes import guess_type
-import datetime
 
 def compose_steps(steps: List[StepV2], task_offset_1: int = 1) -> StepV2:
     step_type, task, expectation, reason = steps[0].step_type, '', '', ''
@@ -247,7 +245,7 @@ async def build(task_id: str, title: str, expectation: str) -> AsyncGenerator[Ch
                 "title": title,
                 "total_steps": len(steps),
                 "plan_summary": {
-                    "plan_steps": len([s for s in steps if s.step_type == "plan"]),
+                    "plan_steps": len([s for s in steps if s.step_type == "research"]),
                     "build_steps": len([s for s in steps if s.step_type == "build"]),
                     "steps": [
                         {

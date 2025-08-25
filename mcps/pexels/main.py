@@ -16,20 +16,70 @@ app = FastMCP("pexels")
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 ETERNALAI_MCP_PROXY_URL = os.getenv("ETERNALAI_MCP_PROXY_URL")
 
-def parse_pexels_search_response(response: dict) -> list[dict]:
-    fields = ['url', 'photographer', 'avg_color', 'src', 'alt']
+async def download_image(url: str, filename: str) -> str:
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url)
+        except Exception as e:
+            logger.error(f"Error downloading image from {url}: {e}")
+            return None
+
+        if response.status_code != 200:
+            logger.error(f"Failed to download image from {url}")
+            return None
+
+        with open(filename, "wb") as f:
+            f.write(response.content)
+
+    return filename
+
+from urllib.parse import urlparse
+
+def get_name_from_url(url: str) -> str:
+    parsed_url = urlparse(url)
+    path = parsed_url.path
+    x = os.path.basename(path)
+    params = parsed_url.query.split('&')
+
+    if len(params) == 0:
+        return x
+    
+    params_dict = dict(item.split('=') for item in params if item)
+    file_ext = os.path.splitext(x)[1]
+    params_dict_str = '-'.join(list([e for e in params_dict.values() if e]))
+    return x.replace(file_ext, f'-{params_dict_str}{file_ext}')
+
+async def parse_pexels_search_response(response: dict, output_dir: str = 'assets/images') -> list[dict]:
+    os.makedirs(output_dir, exist_ok=True)
+
     photos = response.get("photos", [])
+    results = []
 
-    return [
-        {
-            k: v
-            for k, v in e.items()
-            if k in fields
+    for i, photo in enumerate(photos):
+        search_result = {
+            'avg_color': photo.get('avg_color', None),
+            'alt': photo.get('alt', None),
         }
-        for e in photos
-    ]
 
-@app.tool(description="Search for images from Pexels")
+        src = {
+            key: await download_image(
+                value, 
+                os.path.join(output_dir, get_name_from_url(value))
+            )
+            for key, value in photo.get("src", {}).items()
+        }
+        
+        search_result['src'] = {
+            key: value
+            for key, value in src.items()
+            if value is not None
+        }
+
+        results.append(search_result)
+
+    return results
+
+@app.tool(description="Search for images from Pexels in any topics")
 async def search_pexels(topic: Annotated[str, "The topic to search for"]) -> list[dict]:
     params = {
         "query": topic,
@@ -54,7 +104,7 @@ async def search_pexels(topic: Annotated[str, "The topic to search for"]) -> lis
                     return [{"error": "Failed to search for images"}]
 
                 response_json: dict = response.json()
-                return parse_pexels_search_response(response_json)
+                return await parse_pexels_search_response(response_json)
             
             except Exception as e:
                 logger.error(f"Error searching for images: {e}")
@@ -93,7 +143,7 @@ async def search_pexels(topic: Annotated[str, "The topic to search for"]) -> lis
                     return [{"error": "Failed to search for images"}]
 
                 response_json: dict = response.json()
-                return parse_pexels_search_response(response_json)
+                return await parse_pexels_search_response(response_json)
             
             except Exception as e:
                 logger.error(f"Error searching for images: {e}")

@@ -38,7 +38,7 @@ class TaskStep(Base):
     id = Column(String, primary_key=True, index=True)
     task_id = Column(String, nullable=False, index=True)
     step_number = Column(Integer, nullable=False)
-    step_type = Column(String, nullable=False)  # "plan" or "build"
+    step_type = Column(String, nullable=False)  # "research" or "build"
     task_description = Column(Text, nullable=False)
     expectation = Column(Text, nullable=True)
     reason = Column(Text, nullable=True)
@@ -54,6 +54,11 @@ Base.metadata.create_all(bind=engine)
 
 def get_db() -> Session:
     db = SessionLocal()
+    db.query(TaskStep).filter(TaskStep.step_type == "plan").update(
+        {TaskStep.step_type: "research"}
+    )
+    db.commit()
+
     try:
         return db
     finally:

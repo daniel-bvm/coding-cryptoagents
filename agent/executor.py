@@ -12,7 +12,7 @@ PLANNING_SYSTEM_PROMPT = """Your task is to collect information that needed to r
 
 BUILD_SYSTEM_PROMPT = """Your task is to build the project, a static site or a blog post based on the plan. Strictly, follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Code and assets must be written into files. Your final output should be short, talk about what you have done (no code explanation in detail is required)."""
 
-async def execute_plan_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None) -> ClaudeCodeStepOutput:
+async def execute_research_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None) -> ClaudeCodeStepOutput:
 
     async with OpenCodeSDKClient(workdir) as client:
         output = await client.query(
@@ -71,13 +71,13 @@ async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[U
     )
 
 async def execute_steps_v2(
-    steps_type: Literal["plan", "build"], 
+    steps_type: Literal["research", "build"], 
     steps: StepV2, 
     workdir: str,
     session_id: Union[int, str]
 ) -> ClaudeCodeStepOutput:
-    if steps_type == "plan":
-        return await execute_plan_step(steps, workdir, session_id)
+    if steps_type == "research":
+        return await execute_research_step(steps, workdir, session_id)
 
     if steps_type == "build":
         return await execute_build_step(steps, workdir, session_id)

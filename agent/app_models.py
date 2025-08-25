@@ -9,7 +9,7 @@ class Step(BaseModel):
     reason: str = ""
     
 class StepV2(Step):
-    step_type: Literal["plan", "build"] = "plan"
+    step_type: Literal["research", "build"] = "research"
 
 class StepOutput(BaseModel):
     step_id: str
