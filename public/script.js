@@ -244,43 +244,22 @@ function dashboard() {
         // Choose an HTML file to show: prefer index.html, otherwise first .html, else empty
         let chosen = "";
         if (Array.isArray(this.taskFiles) && this.taskFiles.length > 0) {
-          const getName = (entry) => {
-            if (typeof entry === "string") {
-              const parts = entry.split("/");
-              return parts[parts.length - 1];
-            }
-            if (!entry) return "";
-            if (entry.name) return entry.name;
-            if (entry.filename) return entry.filename;
-            if (entry.path) {
-              const parts = entry.path.split("/");
-              return parts[parts.length - 1];
-            }
-            return "";
-          };
-
-          // Try exact index.html first
-          const indexEntry = this.taskFiles.find((f) => {
-            const name = getName(f).toLowerCase();
-            return name === "index.html";
-          });
-
-          if (indexEntry) {
-            chosen = getName(indexEntry);
+          const indexFile = this.taskFiles.find((f) =>
+            f.path.toLowerCase().endsWith("index.html")
+          );
+          if (indexFile) {
+            chosen = indexFile.path;
           } else {
-            // Fallback to first .html file
-            const firstHtml = this.taskFiles.find((f) => {
-              const name = getName(f).toLowerCase();
-              return name.endsWith(".html");
-            });
-            if (firstHtml) chosen = getName(firstHtml);
+            const firstHTML = this.taskFiles.find((f) =>
+              f.path.toLowerCase().endsWith(".html")
+            );
+            if (firstHTML) {
+              chosen = firstHTML.path;
+            }
           }
         }
 
-        console.log("🚀 ~ selectTask ~ chosen 1:", chosen);
         if (!!chosen) {
-          console.log("🚀 ~ selectTask ~ chosen 2:", chosen);
-
           this.viewTaskSteps = false;
         }
 
