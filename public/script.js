@@ -4,6 +4,7 @@ function dashboard() {
     tasks: [],
     selectedTask: null,
     taskFiles: [],
+    showHTMLFile: "",
     taskSteps: [],
     viewTaskSteps: true,
     loading: false,
@@ -18,6 +19,7 @@ function dashboard() {
       await this.refreshTasks();
       this.connectEventSource();
       this.setupEventListeners();
+      console.log("Toggling detail view:", this.viewTaskSteps);
     },
 
     // Setup additional event listeners for connection management
@@ -90,7 +92,7 @@ function dashboard() {
       this.connectionStatus = "connecting";
       this.showConnectionToast("Connecting to real-time updates...", "info");
 
-      this.eventSource = new EventSource("/api/subscribe?channels=tasks");
+      this.eventSource = new EventSource("./api/subscribe?channels=tasks");
 
       this.eventSource.onopen = () => {
         console.log("EventSource connected");
@@ -232,15 +234,61 @@ function dashboard() {
       this.taskFiles = [];
       this.taskSteps = [];
 
-      if (task.status === "completed") {
-        this.viewTaskSteps = false;
-      }
-
       // Load both files and steps
       await Promise.all([
         task.output_directory ? this.loadTaskFiles(task.id) : Promise.resolve(),
         this.loadTaskSteps(task.id),
       ]);
+
+      if (task.status === "completed") {
+        // Choose an HTML file to show: prefer index.html, otherwise first .html, else empty
+        let chosen = "";
+        if (Array.isArray(this.taskFiles) && this.taskFiles.length > 0) {
+          const getName = (entry) => {
+            if (typeof entry === "string") {
+              const parts = entry.split("/");
+              return parts[parts.length - 1];
+            }
+            if (!entry) return "";
+            if (entry.name) return entry.name;
+            if (entry.filename) return entry.filename;
+            if (entry.path) {
+              const parts = entry.path.split("/");
+              return parts[parts.length - 1];
+            }
+            return "";
+          };
+
+          // Try exact index.html first
+          const indexEntry = this.taskFiles.find((f) => {
+            const name = getName(f).toLowerCase();
+            return name === "index.html";
+          });
+
+          if (indexEntry) {
+            chosen = getName(indexEntry);
+          } else {
+            // Fallback to first .html file
+            const firstHtml = this.taskFiles.find((f) => {
+              const name = getName(f).toLowerCase();
+              return name.endsWith(".html");
+            });
+            if (firstHtml) chosen = getName(firstHtml);
+          }
+        }
+
+        console.log("🚀 ~ selectTask ~ chosen 1:", chosen);
+        if (!!chosen) {
+          console.log("🚀 ~ selectTask ~ chosen 2:", chosen);
+
+          this.viewTaskSteps = false;
+        }
+
+        this.showHTMLFile = chosen;
+      } else {
+        this.showHTMLFile = "";
+        this.viewTaskSteps = true;
+      }
     },
 
     // Close task modal
