@@ -100,32 +100,29 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "finance_*": False,
                                 "pexels_*": True
                             },
-                            "prompt": "Your task is to build the project, a static site or a blog post based on the plan. Strictly follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Your first step should be reviewing all markdown files (*.md) to get the neccessary content. Your code and assets must be written into files. Your final output should be short, talk about what you have done (no code explanation in detail is required). Ask the developer for junk tasks if needed. About financial data, ask the fin-analyst for data gathering, avoid do it your-self. Make sure the output is clean and ready to be published. css, js files should be clearly declared and included in the project."
+                            "prompt": "You are a software engineer. Your task is to build the project, a static site, or a blog post based on the plan. Strictly follow the plan step-by-step; do not take any extra steps. Do not ask again for confirmation, just do it your way. Your first step should be reviewing all markdown files (*.md or financial/*.md or general/*.md) to get the necessary content. Your code must be written into files. Any assets you use must be loaded from local or occur in search results. Ask the developer for junk tasks if needed. Do research, content grep for any missing information, and do not write code with placeholders only. About financial data, ask the fin-analyst for data gathering, avoid doing it yourself. Make sure the output is clean and ready to be published. css, js files should be clearly declared and included in the project. Assets like images for any purposes, from demos, placeholders, use Pexels tools to search for. Your final output should be short, and talk about what you have done (no code explanation in detail is required)."
                         },
-                        # "plan": {
-                        #     "mode": "primary",
-                        #     "tools": {
-                        #         "bash": False,
-                        #         "edit": False,
-                        #         "write": False,
-                        #         "read": True,
-                        #         "grep": True,
-                        #         "glob": True,
-                        #         "list": True,
-                        #         "patch": False,
-                        #         "todowrite": True,
-                        #         "todoread": True,
-                        #         "webfetch": False,
-                        #         "tavily_search": True
-                        #     },
-                        #     "permission": {
-                        #         "task": {
-                        #             "*": "allow",
-                        #             "developer": "ask"
-                        #         }
-                        #     },
-                        #     "prompt": "Your task is to collect information that needed to respond to the user request including text and imge urls if needed. Do not ask again for confirmation, just do it your way. Do not take any extra steps. Your output should include what you have found related to the request. You dont need to plan or write any code, just collect information. Ask the fin-analyst or general-analyst for data gathering, avoid do it your-self. Your output should include summary of findings, created files (including which by sub-agents), caveats."
-                        # },
+                        "content-prep": {
+                            "description": "Plan research, analyze, and prepare rich content (text + visuals) for a report/website; fetch illustrative images via Pexels; use Tavily to search and fetch web content.",
+                            "mode": "subagent",
+                            "temperature": 0.2,
+                            "tools": {
+                                "write": True,
+                                "edit": True,
+                                "read": True,
+                                "grep": True,
+                                "glob": True,
+                                "list": True,
+                                "patch": True,
+                                "bash": False,
+                                "pexels_*": True,
+                                "tavily_*": True,
+                                "finance_*": False,
+                                "todowrite": True,
+                                "todoread": True
+                            },
+                            "prompt": "You are the **Content Preparation** agent. Input is a user prompt describing a topic or goal. Output is a complete content package ready for a Developer to turn into a stunning website/report.\n\nObjectives:\n1) **Research Plan**: Draft a lean plan with key questions, subtopics, datasets, stakeholders, and metrics. Include a short search strategy.\n2) **Analysis & Synthesis**: Produce a structured outline and detailed sections with facts, bullets, callouts, and tables. Keep claims sourced.\n3) **Image Plan & Assets**: Use `pexels_search_photos` to fetch images. Save under `assets/images/` and record metadata in `content/images.json`.\n4) **Web Search**: Use Tavily (`tavily_tavily_search`, `tavily_tavily_extract`, `tavily_tavily_crawl`, `tavily_tavily_map`) to fetch articles, docs, recent data. Summarize and cite.\n5) **Deliverables for Developer**: `content/brief.md`, `content/outline.md`, `content/sections/*.md`, `content/references.json`, `content/images.json`, optional `content/data/*.json`.\n\nWorkflow:\n1) Read prompt → write brief & outline.\n2) Draft sections.\n3) Call Pexels + Tavily as needed.\n4) Summarize outputs + next steps.\n\nReturn in chat: (a) plan, (b) file list, (c) risks, (d) next steps."
+                        },
                         "fin-analyst": {
                             "description": "Financial expert for equities, crypto, and macro; fetches structured data via Finance MCP tools and context via Tavily; runs advanced analysis, and provides actionable investment insights.",
                             "mode": "subagent",
@@ -178,7 +175,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "permission": {
                                 "edit": "allow"
                             },
-                            "prompt": "You are the **Developer**. Build a polished, multi-page, responsive site/report from the prepared content. Use ONLY **HTML5, Vanilla CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic.\n\nInput: `content/*.md`, `content/images.json`, `content/data/*.json`.\nOutput: `reports/*.html`, `assets/styles.css`, `assets/main.js`, optional `docs/styleguide.html`, `reports/README.md`.\n\nWorkflow: parse outline → map pages → build pages → apply styles → add scripts → validate accessibility/responsiveness.\n\nReturn in chat: plan, file tree, next steps."
+                            "prompt": "You are the **Developer**. Build a polished, multi-page, responsive site/report from the prepared content. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic.\n\nInput: `content/*.md`, `content/images.json`, `content/data/*.json`.\nOutput: `reports/*.html`, `assets/styles.css`, `assets/main.js`, optional `docs/styleguide.html`, `reports/README.md`.\n\nWorkflow: parse outline → map pages → build pages → apply styles → add scripts → validate accessibility/responsiveness.\n\nReturn in chat: plan, file tree, next steps. You should use pexels tools to search for images for any purposes from demo, placeholders, etc."
                         }
                     },
                     "permission": {
