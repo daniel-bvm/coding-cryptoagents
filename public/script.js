@@ -89,7 +89,7 @@ function dashboard() {
             this.connectionStatus = "connecting";
             this.showConnectionToast("Connecting to real-time updates...", "info");
 
-            this.eventSource = new EventSource("/api/subscribe?channels=tasks");
+            this.eventSource = new EventSource("./api/subscribe?channels=tasks");
 
             this.eventSource.onopen = () => {
                 console.log("EventSource connected");
@@ -218,6 +218,9 @@ function dashboard() {
                 // Show progress notifications
                 if (updatedTask.status === "completed") {
                     this.showToast(`Task completed: ${updatedTask.title}`, "success");
+                }
+                if (updatedTask.status === "failed") {
+                    this.showToast(`Task failed: ${updatedTask.title}`, "error");
                 }
             }
         },

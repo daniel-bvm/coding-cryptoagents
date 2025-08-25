@@ -74,10 +74,6 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                         }
                     },
                     "agent":  {
-                        "general": {
-                            "mode": "subagent",
-                            "enabled": False
-                        },
                         "build": {
                             "mode": "primary",
                             "tools": {
@@ -98,30 +94,30 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             },
                             "prompt": "Your task is to build the project, a static site or a blog post based on the plan. Strictly, follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Code and assets must be written into files. Your final output should be short, talk about what you have done (no code explanation in detail is required). Ask the developer for junk tasks if needed."
                         },
-                        "plan": {
-                            "mode": "primary",
-                            "tools": {
-                                "bash": False,
-                                "edit": False,
-                                "write": False,
-                                "read": True,
-                                "grep": True,
-                                "glob": True,
-                                "list": True,
-                                "patch": False,
-                                "todowrite": True,
-                                "todoread": True,
-                                "webfetch": False,
-                                "tavily_search": True
-                            },
-                            "permission": {
-                                "task": {
-                                    "*": "allow",
-                                    "developer": "ask"
-                                }
-                            },
-                            "prompt": "Your task is to collect information that needed to respond to the user request including text and imge urls if needed. Do not ask again for confirmation, just do it your way. Do not take any extra steps. Your output should include what you have found related to the request. You dont need to plan or write any code, just collect information. Ask the fin-analyst or general-analyst for data gathering, avoid do it your-self. Your output should include summary of findings, created files (including which by sub-agents), caveats."
-                        },
+                        # "plan": {
+                        #     "mode": "primary",
+                        #     "tools": {
+                        #         "bash": False,
+                        #         "edit": False,
+                        #         "write": False,
+                        #         "read": True,
+                        #         "grep": True,
+                        #         "glob": True,
+                        #         "list": True,
+                        #         "patch": False,
+                        #         "todowrite": True,
+                        #         "todoread": True,
+                        #         "webfetch": False,
+                        #         "tavily_search": True
+                        #     },
+                        #     "permission": {
+                        #         "task": {
+                        #             "*": "allow",
+                        #             "developer": "ask"
+                        #         }
+                        #     },
+                        #     "prompt": "Your task is to collect information that needed to respond to the user request including text and imge urls if needed. Do not ask again for confirmation, just do it your way. Do not take any extra steps. Your output should include what you have found related to the request. You dont need to plan or write any code, just collect information. Ask the fin-analyst or general-analyst for data gathering, avoid do it your-self. Your output should include summary of findings, created files (including which by sub-agents), caveats."
+                        # },
                         "fin-analyst": {
                             "description": "Financial expert for equities, crypto, and macro; fetches structured data via Finance MCP tools and context via Tavily; runs advanced analysis, and provides actionable investment insights.",
                             "mode": "subagent",

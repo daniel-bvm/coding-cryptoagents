@@ -33,3 +33,8 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings() 
+
+try:
+    os.makedirs(settings.opencode_directory, exist_ok=True)
+except Exception as e:
+    print(f"Error creating opencode directory: {e}")

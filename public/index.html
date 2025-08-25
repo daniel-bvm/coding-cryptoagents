@@ -8,8 +8,8 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="/static/style.css" rel="stylesheet">
-    <script src="/static/script.js"></script>
+    <link href="./static/style.css" rel="stylesheet">
+    <script src="./static/script.js"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
         tailwind.config = {
@@ -357,7 +357,7 @@
                             Website Preview
                         </h3>
                         <div class="border rounded-lg overflow-hidden">
-                            <iframe :src="`/api/tasks/${selectedTask.id}/preview/index.html`"
+                            <iframe :src="`./api/tasks/${selectedTask.id}/preview/index.html`"
                                     class="w-full h-96 border-0"></iframe>
                         </div>
                     </div>
@@ -380,7 +380,7 @@
                                      :class="[getProgressColor(selectedTask?.status), { 'active': selectedTask?.status !== 'completed' && selectedTask?.status !== 'failed' }]"
                                      :style="`width: ${selectedTask?.progress}%`"></div>
                             </div>
-                            <template x-if="selectedTask?.current_step">
+                            <template x-if="selectedTask?.current_step && selectedTask?.status !== 'completed' && selectedTask?.status !== 'failed'">
                                 <div class="flex items-center text-sm text-gray-600">
                                     <i class="fas fa-cog animate-spin mr-2"></i>
                                     <span x-text="selectedTask?.current_step"></span>
