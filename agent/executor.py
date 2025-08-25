@@ -16,7 +16,7 @@ async def execute_plan_step(steps: StepV2, workdir: str, session_id: Optional[Un
 
     async with OpenCodeSDKClient(workdir) as client:
         output = await client.query(
-            agent="plan",
+            agent="build",
             system=PLANNING_SYSTEM_PROMPT,
             message=steps.task,
             session_id=session_id,
@@ -47,10 +47,10 @@ async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[U
                     'type': 'text',
                     'text': steps.task
                 },
-                {
-                    'type': 'text',
-                    'text': '<system-reminder>\nCRITICAL: Build mode ACTIVE. All of your code, resources should be written into files. Make sure all folders created before using them.</system-reminder>'
-                }
+                # {
+                #     'type': 'text',
+                #     'text': '<system-reminder>\nCRITICAL: Build mode ACTIVE. All of your code, resources should be written into files. Make sure all folders created before using them.</system-reminder>'
+                # }
             ],
             session_id=session_id,
             model_id=settings.llm_model_id_code,

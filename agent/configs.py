@@ -20,11 +20,12 @@ class Settings(BaseSettings):
     opencode_port: int = Field(alias="OPENCODE_PORT", default=4096)
     opencode_directory: str = Field(
         alias="OPENCODE_DIRECTORY", 
-        default="./opencode-workspace" # if not os.path.exists("/storage") else "/storage/opencode-workspace"
+        default="./opencode-workspace" if not os.path.exists("/storage") else "/storage/opencode-workspace"
     )
     
     tavily_api_key: str = Field(alias="TAVILY_API_KEY", default="")
     financial_datasets_api_key: str = Field(alias="FINANCIAL_DATASETS_API_KEY", default="")
+    pexels_api_key: str = Field(alias="PEXELS_API_KEY", default="")
 
     class Config:
         env_file = ".env"

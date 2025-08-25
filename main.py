@@ -24,6 +24,7 @@ os.makedirs(opencode_dir, exist_ok=True)
 async def update_config_task(repeat_interval=0): # non-positive --> no repeat
     isearch_path = os.path.join(CURRENT_DIRECTORY, "mcps", "tavily_search", "main.py")
     financial_datasets_path = os.path.join(CURRENT_DIRECTORY, "mcps", "financial_datasets", "main.py")
+    pexels_path = os.path.join(CURRENT_DIRECTORY, "mcps", "pexels", "main.py")
 
     while True:
         try:
@@ -39,7 +40,8 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
             if settings.financial_datasets_api_key:
                 mcp_env["FINANCIAL_DATASETS_API_KEY"] = settings.financial_datasets_api_key
 
-            # logger.info(f"MCP Environment: {mcp_env}")
+            if settings.pexels_api_key:
+                mcp_env["PEXELS_API_KEY"] = settings.pexels_api_key
 
             mcp_config = {
                 "tavily": {
@@ -51,6 +53,12 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                 "finance": {
                     "type": "local",
                     "command": [sys.executable, financial_datasets_path],
+                    "enabled": True,
+                    "environment": mcp_env
+                },
+                "pexels": {
+                    "type": "local",
+                    "command": [sys.executable, pexels_path],
                     "enabled": True,
                     "environment": mcp_env
                 }
@@ -87,12 +95,12 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "patch": True,
                                 "todowrite": True,
                                 "todoread": True,
-                                "webfetch": False,
-                                "tavily_search": False,
-                                "tavily_fetch": True,
-                                "finance_*": False
+                                "webfetch": True,
+                                "tavily_*": True,
+                                "finance_*": False,
+                                "pexels_*": True
                             },
-                            "prompt": "Your task is to build the project, a static site or a blog post based on the plan. Strictly, follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Code and assets must be written into files. Your final output should be short, talk about what you have done (no code explanation in detail is required). Ask the developer for junk tasks if needed."
+                            "prompt": "Your task is to build the project, a static site or a blog post based on the plan. Strictly follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Your first step should be reviewing all markdown files (*.md) to get the neccessary content. Your code and assets must be written into files. Your final output should be short, talk about what you have done (no code explanation in detail is required). Ask the developer for junk tasks if needed. About financial data, ask the fin-analyst for data gathering, avoid do it your-self. Make sure the output is clean and ready to be published. css, js files should be clearly declared and included in the project."
                         },
                         # "plan": {
                         #     "mode": "primary",
@@ -127,6 +135,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "edit": False,
                                 "finance_*": True,
                                 "tavily_*": True,
+                                "pexels_*": False,
                                 "todowrite": True,
                                 "todoread": True
                             },
@@ -140,6 +149,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "write": True,
                                 "edit": False,
                                 "tavily_*": True,
+                                "pexels_*": False,
                                 "todowrite": True,
                                 "todoread": True
                             },
@@ -162,7 +172,8 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "tavily_search": False,
                                 "tavily_fetch": True,
                                 "todowrite": True,
-                                "todoread": True
+                                "todoread": True,
+                                "pexels_*": True
                             },
                             "permission": {
                                 "edit": "allow"

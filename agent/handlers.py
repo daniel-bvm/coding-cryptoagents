@@ -23,11 +23,11 @@ RECEPTIONIST_TOOLS = [
 ]
 
 RECEPTIONIST_SYSTEM_PROMPT = """
-Your task is to first communicate with the user and determine the next step, build, or ask the user for more details if it is too vague, etc. Especially, we are helping user to build their website or a blog post (that broadcasts content to the audience). User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
+Your task is to first communicate with the user and determine the next step, build, or ask the user for more details if it is too vague, etc. Especially, we are helping user to realize their thoughts, build a static website or a blog post (that broadcasts content to the audience). User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
 - Their core idea is too unclear.
 - Greeting.
 
-In other cases, you are free to guess what they want and call the build tool. We can solve any problems. Any valid request, send it to us, then the user will get what they want.
+In other cases, you are free to guess what they want and call the build tool. We can solve any problems, write anything, build anything. Any valid request, send it to us, then the user will get what they want.
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
@@ -59,7 +59,7 @@ def compose_steps(steps: List[StepV2], task_offset_1: int = 1) -> StepV2:
     step_type, task, expectation, reason = steps[0].step_type, '', '', ''
 
     for i, step in enumerate(steps):
-        task += f"Step {i + task_offset_1}: {step.reason}; {step.task}\n" \
+        task += f"Step {i + task_offset_1}: {step.task}\n" \
               + f"- Expectation: {step.expectation}\n\n"
 
         expectation += f"Step {i + task_offset_1}: {step.expectation}\n"
@@ -293,14 +293,15 @@ async def build(task_id: str, title: str, expectation: str) -> AsyncGenerator[Ch
         for step in ssteps:
             yield wrap_chunk(random_uuid(), f"<action>{step.task}</action>\n")
 
-        task_offset_1 = sum(len(e) for e in segmented_steps[:i]) + 1
+        task_offset = sum(len(e) for e in segmented_steps[:i])
+        task_offset_1 = task_offset + 1
         nsteps = ', '.join([f"{task_offset_1 + j}" for j in range(len(ssteps))])
 
         composed_step = compose_steps(ssteps, task_offset_1)
         logger.info(f"Task {task_id}; Executing step: {composed_step.task}")
 
         # Update progress
-        progress = 10 + int(((task_offset_1 - 1) / len(steps)) * 80)  # 10% to 90%
+        progress = 10 + int((task_offset / len(steps)) * 80)  # 10% to 90%
         repo = get_task_repository()
 
         try:
@@ -333,6 +334,9 @@ async def build(task_id: str, title: str, expectation: str) -> AsyncGenerator[Ch
                 logger.error(f"Error updating step status to executing: {e}")
             finally:
                 repo.db.close()
+
+        if i == 0: # first step
+            composed_step.task = f"We are building a {title}, expected output: {expectation}\n\nYour task is to do it step-by-step\n{composed_step.task}"
 
         step_output: ClaudeCodeStepOutput = await execute_steps_v2(
             composed_step.step_type, 
@@ -367,6 +371,16 @@ async def build(task_id: str, title: str, expectation: str) -> AsyncGenerator[Ch
                 logger.error(f"Error updating step status to completed: {e}")
             finally:
                 repo.db.close()
+                
+    repo = get_task_repository()
+
+    try:
+        task = repo.update_task_progress(task_id, 100, f"Finished", len(steps), len(steps))
+        await publish_task_update(task, "task_progress")
+    except Exception as e:
+        logger.error(f"Error updating task progress: {e}")
+    finally:
+        repo.db.close()
 
     recap = 'These step(s) have been executed:\n'
 
