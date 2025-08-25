@@ -412,14 +412,14 @@ async def build(task_id: str, title: str, expectation: str) -> AsyncGenerator[Ch
         
         task = repo.update_task_output(task_id, workdir, has_index_html)
         task = repo.update_task_status(task_id, "completed")
-        await publish_task_update(task, "task_completed")
+        await publish_task_update(task, "task_output")
 
     except Exception as e:
         logger.error(f"Error completing task: {e}")
         # Mark as failed if we can't update
         try:
             task = repo.update_task_status(task_id, "failed", f"Error completing task: {e}")
-            await publish_task_update(task, "task_status")
+            await publish_task_update(task, "task_output")
         except:
             pass
 
@@ -510,7 +510,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
                         f"Error executing tool call."
                     )
 
-                    await publish_task_update(task, "task_status")
+                    await publish_task_update(task, "task_output")
                 except Exception as e:
                     logger.error(f"Error updating task status: {e}", exc_info=True)
 

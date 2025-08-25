@@ -220,6 +220,9 @@ function dashboard() {
         if (updatedTask.status === "completed") {
           this.showToast(`Task completed: ${updatedTask.title}`, "success");
         }
+        if (updatedTask.status === "failed") {
+          this.showToast(`Task failed: ${updatedTask.title}`, "error");
+        }
       }
     },
 

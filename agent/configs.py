@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     opencode_port: int = Field(alias="OPENCODE_PORT", default=4096)
     opencode_directory: str = Field(
         alias="OPENCODE_DIRECTORY", 
-        default="./opencode-workspace" if not os.path.exists("/storage") else "/storage/opencode-workspace"
+        default="./opencode-workspace" # if not os.path.exists("/storage") else "/storage/opencode-workspace"
     )
     
     tavily_api_key: str = Field(alias="TAVILY_API_KEY", default="")
@@ -33,3 +33,8 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings() 
+
+try:
+    os.makedirs(settings.opencode_directory, exist_ok=True)
+except Exception as e:
+    print(f"Error creating opencode directory: {e}")
