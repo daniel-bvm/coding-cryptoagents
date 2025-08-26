@@ -409,7 +409,7 @@
                                     <template x-if="step.expectation">
                                         <div class="text-xs text-gray-600 mb-2">
                                             <strong>Expected:</strong> <span
-                                                x-html="marked.parse(step.expectation)"></span>
+                                                x-html="marked.parse(escapeHtmlInMarkdown(step.expectation))"></span>
                                         </div>
                                     </template>
 
@@ -471,7 +471,7 @@
         <template x-if="selectedTask?.expectation">
                             <div class="bg-gray-50 rounded-lg p-4">
                                 <h4 class="font-bold mb-2">Description</h4>
-                                <p class="text-sm text-gray-700" x-html="marked.parse(selectedTask?.expectation)"></p>
+                                <p class="text-sm text-gray-700" x-html="marked.parse(escapeHtmlInMarkdown(selectedTask?.expectation))"></p>
                             </div>
                         </template>
     </div>

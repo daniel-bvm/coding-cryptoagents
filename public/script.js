@@ -648,6 +648,12 @@ function dashboard() {
       return colors[status] || "bg-gray-100 text-gray-800";
     },
 
+    // Utility function to escape HTML tags in markdown content
+    escapeHtmlInMarkdown(text) {
+      // Replace HTML tags with markdown code syntax for proper rendering
+      return text.replace(/<(\w+)>/g, "`<$1>`");
+    },
+
     // Get step type icon
     getStepTypeIcon(stepType) {
       return stepType === "research" ? "🔍" : "🔨";
