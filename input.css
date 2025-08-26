@@ -71,3 +71,21 @@
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
     z-index: 1;
 }
+
+/* Bottom positioned tooltip */
+.tooltip-container.tooltip-bottom .tooltip-box {
+    top: auto;
+    bottom: -40px;
+    transform: translateX(-50%) translateY(-6px);
+}
+
+.tooltip-container.tooltip-bottom:focus .tooltip-box,
+.tooltip-container.tooltip-bottom:hover .tooltip-box {
+    transform: translateX(-50%) translateY(0);
+}
+
+.tooltip-container.tooltip-bottom .tooltip-arrow {
+    top: auto;
+    bottom: 75%;
+    transform: translateX(-50%) rotate(225deg);
+}

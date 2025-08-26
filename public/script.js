@@ -1,3 +1,5 @@
+const CDN_BASE_URL = "https://cdn.eternalai.org/prototype-agent"; // Replace with actual CDN base URL
+
 // Dashboard functionality with real-time updates
 function dashboard() {
   return {
@@ -13,6 +15,7 @@ function dashboard() {
     connectionStatus: "disconnected", // disconnected, connecting, connected
     reconnectAttempts: 0,
     reconnectTimeout: null,
+    loadingShares: {}, // Track loading state per task ID
 
     // Initialize the dashboard
     async init() {
@@ -49,6 +52,11 @@ function dashboard() {
           this.eventSource.close();
         }
       });
+    },
+
+    // Check if a specific task is loading share
+    isTaskLoadingShare(taskId) {
+      return !!this.loadingShares[taskId];
     },
 
     // Computed properties
@@ -375,6 +383,162 @@ function dashboard() {
       } catch (error) {
         console.error("Error saving task:", error);
         this.showToast("Save error", "error");
+      }
+    },
+
+    // Helper method to find the best HTML file to share
+    findBestHtmlFile() {
+      if (!Array.isArray(this.taskFiles) || this.taskFiles.length === 0) {
+        return null;
+      }
+
+      // Prefer index.html first
+      const indexFile = this.taskFiles.find((f) =>
+        f.path.toLowerCase().endsWith("index.html")
+      );
+      if (indexFile) {
+        return indexFile.path;
+      }
+
+      // Otherwise, use the first HTML file
+      const firstHTML = this.taskFiles.find((f) =>
+        f.path.toLowerCase().endsWith(".html")
+      );
+      return firstHTML ? firstHTML.path : null;
+    },
+
+    // Helper method to copy share link to clipboard
+    async copyShareLink(baseUrl, filePath) {
+      const shareUrl = `${baseUrl}/${filePath}`;
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        this.showToast("Share link copied to clipboard", "success");
+      } catch (err) {
+        console.error("Failed to copy share link:", err);
+      }
+    },
+
+    // From taskId, upload its taskFiles to CDN (API provided later), after upload success, return url contain index.html or first html file available
+    async uploadTaskFiles(taskId) {
+      try {
+        this.loadingShares[taskId] = true;
+
+        // Ensure task files are loaded
+        if (!this.taskFiles || this.taskFiles.length === 0) {
+          await this.loadTaskFiles(taskId);
+        }
+
+        if (!this.taskFiles || this.taskFiles.length === 0) {
+          this.showToast("No files to upload", "error");
+          return null;
+        }
+
+        // Check if deployment already exists on EternalAI
+
+        const chosenFile = this.findBestHtmlFile();
+
+        try {
+          const checkResponse = await fetch(
+            `${CDN_BASE_URL}/${taskId}/${chosenFile}`
+          );
+          if (checkResponse.ok) {
+            // Files already exist, use existing deployment
+            const baseUrl = `${CDN_BASE_URL}/${taskId}`;
+            return await this.handleExistingCdnLink(baseUrl);
+          }
+        } catch (error) {
+          // Deployment doesn't exist, proceed with upload
+          console.log("No existing deployment found, proceeding with upload");
+        }
+
+        // No existing deployment, proceed with upload
+        return await this.uploadNewFiles(taskId);
+      } catch (error) {
+        console.error("Error uploading task files:", error);
+        this.showToast("Upload failed", "error");
+        return null;
+      } finally {
+        delete this.loadingShares[taskId];
+      }
+    },
+
+    // Handle existing CDN link
+    async handleExistingCdnLink(existingUrl) {
+      const chosenFile = this.findBestHtmlFile();
+
+      if (!chosenFile) {
+        this.showToast("No HTML file to share", "error");
+        return null;
+      }
+
+      await this.copyShareLink(existingUrl, chosenFile);
+      return existingUrl;
+    },
+
+    // Create ZIP file from task files
+    async createZipFromTaskFiles(taskId) {
+      try {
+        // use API
+        const response = await fetch(`./api/tasks/${taskId}/download`);
+        if (response.ok) {
+          const zipBlob = await response.blob();
+          return zipBlob;
+        } else {
+          console.error("Failed to create ZIP file:", response.statusText);
+          return null;
+        }
+      } catch (error) {
+        console.error("Error creating ZIP file:", error);
+        return null;
+      }
+    },
+
+    // Upload new files to CDN
+    async uploadNewFiles(taskId) {
+      try {
+        // First, create a ZIP file from task files
+        const zipBlob = await this.createZipFromTaskFiles(taskId);
+        if (!zipBlob) {
+          this.showToast("Failed to create ZIP file", "error");
+          return null;
+        }
+
+        // Upload ZIP to EternalAI API
+        const formData = new FormData();
+        formData.append("file", zipBlob, `${taskId}.zip`);
+        formData.append("folder_name", taskId);
+
+        const response = await fetch(
+          "https://api.eternalai.org/api/agent/file/upload-zip-extract?admin_key=eai2024",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          console.error("Upload failed:", response.statusText);
+          this.showToast("Upload failed", "error");
+          return null;
+        }
+
+        const data = await response.json();
+        this.showToast("Deployment successful", "success");
+
+        const chosenFile = this.findBestHtmlFile();
+        if (!chosenFile) {
+          this.showToast("No HTML file to share", "error");
+          return null;
+        }
+
+        // Construct the URL based on EternalAI's response structure
+        const baseUrl = data.url || `https://api.eternalai.org/files/${taskId}`;
+        await this.copyShareLink(baseUrl, chosenFile);
+        return baseUrl;
+      } catch (error) {
+        console.error("Upload error:", error);
+        this.showToast("Upload failed", "error");
+        return null;
       }
     },
 

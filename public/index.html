@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prototype - Task Dashboard</title>
-    <link rel="icon"         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
     <link href="./static/tailwind.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="./static/style.css" rel="stylesheet">
@@ -183,16 +184,17 @@
 
                                     <template x-if="task.status === 'completed'">
                                         <div class="flex items-center space-x-1">
-                                            <span class="tooltip-container" tabindex="0"
+                                            <!-- <span class="tooltip-container" tabindex="0"
                                                 aria-label="Download now to save permanently">
                                                 <span class="text-yellow-600 text-xs">⚠️</span>
                                                 <span class="tooltip-box">Download now to save permanently
                                                     <span class="tooltip-arrow" aria-hidden="true"></span>
                                                 </span>
-                                            </span>
-                                            <button @click.stop="downloadTask(task.id)"
-                                                class="text-green-600 hover:text-green-800 transition-colors bg-green-50 hover:bg-green-100 px-2 py-1 rounded text-xs">
-                                                <i class="fas fa-download mr-1"></i>Save
+                                            </span> -->
+                                            <button @click.stop="uploadTaskFiles(task.id)"
+                                                :disabled="isTaskLoadingShare(task.id)"
+                                                class="text-green-600 hover:text-green-800 transition-colors bg-green-50 hover:bg-green-100 px-2 py-1 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed">
+                                                <i class="mr-1" :class="isTaskLoadingShare(task.id) ? 'fa-solid fa-circle-notch animate-spin' : 'fas fa-share'"></i>Share
                                             </button>
                                         </div>
                                     </template>
@@ -285,10 +287,19 @@
                                         class="text-lg"></i>
                                 </button>
                             </div>
-                            <button @click="downloadTask(selectedTask.id)"
-                                class="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg transition-all flex items-center ">
-                                <i class="fas fa-download"></i>
-                            </button>
+                            <span class="tooltip-container tooltip-bottom" tabindex="0" aria-label="Deploy and share">
+                                <button @click="uploadTaskFiles(selectedTask.id)"
+                                    :disabled="isTaskLoadingShare(selectedTask?.id)"
+                                    class="px-4 py-3 rounded-lg transition-all flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i :class="isTaskLoadingShare(selectedTask?.id) ? 'fa-solid fa-circle-notch animate-spin scale-110' : 'fa-solid fa-share scale-110'"></i>
+                                </button>
+                                <span class="tooltip-box ">
+                                    <span class="text-black">
+                                        Deploy and share
+                                    </span>
+                                    <span class="tooltip-arrow" aria-hidden="true"></span>
+                                </span>
+                            </span>
                         </div>
                     </template>
                     <button @click="closeTaskModal()"
