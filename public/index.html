@@ -265,7 +265,7 @@
                         <div class="flex items-center space-x-3">
 
                             <div class="flex items-center">
-                                <button @click="toggleDetailView()"
+                                <button x-show="showHTMLFile !== ''" @click="toggleDetailView()"
                                     :title="viewTaskSteps ? 'Show Preview' : 'Show Steps'"
                                     aria-label="Toggle preview / steps"
                                     class="ml-2  bg-opacity-20 hover:bg-opacity-30 rounded-full transition-colors flex items-center">
