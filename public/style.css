@@ -102,7 +102,6 @@ body.modal-open {
 .progress-bar {
     position: relative;
     overflow: hidden;
-    background-color: #e0e0e0;
 }
 
 .progress-bar.active::after {
@@ -342,5 +341,6 @@ footer {
         transform: translateY(-3px);
     }
 }
+
 
 /* Hide body scrollbar when modal is open */
