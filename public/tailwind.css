@@ -1733,6 +1733,10 @@ video {
   transform: translateX(-50%) rotate(225deg);
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .last\:border-0:last-child {
   border-width: 0px;
 }

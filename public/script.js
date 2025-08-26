@@ -669,6 +669,17 @@ function dashboard() {
       return colors[status] || "bg-gray-400";
     },
 
+    // Get status text color for task details
+    getStatusTextColor(status) {
+      const colors = {
+        pending: "text-gray-600",
+        processing: "text-blue-600",
+        completed: "text-green-600",
+        failed: "text-red-600",
+      };
+      return colors[status] || "text-gray-600";
+    },
+
     // Show plan step creation notification
     showPlanStepNotification(step, stepNumber, title) {
       const stepTypeIcon = step.step_type === "plan" ? "🔍" : "🔨";

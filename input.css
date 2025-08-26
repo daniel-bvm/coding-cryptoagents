@@ -89,3 +89,7 @@
     bottom: 75%;
     transform: translateX(-50%) rotate(225deg);
 }
+
+body.modal-open {
+    overflow: hidden;
+}

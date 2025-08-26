@@ -188,7 +188,7 @@
                                                     <span class="tooltip-arrow" aria-hidden="true"></span>
                                                 </span>
                                             </span> -->
-                                            <button @click.stop="uploadTaskFiles(task.id)"
+                                            <button @click.stop="downloadTask(task.id)"
                                                 :disabled="isTaskLoadingShare(task.id)"
                                                 class="text-green-600 hover:text-green-800 transition-colors bg-green-50 hover:bg-green-100 px-2 py-1 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed">
                                                 <i class="mr-1" :class="isTaskLoadingShare(task.id) ? 'fa-solid fa-circle-notch animate-spin' : 'fas fa-share'"></i>Share
