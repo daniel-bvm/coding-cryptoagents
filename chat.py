@@ -10,8 +10,9 @@ if __name__ == "__main__":
 
     user_messages = [
         'hi',
-        'I need a Tesla Q2 2025 Financial Analysis report',
+        # 'I need a Tesla Q2 2025 Financial Analysis report',
         # 'show me information about Lawful Permanent Resident Admission for Naturalization'
+        "ELI5 about Footballdotfun"
     ]
 
     user_messages_it = iter(user_messages)

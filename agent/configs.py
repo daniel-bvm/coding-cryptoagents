@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     tavily_api_key: str = Field(alias="TAVILY_API_KEY", default="")
     financial_datasets_api_key: str = Field(alias="FINANCIAL_DATASETS_API_KEY", default="")
     pexels_api_key: str = Field(alias="PEXELS_API_KEY", default="")
+    twitter_api_key: str = Field(alias="TWITTER_API_KEY", default="")
 
     class Config:
         env_file = ".env"
