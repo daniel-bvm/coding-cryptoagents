@@ -2,8 +2,8 @@ RECEPTIONIST_TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "build",
-            "description": "Start planning, researching anything, and building a static website, report or blog post using HTML, CSS and Javascript that responds to the user message.",
+            "name": "solve",
+            "description": "Start planning, researching, and building a static website, report or blog post that responds to the user or explains what they are looking for.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -13,7 +13,7 @@ RECEPTIONIST_TOOLS = [
                     },
                     "expectation": {
                         "type": "string", 
-                        "description": "Describe what to build as much detail as possible.",
+                        "description": "Describe how should the output looks like.",
                     }
                 },
                 "required": ["title", "expectation"]
@@ -27,7 +27,7 @@ Your task is to first communicate with the user and determine the next step, exp
 - Their core idea is too unclear.
 - Greeting.
 
-In other cases, you are free to guess what they want and call the build tool. But, for terms, keywords, keep it raw in the description and title so we can build the answer more efficiently. We can solve any problems, explain (even though the user is five), write, and build anything. Any request, send it to us, then the user will get what they want. 
+In other cases, you are free to guess what they want and call the solve tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can solve any problems, explain, write, and build anything. Any request, send it to us via the solve function, and the user gets what they want. 
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
