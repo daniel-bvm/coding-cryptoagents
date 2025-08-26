@@ -484,14 +484,9 @@ function dashboard() {
       return colors[status] || "bg-gray-100 text-gray-800";
     },
 
-    getStatusTextColor(status) {
-      const colors = {
-        pending: "text-gray-600",
-        processing: "text-blue-600",
-        completed: "text-green-600",
-        failed: "text-red-600",
-      };
-      return colors[status] || "text-gray-600";
+    // Get step type icon
+    getStepTypeIcon(stepType) {
+      return stepType === "research" ? "🔍" : "🔨";
     },
 
     getProgressColor(status) {
