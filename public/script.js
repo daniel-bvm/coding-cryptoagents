@@ -1,5 +1,3 @@
-const CDN_BASE_URL = "https://cdn.eternalai.org/prototype-agent"; // Replace with actual CDN base URL
-
 // Dashboard functionality with real-time updates
 function dashboard() {
   return {
@@ -22,7 +20,6 @@ function dashboard() {
       await this.refreshTasks();
       this.connectEventSource();
       this.setupEventListeners();
-      console.log("Toggling detail view:", this.viewTaskSteps);
     },
 
     // Setup additional event listeners for connection management
@@ -47,7 +44,7 @@ function dashboard() {
       window.addEventListener("offline", () => {
         console.log("Network went offline");
         this.connectionStatus = "disconnected";
-        this.showConnectionToast("Network offline", "error");
+        toastManager.showConnection("Network offline", "error");
         if (this.eventSource) {
           this.eventSource.close();
         }
@@ -80,11 +77,11 @@ function dashboard() {
         if (response.ok) {
           this.tasks = await response.json();
         } else {
-          this.showToast("Failed to load tasks", "error");
+          toastManager.show("Failed to load tasks", "error");
         }
       } catch (error) {
         console.error("Error fetching tasks:", error);
-        this.showToast("Error loading tasks", "error");
+        toastManager.show("Error loading tasks", "error");
       } finally {
         this.loading = false;
       }
@@ -98,7 +95,7 @@ function dashboard() {
 
       // Show connection status
       this.connectionStatus = "connecting";
-      this.showConnectionToast("Connecting to real-time updates...", "info");
+      toastManager.showConnection("Connecting to real-time updates...", "info");
 
       this.eventSource = new EventSource("./api/subscribe?channels=tasks");
 
@@ -106,7 +103,10 @@ function dashboard() {
         console.log("EventSource connected");
         this.connectionStatus = "connected";
         this.reconnectAttempts = 0;
-        this.showConnectionToast("Connected to real-time updates", "success");
+        toastManager.showConnection(
+          "Connected to real-time updates",
+          "success"
+        );
       };
 
       this.eventSource.onmessage = (event) => {
@@ -126,11 +126,8 @@ function dashboard() {
         // Increment reconnect attempts
         this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
 
-        // Fixed 2-second retry interval
-        const delay = 2000; // Always 2 seconds
-
         // Show disconnection message
-        this.showConnectionToast(
+        toastManager.showConnection(
           `Connection lost. Reconnecting in 2s (attempt ${this.reconnectAttempts})`,
           "warning"
         );
@@ -138,7 +135,7 @@ function dashboard() {
         // Attempt to reconnect after 2 seconds
         this.reconnectTimeout = setTimeout(() => {
           this.connectEventSource();
-        }, delay);
+        }, CONSTANTS.RECONNECT_DELAY);
       };
     },
 
@@ -154,11 +151,13 @@ function dashboard() {
         total_steps,
         plan_summary,
       } = data.data;
+
       console.log("event data:", data.data);
+
       switch (event_type) {
         case "task_created":
           this.tasks.unshift(task);
-          this.showToast(`New task created: ${task.title}`, "success");
+          toastManager.show(`New task created: ${task.title}`, "success");
           break;
 
         case "task_updated":
@@ -172,10 +171,9 @@ function dashboard() {
           this.tasks = this.tasks.filter((t) => t.id !== task_id);
           if (this.selectedTask && this.selectedTask.id === task_id) {
             this.selectedTask = null;
-            // Remove modal-open class from body when modal closes
             document.body.classList.remove("modal-open");
           }
-          this.showToast("Task deleted", "info");
+          toastManager.show("Task deleted", "info");
           break;
 
         case "plan_step_created":
@@ -189,8 +187,9 @@ function dashboard() {
             icon: step.step_type === "plan" ? "🔍" : "🔨",
             timestamp: new Date(),
           });
-          // also need to reload loadTaskSteps
-          if (!!this.selectedTask) {
+
+          // Reload task steps if task is selected
+          if (this.selectedTask) {
             this.loadTaskSteps(this.selectedTask.id);
           }
 
@@ -230,10 +229,10 @@ function dashboard() {
 
         // Show progress notifications
         if (updatedTask.status === "completed") {
-          this.showToast(`Task completed: ${updatedTask.title}`, "success");
+          toastManager.show(`Task completed: ${updatedTask.title}`, "success");
         }
         if (updatedTask.status === "failed") {
-          this.showToast(`Task failed: ${updatedTask.title}`, "error");
+          toastManager.show(`Task failed: ${updatedTask.title}`, "error");
         }
       }
     },
@@ -255,28 +254,13 @@ function dashboard() {
 
       if (task.status === "completed") {
         // Choose an HTML file to show: prefer index.html, otherwise first .html, else empty
-        let chosen = "";
-        if (Array.isArray(this.taskFiles) && this.taskFiles.length > 0) {
-          const indexFile = this.taskFiles.find((f) =>
-            f.path.toLowerCase().endsWith("index.html")
-          );
-          if (indexFile) {
-            chosen = indexFile.path;
-          } else {
-            const firstHTML = this.taskFiles.find((f) =>
-              f.path.toLowerCase().endsWith(".html")
-            );
-            if (firstHTML) {
-              chosen = firstHTML.path;
-            }
-          }
-        }
+        const chosen = utils.findBestHtmlFile(this.taskFiles);
 
-        if (!!chosen) {
+        if (chosen) {
           this.viewTaskSteps = false;
         }
 
-        this.showHTMLFile = chosen;
+        this.showHTMLFile = chosen || "";
       } else {
         this.showHTMLFile = "";
         this.viewTaskSteps = true;
@@ -343,78 +327,74 @@ function dashboard() {
               if (response.body && writable) {
                 // Stream directly from response to file
                 await response.body.pipeTo(writable);
-                this.showToast("Saved to local folder", "success");
+                toastManager.show("Saved to local folder", "success");
               } else {
                 // Fallback if streaming not supported
                 const blob = await response.blob();
                 await writable.write(blob);
                 await writable.close();
-                this.showToast("Saved to local folder", "success");
+                toastManager.show("Saved to local folder", "success");
               }
             } catch (fsError) {
               // If user cancels or error, fallback to download
-              const blob = await response.blob();
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `task_${taskId}.zip`;
-              document.body.appendChild(a);
-              a.click();
-              window.URL.revokeObjectURL(url);
-              document.body.removeChild(a);
-              this.showToast("Download started", "success");
+              this.fallbackDownload(await response.blob(), taskId);
             }
           } else {
             // Fallback for browsers without File System Access API
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `task_${taskId}.zip`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            this.showToast("Download started", "success");
+            this.fallbackDownload(await response.blob(), taskId);
           }
         } else {
-          this.showToast("Download failed", "error");
+          toastManager.show("Download failed", "error");
         }
       } catch (error) {
         console.error("Error saving task:", error);
-        this.showToast("Save error", "error");
+        toastManager.show("Save error", "error");
       }
+    },
+
+    // Fallback download method
+    fallbackDownload(blob, taskId) {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `task_${taskId}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toastManager.show("Download started", "success");
     },
 
     // Helper method to find the best HTML file to share
     findBestHtmlFile() {
-      if (!Array.isArray(this.taskFiles) || this.taskFiles.length === 0) {
-        return null;
-      }
-
-      // Prefer index.html first
-      const indexFile = this.taskFiles.find((f) =>
-        f.path.toLowerCase().endsWith("index.html")
-      );
-      if (indexFile) {
-        return indexFile.path;
-      }
-
-      // Otherwise, use the first HTML file
-      const firstHTML = this.taskFiles.find((f) =>
-        f.path.toLowerCase().endsWith(".html")
-      );
-      return firstHTML ? firstHTML.path : null;
+      return utils.findBestHtmlFile(this.taskFiles);
     },
 
     // Helper method to copy share link to clipboard
     async copyShareLink(baseUrl, filePath) {
       const shareUrl = `${baseUrl}/${filePath}`;
       try {
-        await navigator.clipboard.writeText(shareUrl);
-        this.showToast("Share link copied to clipboard", "success");
-      } catch (err) {
-        console.error("Failed to copy share link:", err);
+        if (await utils.copyToClipboard(shareUrl)) {
+          toastManager.show("Share link copied to clipboard", "success");
+        } else {
+          // If copy failed, show the URL in a toast so user can copy manually
+          toastManager.showAdvanced({
+            title: "Copy manually",
+            message: "Couldn't copy automatically. Click to select:",
+            type: "info",
+            duration: 10000,
+            details: shareUrl
+          });
+        }
+      } catch (error) {
+        console.error("Error copying to clipboard:", error);
+        toastManager.showAdvanced({
+          title: "Share Link Ready",
+          message: "Please copy manually:",
+          type: "info",
+          duration: 10000,
+          details: shareUrl
+        });
       }
     },
 
@@ -429,21 +409,20 @@ function dashboard() {
         }
 
         if (!this.taskFiles || this.taskFiles.length === 0) {
-          this.showToast("No files to upload", "error");
+          toastManager.show("No files to upload", "error");
           return null;
         }
 
         // Check if deployment already exists on EternalAI
-
         const chosenFile = this.findBestHtmlFile();
 
         try {
           const checkResponse = await fetch(
-            `${CDN_BASE_URL}/${taskId}/${chosenFile}`
+            `${CONSTANTS.CDN_BASE_URL}/${taskId}/${chosenFile}`
           );
           if (checkResponse.ok) {
             // Files already exist, use existing deployment
-            const baseUrl = `${CDN_BASE_URL}/${taskId}`;
+            const baseUrl = `${CONSTANTS.CDN_BASE_URL}/${taskId}`;
             return await this.handleExistingCdnLink(baseUrl);
           }
         } catch (error) {
@@ -455,7 +434,7 @@ function dashboard() {
         return await this.uploadNewFiles(taskId);
       } catch (error) {
         console.error("Error uploading task files:", error);
-        this.showToast("Upload failed", "error");
+        toastManager.show("Upload failed", "error");
         return null;
       } finally {
         delete this.loadingShares[taskId];
@@ -467,7 +446,7 @@ function dashboard() {
       const chosenFile = this.findBestHtmlFile();
 
       if (!chosenFile) {
-        this.showToast("No HTML file to share", "error");
+        toastManager.show("No HTML file to share", "error");
         return null;
       }
 
@@ -481,8 +460,7 @@ function dashboard() {
         // use API
         const response = await fetch(`./api/tasks/${taskId}/download`);
         if (response.ok) {
-          const zipBlob = await response.blob();
-          return zipBlob;
+          return await response.blob();
         } else {
           console.error("Failed to create ZIP file:", response.statusText);
           return null;
@@ -499,7 +477,7 @@ function dashboard() {
         // First, create a ZIP file from task files
         const zipBlob = await this.createZipFromTaskFiles(taskId);
         if (!zipBlob) {
-          this.showToast("Failed to create ZIP file", "error");
+          toastManager.show("Failed to create ZIP file", "error");
           return null;
         }
 
@@ -518,16 +496,16 @@ function dashboard() {
 
         if (!response.ok) {
           console.error("Upload failed:", response.statusText);
-          this.showToast("Upload failed", "error");
+          toastManager.show("Upload failed", "error");
           return null;
         }
 
         const data = await response.json();
-        this.showToast("Deployment successful", "success");
+        toastManager.show("Deployment successful", "success");
 
         const chosenFile = this.findBestHtmlFile();
         if (!chosenFile) {
-          this.showToast("No HTML file to share", "error");
+          toastManager.show("No HTML file to share", "error");
           return null;
         }
 
@@ -537,14 +515,13 @@ function dashboard() {
         return baseUrl;
       } catch (error) {
         console.error("Upload error:", error);
-        this.showToast("Upload failed", "error");
+        toastManager.show("Upload failed", "error");
         return null;
       }
     },
 
     // toggle detail view
     toggleDetailView() {
-      console.log("Toggling detail view:", this.viewTaskSteps);
       this.viewTaskSteps = !this.viewTaskSteps;
     },
 
@@ -554,37 +531,22 @@ function dashboard() {
       window.open(url, "_blank");
     },
 
-    // Utility functions
-    formatDate(dateString) {
-      const date = new Date(dateString);
-      return date.toLocaleString();
-    },
-
-    formatFileSize(bytes) {
-      if (bytes === 0) return "0 Bytes";
-      const k = 1024;
-      const sizes = ["Bytes", "KB", "MB", "GB"];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-    },
-
-    formatTimeAgo(date) {
-      const now = new Date();
-      const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
-
-      if (diffInSeconds < 60) return "just now";
-      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-      if (diffInSeconds < 86400)
-        return `${Math.floor(diffInSeconds / 3600)}h ago`;
-      return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    },
+    // Utility functions (delegated to utils)
+    formatDate: utils.formatDate,
+    formatFileSize: utils.formatFileSize,
+    formatTimeAgo: utils.formatTimeAgo,
+    escapeHtmlInMarkdown: utils.escapeHtmlInMarkdown,
+    getStepTypeIcon: utils.getStepTypeIcon,
 
     // Plan activity management
     addPlanActivity(activity) {
       this.planActivity.unshift(activity);
-      // Keep only last 20 activities
-      if (this.planActivity.length > 20) {
-        this.planActivity = this.planActivity.slice(0, 20);
+      // Keep only last activities
+      if (this.planActivity.length > CONSTANTS.MAX_PLAN_ACTIVITIES) {
+        this.planActivity = this.planActivity.slice(
+          0,
+          CONSTANTS.MAX_PLAN_ACTIVITIES
+        );
       }
     },
 
@@ -613,71 +575,32 @@ function dashboard() {
 
     // Get step status styling
     getStepStatusColor(status) {
-      const colors = {
-        pending: "bg-gray-100 text-gray-600 border-gray-300",
-        executing: "bg-blue-100 text-blue-700 border-blue-300",
-        completed: "bg-green-100 text-green-700 border-green-300",
-        failed: "bg-red-100 text-red-700 border-red-300",
-      };
-      return colors[status] || colors.pending;
+      return STEP_CONFIGS.colors[status] || STEP_CONFIGS.colors.pending;
     },
 
     // Get step status icon
     getStepStatusIcon(status) {
-      const icons = {
-        pending: "fas fa-clock text-gray-500",
-        executing: "fas fa-cog fa-spin text-blue-500",
-        completed: "fas fa-check-circle text-green-500",
-        failed: "fas fa-times-circle text-red-500",
-      };
-      return icons[status] || icons.pending;
+      return STEP_CONFIGS.icons[status] || STEP_CONFIGS.icons.pending;
     },
 
-    // Get step type icon
-    getStepTypeIcon(stepType) {
-      return stepType === "plan" ? "🔍" : "🔨";
-    },
-
+    // Get status styling
     getStatusColor(status) {
-      const colors = {
-        pending: "bg-gray-100 text-gray-800",
-        processing: "bg-blue-100 text-blue-800",
-        completed: "bg-green-100 text-green-800",
-        failed: "bg-red-100 text-red-800",
-      };
-      return colors[status] || "bg-gray-100 text-gray-800";
+      return STATUS_CONFIGS.colors[status] || STATUS_CONFIGS.colors.pending;
     },
 
-    // Utility function to escape HTML tags in markdown content
-    escapeHtmlInMarkdown(text) {
-      // Replace HTML tags with markdown code syntax for proper rendering
-      return text.replace(/<(\w+)>/g, "`<$1>`");
-    },
-
-    // Get step type icon
-    getStepTypeIcon(stepType) {
-      return stepType === "research" ? "🔍" : "🔨";
-    },
-
+    // Get progress color
     getProgressColor(status) {
-      const colors = {
-        pending: "bg-gray-400",
-        processing: "bg-blue-500",
-        completed: "bg-green-500",
-        failed: "bg-red-500",
-      };
-      return colors[status] || "bg-gray-400";
+      return (
+        STATUS_CONFIGS.progressColors[status] ||
+        STATUS_CONFIGS.progressColors.pending
+      );
     },
 
     // Get status text color for task details
     getStatusTextColor(status) {
-      const colors = {
-        pending: "text-gray-600",
-        processing: "text-blue-600",
-        completed: "text-green-600",
-        failed: "text-red-600",
-      };
-      return colors[status] || "text-gray-600";
+      return (
+        STATUS_CONFIGS.textColors[status] || STATUS_CONFIGS.textColors.pending
+      );
     },
 
     // Show plan step creation notification
@@ -685,7 +608,7 @@ function dashboard() {
       const stepTypeIcon = step.step_type === "plan" ? "🔍" : "🔨";
       const stepTypeText = step.step_type === "plan" ? "Research" : "Build";
 
-      this.showAdvancedToast({
+      toastManager.showAdvanced({
         title: `Step ${stepNumber}: ${stepTypeText}`,
         message: step.reason,
         type: "info",
@@ -700,7 +623,7 @@ function dashboard() {
       const planSteps = planSummary.plan_steps;
       const buildSteps = planSummary.build_steps;
 
-      this.showAdvancedToast({
+      toastManager.showAdvanced({
         title: `Plan Ready: ${title}`,
         message: `Generated ${totalSteps} steps (${planSteps} research, ${buildSteps} build)`,
         type: "success",
@@ -708,191 +631,6 @@ function dashboard() {
         icon: "🎯",
         details: "Execution will begin shortly...",
       });
-    },
-
-    // Toast notification system
-    showToast(message, type = "info") {
-      const container = document.getElementById("toast-container");
-      const toast = document.createElement("div");
-
-      const icons = {
-        success: "fas fa-check-circle text-green-500",
-        error: "fas fa-exclamation-circle text-red-500",
-        info: "fas fa-info-circle text-blue-500",
-        warning: "fas fa-exclamation-triangle text-yellow-500",
-      };
-
-      const colors = {
-        success: "bg-green-50 border-green-200 text-green-800",
-        error: "bg-red-50 border-red-200 text-red-800",
-        info: "bg-blue-50 border-blue-200 text-blue-800",
-        warning: "bg-yellow-50 border-yellow-200 text-yellow-800",
-      };
-
-      toast.className = `flex items-center p-4 mb-2 border rounded-lg shadow-lg transform transition-all duration-300 ease-in-out translate-x-full opacity-0 ${colors[type]}`;
-      toast.innerHTML = `
-                <i class="${icons[type]} mr-3"></i>
-                <span class="flex-1">${message}</span>
-                <button onclick="this.parentElement.remove()" class="ml-3 text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-
-      container.appendChild(toast);
-
-      // Animate in
-      setTimeout(() => {
-        toast.classList.remove("translate-x-full", "opacity-0");
-      }, 10);
-
-      // Auto remove after 5 seconds
-      setTimeout(() => {
-        if (toast.parentElement) {
-          toast.classList.add("translate-x-full", "opacity-0");
-          setTimeout(() => {
-            if (toast.parentElement) {
-              toast.remove();
-            }
-          }, 300);
-        }
-      }, 5000);
-    },
-
-    // Connection status toast notifications
-    showConnectionToast(message, type = "info") {
-      // Remove any existing connection toasts first
-      const existingToasts = document.querySelectorAll(".connection-toast");
-      existingToasts.forEach((toast) => toast.remove());
-
-      const container = document.getElementById("toast-container");
-      const toast = document.createElement("div");
-
-      const colors = {
-        success: "bg-green-50 border-green-200 text-green-800",
-        warning: "bg-yellow-50 border-yellow-200 text-yellow-800",
-        info: "bg-blue-50 border-blue-200 text-blue-800",
-        error: "bg-red-50 border-red-200 text-red-800",
-      };
-
-      const icons = {
-        success: "fas fa-wifi text-green-500",
-        warning: "fas fa-exclamation-triangle text-yellow-500",
-        info: "fas fa-sync fa-spin text-blue-500",
-        error: "fas fa-wifi-slash text-red-500",
-      };
-
-      toast.className = `connection-toast flex items-center p-3 mb-2 border rounded-lg shadow-lg transform transition-all duration-300 ease-in-out translate-x-full opacity-0 ${colors[type]}`;
-      toast.innerHTML = `
-                <i class="${icons[type]} mr-2 text-sm"></i>
-                <span class="flex-1 text-sm">${message}</span>
-                ${
-                  type === "success"
-                    ? `<button onclick="this.parentElement.remove()" class="ml-2 text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xs"></i>
-                </button>`
-                    : ""
-                }
-            `;
-
-      container.appendChild(toast);
-
-      // Animate in
-      setTimeout(() => {
-        toast.classList.remove("translate-x-full", "opacity-0");
-      }, 10);
-
-      // Auto remove success messages after 3 seconds
-      if (type === "success") {
-        setTimeout(() => {
-          if (toast.parentElement) {
-            toast.classList.add("translate-x-full", "opacity-0");
-            setTimeout(() => {
-              if (toast.parentElement) {
-                toast.remove();
-              }
-            }, 300);
-          }
-        }, 3000);
-      }
-    },
-
-    // Advanced toast notification system for plan events
-    showAdvancedToast({
-      title,
-      message,
-      type = "info",
-      duration = 5000,
-      icon = null,
-      details = null,
-    }) {
-      const container = document.getElementById("toast-container");
-      const toast = document.createElement("div");
-
-      const colors = {
-        success:
-          "bg-gradient-to-r from-green-50 to-green-100 border-green-300 text-green-900",
-        error:
-          "bg-gradient-to-r from-red-50 to-red-100 border-red-300 text-red-900",
-        info: "bg-gradient-to-r from-blue-50 to-blue-100 border-blue-300 text-blue-900",
-        warning:
-          "bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300 text-yellow-900",
-      };
-
-      const iconDisplay =
-        icon ||
-        (type === "success"
-          ? "✅"
-          : type === "error"
-          ? "❌"
-          : type === "warning"
-          ? "⚠️"
-          : "ℹ️");
-
-      toast.className = `relative p-4 mb-3 border-l-4 rounded-lg shadow-xl transform transition-all duration-500 ease-in-out translate-x-full opacity-0 max-w-md ${colors[type]}`;
-      toast.innerHTML = `
-                <div class="flex items-start">
-                    <div class="text-2xl mr-3 animate-bounce-gentle">${iconDisplay}</div>
-                    <div class="flex-1">
-                        <div class="font-bold text-sm mb-1">${title}</div>
-                        <div class="text-sm mb-2">${message}</div>
-                        ${
-                          details
-                            ? `<div class="text-xs opacity-75">${details}</div>`
-                            : ""
-                        }
-                    </div>
-                    <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-gray-400 hover:text-gray-600 transition-colors">
-                        <i class="fas fa-times text-xs"></i>
-                    </button>
-                </div>
-                <div class="absolute bottom-0 left-0 h-1 bg-current opacity-20 transition-all duration-${duration} ease-linear" style="width: 100%"></div>
-            `;
-
-      container.appendChild(toast);
-
-      // Animate in
-      setTimeout(() => {
-        toast.classList.remove("translate-x-full", "opacity-0");
-        // Start progress bar animation
-        const progressBar = toast.querySelector(".absolute.bottom-0");
-        if (progressBar) {
-          setTimeout(() => {
-            progressBar.style.width = "0%";
-          }, 100);
-        }
-      }, 10);
-
-      // Auto remove
-      setTimeout(() => {
-        if (toast.parentElement) {
-          toast.classList.add("translate-x-full", "opacity-0");
-          setTimeout(() => {
-            if (toast.parentElement) {
-              toast.remove();
-            }
-          }, 500);
-        }
-      }, duration);
     },
 
     // Cleanup on destroy
@@ -910,7 +648,7 @@ function dashboard() {
 
     // Manual reconnection function
     forceReconnect() {
-      this.showConnectionToast("Manually reconnecting...", "info");
+      toastManager.showConnection("Manually reconnecting...", "info");
       this.destroy();
       this.connectEventSource();
     },
