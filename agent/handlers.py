@@ -3,7 +3,7 @@ RECEPTIONIST_TOOLS = [
         "type": "function",
         "function": {
             "name": "build",
-            "description": "Start planning, researching anything, and building a static website, report or blog post using HTML, CSS and Javascript.",
+            "description": "Start planning, researching anything, and building a static website, report or blog post using HTML, CSS and Javascript that responds to the user message.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -23,11 +23,11 @@ RECEPTIONIST_TOOLS = [
 ]
 
 RECEPTIONIST_SYSTEM_PROMPT = """
-Your task is to first communicate with the user and determine the next step, research, or build, or ask the user for more details if it is too vague, etc. Especially, we are helping user to realize their thoughts, prototype it, build a static website, html report or a blog post (that broadcasts content to the audience). User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
+Your task is to first communicate with the user and determine the next step, explain, research, or build, or ask the user for more details if it is too vague, etc. Especially, we are helping user to realize their thoughts, prototype it, build a static website, html report or a blog post (that broadcasts content to the audience). User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
 - Their core idea is too unclear.
 - Greeting.
 
-In other cases, you are free to guess what they want and call the build tool. We can solve any problems, write anything, build anything. Any valid request, send it to us, then the user will get what they want.
+In other cases, you are free to guess what they want and call the build tool. But, for terms, keywords, keep it raw in the description and title so we can build the answer more efficiently. We can solve any problems, explain (even though the user is five), write, and build anything. Any request, send it to us, then the user will get what they want. 
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
@@ -53,6 +53,7 @@ import glob
 import base64
 from mimetypes import guess_type
 import uuid
+from .lite_keybert import extract_keywords
 
 def compose_steps(steps: List[StepV2], task_offset_1: int = 1) -> StepV2:
     step_type, task, expectation, reason = steps[0].step_type, '', '', ''
@@ -141,7 +142,12 @@ def construct_file_response(file_paths: list[str]) -> str:
 
     return f"<files>{files_xml}</files>"
 
-async def build(task_id: str, title: str, expectation: str) -> AsyncGenerator[ChatCompletionStreamResponse | ChatCompletionResponse, None]: # recap
+async def build(
+    task_id: str, 
+    title: str,
+    expectation: str,
+    pre_search_info: str | None = None
+) -> AsyncGenerator[ChatCompletionStreamResponse | ChatCompletionResponse, None]: # recap
     assert expectation is not None, "No task definition provided"
     
     # Create task in database

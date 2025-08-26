@@ -43,6 +43,9 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
             if settings.pexels_api_key:
                 mcp_env["PEXELS_API_KEY"] = settings.pexels_api_key
 
+            if settings.twitter_api_key:
+                mcp_env["TWITTER_API_KEY"] = settings.twitter_api_key
+
             mcp_config = {
                 "tavily": {
                     "type": "local",

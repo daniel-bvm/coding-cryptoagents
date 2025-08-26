@@ -1,4 +1,4 @@
-from danieltn11/opencode:1.0.6
+from danieltn11/opencode:1.0.7
 
 # env LLM_MODEL_ID=z-ai/glm-4.5-air
 # env LLM_MODEL_ID_CODE=qwen/qwen3-coder
