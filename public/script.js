@@ -172,11 +172,11 @@ function dashboard() {
                     this.addPlanActivity({
                         id: `step-${Date.now()}`,
                         title: `Step ${step_number}: ${
-              step.step_type === "plan" ? "Research" : "Build"
+              step.step_type === "research" ? "Research" : "Build"
             }`,
                         message: step.reason,
                         details: `Task: ${title}`,
-                        icon: step.step_type === "plan" ? "🔍" : "🔨",
+                        icon: step.step_type === "research" ? "🔍" : "🔨",
                         timestamp: new Date(),
                     });
                     // also need to reload loadTaskSteps
@@ -461,7 +461,7 @@ function dashboard() {
 
         // Get step type icon
         getStepTypeIcon(stepType) {
-            return stepType === "plan" ? "🔍" : "🔨";
+            return stepType === "research" ? "🔍" : "🔨";
         },
 
         getStatusColor(status) {
@@ -496,8 +496,8 @@ function dashboard() {
 
         // Show plan step creation notification
         showPlanStepNotification(step, stepNumber, title) {
-            const stepTypeIcon = step.step_type === "plan" ? "🔍" : "🔨";
-            const stepTypeText = step.step_type === "plan" ? "Research" : "Build";
+            const stepTypeIcon = step.step_type === "research" ? "🔍" : "🔨";
+            const stepTypeText = step.step_type === "research" ? "Research" : "Build";
 
             this.showAdvancedToast({
                 title: `Step ${stepNumber}: ${stepTypeText}`,
