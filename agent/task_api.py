@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, AsyncGenerator
 from datetime import datetime
 import os
 import zipfile
@@ -307,6 +307,17 @@ async def get_task_files(task_id: str, repo: TaskRepository = Depends(get_task_r
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         repo.db.close()
+        
+        
+async def content_generator(buffer: BytesIO, chunk_size: int = 8192) -> AsyncGenerator[bytes, None]:
+    while True:
+        data = buffer.read(chunk_size)
+
+        if not data:
+            break
+
+        yield data
+        
 
 @router.get("/{task_id}/download")
 async def download_task(task_id: str, repo: TaskRepository = Depends(get_task_repository)):
@@ -330,14 +341,12 @@ async def download_task(task_id: str, repo: TaskRepository = Depends(get_task_re
                     zip_file.write(file_path, arcname)
         
         zip_buffer.seek(0)
-        
-        # Create response
+
         response = StreamingResponse(
-            BytesIO(zip_buffer.read()),
-            media_type="application/zip",
+            content_generator(zip_buffer),
             headers={"Content-Disposition": f"attachment; filename={task.title.replace(' ', '_')}_{task_id}.zip"}
         )
-        
+
         return response
     except HTTPException:
         raise

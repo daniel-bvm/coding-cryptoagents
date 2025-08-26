@@ -304,13 +304,11 @@ function dashboard() {
                 this.taskSteps = [];
             }
         },
-
-        // Save the content to local folder (download task as ZIP)
+        // Save the content to local folder (stream download as ZIP)
         async downloadTask(taskId) {
             try {
                 const response = await fetch(`./api/tasks/${taskId}/download`);
                 if (response.ok) {
-                    const blob = await response.blob();
                     // Use the File System Access API if available
                     if ('showSaveFilePicker' in window) {
                         try {
@@ -323,11 +321,21 @@ function dashboard() {
                             };
                             const handle = await window.showSaveFilePicker(options);
                             const writable = await handle.createWritable();
-                            await writable.write(blob);
-                            await writable.close();
-                            this.showToast("Saved to local folder", "success");
+
+                            if (response.body && writable) {
+                                // Stream directly from response to file
+                                await response.body.pipeTo(writable);
+                                this.showToast("Saved to local folder", "success");
+                            } else {
+                                // Fallback if streaming not supported
+                                const blob = await response.blob();
+                                await writable.write(blob);
+                                await writable.close();
+                                this.showToast("Saved to local folder", "success");
+                            }
                         } catch (fsError) {
                             // If user cancels or error, fallback to download
+                            const blob = await response.blob();
                             const url = window.URL.createObjectURL(blob);
                             const a = document.createElement("a");
                             a.href = url;
@@ -340,6 +348,7 @@ function dashboard() {
                         }
                     } else {
                         // Fallback for browsers without File System Access API
+                        const blob = await response.blob();
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement("a");
                         a.href = url;
