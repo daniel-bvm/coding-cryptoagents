@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prototype - Task Dashboard</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+    <link rel="icon"         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
     <link href="./static/tailwind.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="./static/style.css" rel="stylesheet">
@@ -45,17 +45,19 @@
                                      }"></div>
                                 <span class="text-xs">
                                     <span x-show="connectionStatus === 'connected'">Live</span>
-                                <span x-show="connectionStatus === 'connecting'">Connecting</span>
-                                <span x-show="connectionStatus === 'disconnected'">Offline</span>
+                                    <span x-show="connectionStatus === 'connecting'">Connecting</span>
+                                    <span x-show="connectionStatus === 'disconnected'">Offline</span>
                                 </span>
                             </div>
-                            <button @click="forceReconnect()" x-show="connectionStatus === 'disconnected'" class="text-xs hover:text-gray-200 transition-colors">
+                            <button @click="forceReconnect()" x-show="connectionStatus === 'disconnected'"
+                                class="text-xs hover:text-gray-200 transition-colors">
                                 <i class="fas fa-redo"></i>
                             </button>
                         </div>
                     </div>
 
-                    <button style="display: none;" @click="refreshTasks()" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105">
+                    <button style="display: none;" @click="refreshTasks()"
+                        class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105">
                         <i class="fas fa-sync-alt" :class="{ 'animate-spin': loading }"></i>
                     </button>
                 </div>
@@ -132,17 +134,18 @@
                             <div class="flex-1">
                                 <div class="flex items-center justify-between mb-1">
                                     <h4 class="font-bold text-sm" x-text="activity.title"></h4>
-                                    <span class="text-xs text-gray-500" x-text="formatTimeAgo(activity.timestamp)"></span>
+                                    <span class="text-xs text-gray-500"
+                                        x-text="formatTimeAgo(activity.timestamp)"></span>
                                 </div>
                                 <p class="text-sm text-gray-700 mb-1" x-text="activity.message"></p>
                                 <template x-if="activity.details">
                                     <p class="text-xs text-gray-500" x-text="activity.details"></p>
                                 </template>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
-            </template>
-        </div>
-        </div>
         </div>
 
         <!-- Task List -->
@@ -167,47 +170,51 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     <template x-for="task in tasks" :key="task.id">
                         <div class="task-card bg-white border border-gray-200 rounded-xl shadow-lg p-6 transition-all duration-300 cursor-pointer animate-fade-in"
-                             @click="selectTask(task)">
+                            @click="selectTask(task)">
                             <!-- Task Header -->
                             <div class="flex items-start justify-between mb-4">
                                 <div class="flex-1">
                                     <h3 class="text-lg font-bold text-gray-800 mb-1" x-text="task.title"></h3>
                                     <p class="text-sm text-gray-500" x-text="formatDate(task.created_at)"></p>
                                 </div>
-                                                                <div class="flex items-center space-x-2">
-                                                                    <span class="status-badge px-3 py-1 rounded-full text-xs font-medium"
-                                                                          :class="getStatusColor(task.status)" x-text="task.status"></span>
-                                                                    
+                                <div class="flex items-center space-x-2">
+                                    <span class="status-badge px-3 py-1 rounded-full text-xs font-medium"
+                                        :class="getStatusColor(task.status)" x-text="task.status"></span>
+
                                     <template x-if="task.status === 'completed'">
                                         <div class="flex items-center space-x-1">
-                                            <span class="tooltip-container" tabindex="0" aria-label="Download now to save permanently">
+                                            <span class="tooltip-container" tabindex="0"
+                                                aria-label="Download now to save permanently">
                                                 <span class="text-yellow-600 text-xs">⚠️</span>
                                                 <span class="tooltip-box">Download now to save permanently
                                                     <span class="tooltip-arrow" aria-hidden="true"></span>
                                                 </span>
                                             </span>
                                             <button @click.stop="downloadTask(task.id)"
-                                                    class="text-green-600 hover:text-green-800 transition-colors bg-green-50 hover:bg-green-100 px-2 py-1 rounded text-xs">
+                                                class="text-green-600 hover:text-green-800 transition-colors bg-green-50 hover:bg-green-100 px-2 py-1 rounded text-xs">
                                                 <i class="fas fa-download mr-1"></i>Save
                                             </button>
                                         </div>
                                     </template>
-                </div>
-            </div>
+                                </div>
+                            </div>
 
-            <!-- Progress Bar -->
-            <div class="mb-4">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-700">Progress</span>
-                    <span class="text-sm text-gray-500" x-text="task.progress + '%'"></span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="progress-bar h-2 rounded-full transition-all duration-500 ease-out" :class="[getProgressColor(task.status), { 'active': task.status !== 'completed' && task.status !== 'failed' }]" :style="`width: ${task.progress}%`"></div>
-                </div>
-            </div>
+                            <!-- Progress Bar -->
+                            <div class="mb-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-gray-700">Progress</span>
+                                    <span class="text-sm text-gray-500" x-text="task.progress + '%'"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="progress-bar h-2 rounded-full transition-all duration-500 ease-out"
+                                        :class="[getProgressColor(task.status), { 'active': task.status !== 'completed' && task.status !== 'failed' }]"
+                                        :style="`width: ${task.progress}%`"></div>
+                                </div>
+                            </div>
 
-            <!-- Task Details -->
-            <template x-if="task.status !== 'completed' && task.status !== 'failed' && task.current_step">
+                            <!-- Task Details -->
+                            <template
+                                x-if="task.status !== 'completed' && task.status !== 'failed' && task.current_step">
                                 <div class="mb-3">
                                     <p class="text-sm text-gray-600">
                                         <i class="fas fa-cog animate-spin mr-1"></i>
@@ -216,70 +223,78 @@
                                 </div>
                             </template>
 
-            <!-- Steps Counter -->
-            <template x-if="task.total_steps > 0">
+                            <!-- Steps Counter -->
+                            <template x-if="task.total_steps > 0">
                                 <div class="flex items-center text-sm text-gray-500 mb-3">
                                     <i class="fas fa-list-ol mr-2"></i>
                                     <span x-text="`${task.completed_steps}/${task.total_steps} steps`"></span>
                                 </div>
                             </template>
 
-            <!-- Features -->
-            <div class="flex items-center text-sm gap-x-4">
-                <template x-if="task.has_index_html">
+                            <!-- Features -->
+                            <div class="flex items-center text-sm gap-x-4">
+                                <template x-if="task.has_index_html">
                                     <span class="flex items-center text-green-600">
                                         <i class="fas fa-globe  mr-1"></i>
                                         Website
                                     </span>
                                 </template>
-                <template x-if="task.output_directory">
+                                <template x-if="task.output_directory">
                                     <span class="flex items-center text-blue-600">
                                         <i class="fas fa-folder mr-1"></i>
                                         Files
                                     </span>
                                 </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
-        </div>
-        </template>
-        </div>
-        </div>
         </div>
     </main>
 
     <!-- Web Preview Modal -->
-    <div x-show="selectedTask" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-        class="fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4 z-50" @click.self="closeTaskModal()" <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" x-show="selectedTask" x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-100 transform scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform scale-100" x-transition:leave-end="opacity-0 transform scale-95">
+    <div x-show="selectedTask" x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4 z-50"
+        @click.self="closeTaskModal()" <div
+        class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" x-show="selectedTask"
+        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95"
+        x-transition:enter-end="opacity-100 transform scale-100" x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100 transform scale-100"
+        x-transition:leave-end="opacity-0 transform scale-95">
 
         <!-- Modal Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 w-full">
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 w-full">
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-2xl font-bold" x-text="selectedTask?.title"></h2>
-                    <p class="text-blue-100" x-text="selectedTask?.id"></p>
+                    <h2 class="text-xl font-bold" x-text="selectedTask?.title"></h2>
                 </div>
                 <div class="flex items-center space-x-3">
                     <template x-if="selectedTask?.status === 'completed'">
-                            <div class="flex items-center space-x-3">
-                               
-                                <div class="flex items-center">
-                                    <button @click="toggleDetailView()"
-                                            :title="viewTaskSteps ? 'Show Preview' : 'Show Steps'"
-                                            aria-label="Toggle preview / steps"
-                                            class="ml-2 bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-2 rounded-full transition-colors flex items-center">
-                                        <i :class="!viewTaskSteps ? 'fas fa-info-circle text-white' : 'fas fa-list text-white'" class="text-lg"></i>
-                                    </button>
-                                </div>
-                                <button @click="downloadTask(selectedTask.id)"
-                                        class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-all flex items-center">
-                                    <i class="fas fa-download mr-2"></i>
-                                    Download ZIP
+                        <div class="flex items-center space-x-3">
+
+                            <div class="flex items-center">
+                                <button @click="toggleDetailView()"
+                                    :title="viewTaskSteps ? 'Show Preview' : 'Show Steps'"
+                                    aria-label="Toggle preview / steps"
+                                    class="ml-2  bg-opacity-20 hover:bg-opacity-30 rounded-full transition-colors flex items-center">
+                                    <i :class="!viewTaskSteps ? 'fas fa-info-circle text-white scale-110' : 'fas fa-list text-white scale-110'"
+                                        class="text-lg"></i>
                                 </button>
                             </div>
-                        </template>
-                    <button @click="closeTaskModal()" class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition-all">
-                            <i class="fas fa-times"></i>
-                        </button>
+                            <button @click="downloadTask(selectedTask.id)"
+                                class="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg transition-all flex items-center ">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </template>
+                    <button @click="closeTaskModal()"
+                        class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition-all w-10">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -288,187 +303,194 @@
         <div class="overflow-y-hidden bg-white w-full h-[90vh]">
             <div x-show="!viewTaskSteps" class="h-full">
                 <template x-if="selectedTask?.status === 'completed' && showHTMLFile !== ''">
-                   
-                        <div class="h-full">
-                            <iframe :src="`./api/tasks/${selectedTask.id}/preview/${showHTMLFile}`"
-                                    class="w-full h-full border-0"></iframe>
-                        </div>
+
+                    <div class="h-full">
+                        <iframe :src="`./api/tasks/${selectedTask.id}/preview/${showHTMLFile}`"
+                            class="w-full h-full border-0"></iframe>
+                    </div>
                     <!-- </div> -->
                 </template>
             </div>
             <div class="p-6 h-full overflow-y-auto">
                 <template x-if="selectedTask?.status !== 'completed'">
-                                <!-- Progress Section -->
-                                <div class="mb-6">
-                                    <h3 class="text-lg text-black font-bold mb-4 flex items-center">
-                                        <i class="fas fa-tasks mr-2 text-blue-600"></i>
-                                        Progress
-                                    </h3>
-                                    <div class="bg-gray-50 rounded-lg p-4">
-                                        <div class="flex items-center justify-between mb-3">
-                                            <span class="font-medium">Overall Progress</span>
-                                            <span class="text-lg font-bold" x-text="selectedTask?.progress + '%'"></span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
-                                            <div class="progress-bar h-3 rounded-full transition-all duration-500"
-                                                :class="[getProgressColor(selectedTask?.status), { 'active': selectedTask?.status !== 'completed' && selectedTask?.status !== 'failed' }]"
-                                                :style="`width: ${selectedTask?.progress}%`"></div>
-                                        </div>
-                                        <template x-if="selectedTask?.current_step">
-                                            <div class="flex items-center text-sm text-gray-600">
-                                                <i class="fas fa-cog animate-spin mr-2"></i>
-                                                <span x-text="selectedTask?.current_step"></span>
-                                            </div>
-                                        </template>
-            </div>
-        </div>
-        </template>
+                    <!-- Progress Section -->
+                    <div class="mb-6">
+                        <h3 class="text-lg text-black font-bold mb-4 flex items-center">
+                            <i class="fas fa-tasks mr-2 text-blue-600"></i>
+                            Progress
+                        </h3>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="font-medium">Overall Progress</span>
+                                <span class="text-lg font-bold" x-text="selectedTask?.progress + '%'"></span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
+                                <div class="progress-bar h-3 rounded-full transition-all duration-500"
+                                    :class="[getProgressColor(selectedTask?.status), { 'active': selectedTask?.status !== 'completed' && selectedTask?.status !== 'failed' }]"
+                                    :style="`width: ${selectedTask?.progress}%`"></div>
+                            </div>
+                            <template x-if="selectedTask?.current_step">
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <i class="fas fa-cog animate-spin mr-2"></i>
+                                    <span x-text="selectedTask?.current_step"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
 
-        <div x-show="viewTaskSteps">
-            <!-- File List -->
-            <div class="mb-6" x-show="taskFiles.length > 0">
-                <h3 class="text-lg font-bold mb-4 flex items-center">
-                    <i class="fas fa-folder-open mr-2 text-yellow-600"></i> Generated Files
-                </h3>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <template x-for="file in taskFiles" :key="file.path">
-                                                <div class="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                                                    <div class="flex items-center">
-                                                        <i class="fas fa-file mr-2 text-gray-400"
-                                                        :class="{
+                <div x-show="viewTaskSteps">
+                    <!-- File List -->
+                    <div class="mb-6" x-show="taskFiles.length > 0">
+                        <h3 class="text-lg font-bold mb-4 flex items-center">
+                            <i class="fas fa-folder-open mr-2 text-yellow-600"></i> Generated Files
+                        </h3>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <template x-for="file in taskFiles" :key="file.path">
+                                <div
+                                    class="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-file mr-2 text-gray-400" :class="{
                                                             'fa-file-code text-blue-500': file.name.endsWith('.html') || file.name.endsWith('.css') || file.name.endsWith('.js'),
                                                             'fa-file-image text-green-500': file.name.match(/\.(jpg|jpeg|png|gif|svg)$/i),
                                                             'fa-globe text-orange-500': file.is_index
                                                         }"></i>
-                                                        <span x-text="file.name" class="font-medium"></span>
-                                                        <template x-if="file.is_index">
-                                                            <span class="ml-2 bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">Index</span>
-                                                        </template>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm text-gray-500" x-text="formatFileSize(file.size)"></span>
-                    <template x-if="file.is_html">
-                                                            <button @click="previewFile(selectedTask.id, file.path)"
-                                                                    class="text-blue-600 hover:text-blue-800 text-sm">
-                                                                <i class="fas fa-eye"></i>
-                                                            </button>
-                                                        </template>
-                </div>
-            </div>
-            </template>
-        </div>
-    </div>
-
-
-    <!-- Task Steps -->
-    <div class="mb-6" x-show="taskSteps.length > 0">
-        <h3 class="text-lg font-bold mb-4 flex items-center text-black">
-            <i class="fas fa-list-ol mr-2 text-purple-600"></i> Execution Steps
-        </h3>
-        <div class="bg-gray-50 rounded-lg p-4">
-            <template x-for="(step, index) in taskSteps" :key="step.id">
-                                                <div class="mb-4 p-4 border rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-md"
-                                                    :class="getStepStatusColor(step.status)">
-                                                    <div class="flex items-start justify-between mb-2">
-                                                        <div class="flex items-center space-x-3">
-                                                            <div class="text-lg" x-text="getStepTypeIcon(step.step_type)"></div>
-                                                            <div>
-                                                                <div class="flex items-center space-x-2">
-                                                                    <span class="font-semibold text-sm">
-                                                                        Step <span x-text="step.step_number"></span>: 
-                                                                        <span x-text="step.step_type === 'research' ? 'Research' : 'Build'"></span>
-                                                                    </span>
-                                                                </div>
-                                                                <p class="text-sm text-gray-600 mt-1" x-text="step.reason"></p>
-                                                            </div>
-                                                        </div>
-                                                        <div class="flex items-center space-x-2">
-                                                            <i :class="getStepStatusIcon(step.status)"></i>
-                                                            <span class="text-xs font-medium px-2 py-1 rounded border"
-                                                                :class="getStepStatusColor(step.status)" x-text="step.status"></span>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="text-sm mb-2">
-                                                        <p class="text-gray-700" x-text="step.task_description"></p>
-                                                    </div>
-                                                    
-                                                    <template x-if="step.expectation">
-                                                        <div class="text-xs text-gray-600 mb-2">
-                                                            <strong>Expected:</strong> <span x-html="marked.parse(step.expectation)"></span>
-                                                        </div>
-                                                    </template>
-
-            <template x-if="step.output && step.status === 'completed'">
-                                                        <div class="mt-3 p-3 bg-green-50 rounded border border-green-200">
-                                                            <h5 class="text-xs font-semibold text-green-800 mb-1">Output:</h5>
-                                                            <p class="text-xs text-green-700" x-text="step.output.length > 200 ? step.output.substring(0, 200) + '...' : step.output"></p>
-                                                        </div>
-                                                    </template>
-
-            <template x-if="step.error_message && step.status === 'failed'">
-                                                        <div class="mt-3 p-3 bg-red-50 rounded border border-red-200">
-                                                            <h5 class="text-xs font-semibold text-red-800 mb-1">Error:</h5>
-                                                            <p class="text-xs text-red-700" x-text="step.error_message"></p>
-                                                        </div>
-                                                    </template>
-
-            <div class="flex items-center justify-between mt-3 text-xs text-gray-500">
-                <div class="flex items-center space-x-4">
-                    <template x-if="step.started_at">
-                                                                <span>Started: <span x-text="formatDate(step.started_at)"></span></span>
-                                                            </template>
-                    <template x-if="step.completed_at">
-                                                                <span>Completed: <span x-text="formatDate(step.completed_at)"></span></span>
-                                                            </template>
-                </div>
-            </div>
-        </div>
-        </template>
-    </div>
-    </div>
-
-
-    <!-- Task Info -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-gray-50 rounded-lg p-4">
-            <h4 class="font-bold mb-2">Task Details</h4>
-            <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Status:</span>
-                    <span class="font-medium" :class="getStatusTextColor(selectedTask?.status)" x-text="selectedTask?.status"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Created:</span>
-                    <span x-text="formatDate(selectedTask?.created_at)"></span>
-                </div>
-                <template x-if="selectedTask?.completed_at">
-                                                    <div class="flex justify-between">
-                                                        <span class="text-gray-600">Completed:</span>
-                                                        <span x-text="formatDate(selectedTask?.completed_at)"></span>
-                                                    </div>
-                                                </template>
-            </div>
-        </div>
-
-        <template x-if="selectedTask?.expectation">
-                                            <div class="bg-gray-50 rounded-lg p-4">
-                                                <h4 class="font-bold mb-2">Description</h4>
-                                                <p class="text-sm text-gray-700" x-html="marked.parse(selectedTask?.expectation)"></p>
-                                            </div>
+                                        <span x-text="file.name" class="font-medium"></span>
+                                        <template x-if="file.is_index">
+                                            <span
+                                                class="ml-2 bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">Index</span>
                                         </template>
-    </div>
-    </d>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-sm text-gray-500" x-text="formatFileSize(file.size)"></span>
+                                        <template x-if="file.is_html">
+                                            <button @click="previewFile(selectedTask.id, file.path)"
+                                                class="text-blue-600 hover:text-blue-800 text-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
 
-    <template x-if="selectedTask?.error_message">
-                                    <div class="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-                                        <h4 class="font-bold text-red-800 mb-2">Error Details</h4>
-                                        <p class="text-sm text-red-700" x-text="selectedTask?.error_message"></p>
+
+                    <!-- Task Steps -->
+                    <div class="mb-6" x-show="taskSteps.length > 0">
+                        <h3 class="text-lg font-bold mb-4 flex items-center text-black">
+                            <i class="fas fa-list-ol mr-2 text-purple-600"></i> Execution Steps
+                        </h3>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <template x-for="(step, index) in taskSteps" :key="step.id">
+                                <div class="mb-4 p-4 border rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-md"
+                                    :class="getStepStatusColor(step.status)">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="text-lg" x-text="getStepTypeIcon(step.step_type)"></div>
+                                            <div>
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="font-semibold text-sm">
+                                                        Step <span x-text="step.step_number"></span>:
+                                                        <span
+                                                            x-text="step.step_type === 'research' ? 'Research' : 'Build'"></span>
+                                                    </span>
+                                                </div>
+                                                <p class="text-sm text-gray-600 mt-1" x-text="step.reason"></p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <i :class="getStepStatusIcon(step.status)"></i>
+                                            <span class="text-xs font-medium px-2 py-1 rounded border"
+                                                :class="getStepStatusColor(step.status)" x-text="step.status"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-sm mb-2">
+                                        <p class="text-gray-700" x-text="step.task_description"></p>
+                                    </div>
+
+                                    <template x-if="step.expectation">
+                                        <div class="text-xs text-gray-600 mb-2">
+                                            <strong>Expected:</strong> <span
+                                                x-html="marked.parse(step.expectation)"></span>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="step.output && step.status === 'completed'">
+                                        <div class="mt-3 p-3 bg-green-50 rounded border border-green-200">
+                                            <h5 class="text-xs font-semibold text-green-800 mb-1">Output:</h5>
+                                            <p class="text-xs text-green-700"
+                                                x-text="step.output.length > 200 ? step.output.substring(0, 200) + '...' : step.output">
+                                            </p>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="step.error_message && step.status === 'failed'">
+                                        <div class="mt-3 p-3 bg-red-50 rounded border border-red-200">
+                                            <h5 class="text-xs font-semibold text-red-800 mb-1">Error:</h5>
+                                            <p class="text-xs text-red-700" x-text="step.error_message"></p>
+                                        </div>
+                                    </template>
+
+                                    <div class="flex items-center justify-between mt-3 text-xs text-gray-500">
+                                        <div class="flex items-center space-x-4">
+                                            <template x-if="step.started_at">
+                                                <span>Started: <span x-text="formatDate(step.started_at)"></span></span>
+                                            </template>
+                                            <template x-if="step.completed_at">
+                                                <span>Completed: <span
+                                                        x-text="formatDate(step.completed_at)"></span></span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+
+                    <!-- Task Info -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="font-bold mb-2">Task Details</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Status:</span>
+                                    <span class="font-medium" :class="getStatusTextColor(selectedTask?.status)"
+                                        x-text="selectedTask?.status"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Created:</span>
+                                    <span x-text="formatDate(selectedTask?.created_at)"></span>
+                                </div>
+                                <template x-if="selectedTask?.completed_at">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Completed:</span>
+                                        <span x-text="formatDate(selectedTask?.completed_at)"></span>
                                     </div>
                                 </template>
-    </div>
-    </div>
-    </div>
+                            </div>
+                        </div>
+
+                        <template x-if="selectedTask?.expectation">
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-bold mb-2">Description</h4>
+                                <p class="text-sm text-gray-700" x-html="marked.parse(selectedTask?.expectation)"></p>
+                            </div>
+                        </template>
+                    </div>
+                    </d>
+
+                    <template x-if="selectedTask?.error_message">
+                        <div class="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                            <h4 class="font-bold text-red-800 mb-2">Error Details</h4>
+                            <p class="text-sm text-red-700" x-text="selectedTask?.error_message"></p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
     </div>
 
 
@@ -500,16 +522,16 @@
                                      'bg-red-400': connectionStatus === 'disconnected'
                                  }"></div>
                             <span class="text-gray-400">
-                                Real-time Status: 
+                                Real-time Status:
                                 <span :class="{
                                     'text-green-400': connectionStatus === 'connected',
                                     'text-yellow-400': connectionStatus === 'connecting',
                                     'text-red-400': connectionStatus === 'disconnected'
                                 }">
                                     <span x-show="connectionStatus === 'connected'">Connected</span>
-                            <span x-show="connectionStatus === 'connecting'">Connecting...</span>
-                            <span x-show="connectionStatus === 'disconnected'">Disconnected</span>
-                            </span>
+                                    <span x-show="connectionStatus === 'connecting'">Connecting...</span>
+                                    <span x-show="connectionStatus === 'disconnected'">Disconnected</span>
+                                </span>
                             </span>
                         </div>
 
@@ -522,7 +544,8 @@
 
                 <div class="mt-4 pt-4 border-t border-gray-700 text-center text-gray-500 text-xs">
                     <p>
-                        <i class="fas fa-info-circle mr-1"></i> This dashboard provides real-time monitoring but does not guarantee data persistence. Always backup important work locally.
+                        <i class="fas fa-info-circle mr-1"></i> This dashboard provides real-time monitoring but does
+                        not guarantee data persistence. Always backup important work locally.
                     </p>
                 </div>
             </div>
