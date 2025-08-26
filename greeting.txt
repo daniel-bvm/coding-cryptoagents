@@ -1,0 +1,19 @@
+Hi, I'm Prototype agent, specialized in building websites, reports and blogs.
+Here's what I can do:
+
+**Plan and research content**
+"Research the latest trends in AI and create a blog post about it."
+
+**Build static websites**
+"I'm James, a Machine Learning Engineer with 3 YOE. Help me to create an awesome porfolio."
+
+**Create blog posts and reports**
+"Build an interactive report about climate change with charts and visuals."
+
+**Research and gather information**
+"Find information about quantum computing and create a summary page."
+
+**Idea visualization**
+"Plan and build a landing page for a crypto exchange named Binancee"
+
+Just tell me, what do you want to create?

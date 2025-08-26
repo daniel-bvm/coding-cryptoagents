@@ -52,6 +52,7 @@ from agent.pubsub import EventHandler, EventPayload, EventType
 import glob
 import base64
 from mimetypes import guess_type
+import uuid
 
 def compose_steps(steps: List[StepV2], task_offset_1: int = 1) -> StepV2:
     step_type, task, expectation, reason = steps[0].step_type, '', '', ''
@@ -336,6 +337,24 @@ async def build(task_id: str, title: str, expectation: str) -> AsyncGenerator[Ch
         if i == 0: # first step
             composed_step.task = f"We are building a {title}, expected output: {expectation}\n\nYour task is to do it step-by-step\n{composed_step.task}"
 
+        is_last_build_step = ssteps[-1].step_type == "build"
+
+        for j in range(i + 1, len(segmented_steps)):
+            if segmented_steps[j][-1].step_type == "build":
+                is_last_build_step = False
+                break
+
+        html_files = glob.glob(os.path.join(workdir, "**/*.html"), recursive=True)
+        index_html_files = glob.glob(os.path.join(workdir, "**/index.html"), recursive=True)
+        has_index_html = len(index_html_files) > 0
+        has_any_html = len(html_files) > 0
+
+        if is_last_build_step and not has_index_html:
+            composed_step.task += f"\n\nImportant: The current project does not contain an index.html file to show. Please create it."
+
+            if has_any_html:
+                composed_step.task += f"\n\nHint: If the main content is in another index.html file, just rename it to index.html then polish it."
+
         step_output: ClaudeCodeStepOutput = await execute_steps_v2(
             composed_step.step_type, 
             composed_step, 
@@ -399,7 +418,7 @@ async def build(task_id: str, title: str, expectation: str) -> AsyncGenerator[Ch
 
             if zip_output and os.path.exists(zip_output) and os.path.getsize(zip_output) > 0:
                 logger.info(f"Output file: {zip_output}; Size: {os.path.getsize(zip_output)}")
-                yield wrap_chunk(random_uuid(), construct_file_response([zip_output]))
+                # yield wrap_chunk(random_uuid(), construct_file_response([zip_output]))
 
             recap += f"Output has been sent to the user.\n"
 
@@ -497,7 +516,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
 
             logger.info(f"Executing tool call: {_name} with args: {_args}")
             _result = ''
-            task_id = os.urandom(4).hex()
+            task_id = uuid.uuid4().hex
             _args["task_id"] = task_id
 
             try:
