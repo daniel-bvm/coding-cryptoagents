@@ -6,144 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prototype - Task Dashboard</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="./static/tailwind.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="./static/style.css" rel="stylesheet">
     <script src="./static/script.js"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Marked.js for Markdown rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    animation: {
-                        'fade-in': 'fadeIn 0.5s ease-in-out',
-                        'slide-in': 'slideIn 0.3s ease-out',
-                        'bounce-gentle': 'bounceGentle 2s infinite',
-                        'pulse-slow': 'pulse 3s infinite',
-                        'gradient': 'gradient 6s ease infinite',
-                    },
-                    keyframes: {
-                        fadeIn: {
-                            '0%': {
-                                opacity: '0',
-                                transform: 'translateY(10px)'
-                            },
-                            '100%': {
-                                opacity: '1',
-                                transform: 'translateY(0)'
-                            }
-                        },
-                        slideIn: {
-                            '0%': {
-                                transform: 'translateX(-100%)'
-                            },
-                            '100%': {
-                                transform: 'translateX(0)'
-                            }
-                        },
-                        bounceGentle: {
-                            '0%, 100%': {
-                                transform: 'translateY(0)'
-                            },
-                            '50%': {
-                                transform: 'translateY(-5px)'
-                            }
-                        },
-                        gradient: {
-                            '0%, 100%': {
-                                backgroundPosition: '0% 50%'
-                            },
-                            '50%': {
-                                backgroundPosition: '100% 50%'
-                            }
-                        }
-                    },
-                    backgroundSize: {
-                        '300%': '300%',
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        .gradient-bg {
-            background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c);
-            background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
-        }
-        
-        .glass {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .task-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
-        
-        .progress-ring {
-            transition: stroke-dasharray 0.5s ease-in-out;
-        }
-        /* Elegant tooltip for small inline icons */
-        
-        .tooltip-container {
-            position: relative;
-            display: inline-block;
-            line-height: 0;
-        }
-        
-        .tooltip-box {
-            position: absolute;
-            top: -40px;
-            left: 50%;
-            transform: translateX(-50%) translateY(6px);
-            background: white;
-            /* amber-500 */
-            color: rgb(202 138 4 / var(--tw-text-opacity, 1));
-            padding: 6px 10px;
-            height: 30px;
-            display: grid;
-            place-items: center;
-            border-radius: 6px;
-            font-size: 12px;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-            transition: opacity 0.18s ease, transform 0.18s ease;
-            z-index: 50;
-        }
-        
-        .tooltip-container:focus .tooltip-box,
-        .tooltip-container:hover .tooltip-box {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-            pointer-events: auto;
-        }
-        
-        .tooltip-arrow {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background: white;
-            left: 50%;
-            top: 75%;
-            transform: translateX(-50%) rotate(45deg);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-            z-index: 1;
-        }
-    </style>
 </head>
 
 <body class="bg-gray-50 min-h-screen" x-data="dashboard()" x-init="init()" @keydown.window.escape="closeTaskModal()">
     <!-- Header -->
     <header class="gradient-bg text-white shadow-2xl">
         <div class="container mx-auto px-6 py-8">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between flex-wrap w-full gap-3">
                 <div class="flex items-center space-x-4">
                     <div class="bg-white bg-opacity-20 p-3 rounded-full">
                         <i class="fas fa-robot text-2xl"></i>
@@ -153,7 +29,7 @@
                         <p class="text-blue-100">Task Dashboard</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-4 min-w-36-">
                     <div class="bg-white bg-opacity-20 px-4 py-2 rounded-full">
                         <span class="text-sm">Total Tasks: <span x-text="tasks.length" class="font-bold"></span></span>
                     </div>

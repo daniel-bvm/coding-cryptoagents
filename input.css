@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles from the original HTML */
+.gradient-bg {
+    background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+}
+
+.glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.task-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.progress-ring {
+    transition: stroke-dasharray 0.5s ease-in-out;
+}
+
+/* Elegant tooltip for small inline icons */
+.tooltip-container {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+}
+
+.tooltip-box {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    background: white;
+    /* amber-500 */
+    color: rgb(202 138 4 / var(--tw-text-opacity, 1));
+    padding: 6px 10px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 50;
+}
+
+.tooltip-container:focus .tooltip-box,
+.tooltip-container:hover .tooltip-box {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+.tooltip-arrow {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: white;
+    left: 50%;
+    top: 75%;
+    transform: translateX(-50%) rotate(45deg);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    z-index: 1;
+}

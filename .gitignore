@@ -23,3 +23,6 @@ data/
 .env
 chat_history.json
 tasks.db
+
+# Tailwind CSS generated file (uncomment for development)
+# public/tailwind.css
