@@ -1,4 +1,31 @@
-/* Additional custom styles for enhanced animations and effects */
+/* Additional custom styles for enhanced anim/* Floating animation for cards */
+
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+/* Gentle bounce animation for progress toast icons */
+@keyframes bounce-gentle {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-3px);
+    }
+    60% {
+        transform: translateY(-1px);
+    }
+}
+
+.animate-bounce-gentle {
+    animation: bounce-gentle 2s infinite;
+}effects */
 
 
 /* Smooth scrolling for the entire page */

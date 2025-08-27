@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     financial_datasets_api_key: str = Field(alias="FINANCIAL_DATASETS_API_KEY", default="")
     pexels_api_key: str = Field(alias="PEXELS_API_KEY", default="")
     twitter_api_key: str = Field(alias="TWITTER_API_KEY", default="")
+    eternalai_admin_key: str = Field(alias="ETERNALAI_ADMIN_KEY", default="eai2024")
 
     class Config:
         env_file = ".env"
