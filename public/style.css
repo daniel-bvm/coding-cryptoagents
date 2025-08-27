@@ -131,6 +131,30 @@ body.modal-open {
     overflow: hidden;
 }
 
+.progress-bar-animated {
+    background-image: linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.2) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0.2) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 20px 20px;
+    animation: progress-stripes 1s linear infinite;
+}
+
+@keyframes progress-stripes {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 20px 20px;
+    }
+}
+
 .progress-bar.active::after {
     content: '';
     position: absolute;
@@ -149,6 +173,43 @@ body.modal-open {
     }
     100% {
         background-position: 30px 30px;
+    }
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+    20%, 40%, 60%, 80% { transform: translateX(3px); }
+}
+
+.animate-shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+/* Enhanced progress bar glow effect */
+.progress-bar-animated::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+    );
+    animation: progress-shine 2s infinite;
+}
+
+@keyframes progress-shine {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
     }
 }
 

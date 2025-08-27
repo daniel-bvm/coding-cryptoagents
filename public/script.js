@@ -1,6 +1,5 @@
-const CDN_BASE_URL = "https://cdn.eternalai.org/prototype-agent"; // Replace with actual CDN base URL
+const CDN_BASE_URL = "https://cdn.eternalai.org/prototype-agent";
 
-// Dashboard functionality with real-time updates
 function dashboard() {
   return {
     tasks: [],
@@ -12,39 +11,43 @@ function dashboard() {
     loading: false,
     eventSource: null,
     planActivity: [],
-    connectionStatus: "disconnected", // disconnected, connecting, connected
+    connectionStatus: "disconnected",
     reconnectAttempts: 0,
     reconnectTimeout: null,
-    loadingShares: {}, // Track loading state per task ID
+    loadingShares: {},
 
-    // Initialize the dashboard
+    uploadConfig: {
+      enforceMinimumStepTiming: true,
+      minimumStepTimes: {
+        preparation: 500,
+        zipCreation: 600,
+        analysis: 500,
+        uploadPrep: 600,
+        uploadStep: 400,
+        processing: 500,
+        extraction: 400,
+      },
+    },
     async init() {
       await this.refreshTasks();
       this.connectEventSource();
       this.setupEventListeners();
     },
 
-    // Setup additional event listeners for connection management
     setupEventListeners() {
-      // Reconnect when page becomes visible again
       document.addEventListener("visibilitychange", () => {
         if (!document.hidden && this.connectionStatus === "disconnected") {
-          console.log("Page became visible, attempting reconnection");
           this.connectEventSource();
         }
       });
 
-      // Reconnect when network comes back online
       window.addEventListener("online", () => {
-        console.log("Network came back online, attempting reconnection");
         if (this.connectionStatus === "disconnected") {
           this.connectEventSource();
         }
       });
 
-      // Handle network offline
       window.addEventListener("offline", () => {
-        console.log("Network went offline");
         this.connectionStatus = "disconnected";
         this.showConnectionToast("Network offline", "error");
         if (this.eventSource) {
@@ -52,13 +55,10 @@ function dashboard() {
         }
       });
     },
-
-    // Check if a specific task is loading share
     isTaskLoadingShare(taskId) {
       return !!this.loadingShares[taskId];
     },
 
-    // Computed properties
     get completedTasks() {
       return this.tasks.filter((task) => task.status === "completed").length;
     },
@@ -71,7 +71,6 @@ function dashboard() {
       return this.tasks.filter((task) => task.status === "failed").length;
     },
 
-    // Fetch all tasks
     async refreshTasks() {
       this.loading = true;
       try {
@@ -82,27 +81,23 @@ function dashboard() {
           this.showToast("Failed to load tasks", "error");
         }
       } catch (error) {
-        console.error("Error fetching tasks:", error);
         this.showToast("Error loading tasks", "error");
       } finally {
         this.loading = false;
       }
     },
 
-    // Connect to real-time event stream
     connectEventSource() {
       if (this.eventSource) {
         this.eventSource.close();
       }
 
-      // Show connection status
       this.connectionStatus = "connecting";
       this.showConnectionToast("Connecting to real-time updates...", "info");
 
       this.eventSource = new EventSource("./api/subscribe?channels=tasks");
 
       this.eventSource.onopen = () => {
-        console.log("EventSource connected");
         this.connectionStatus = "connected";
         this.reconnectAttempts = 0;
         this.showConnectionToast("Connected to real-time updates", "success");
@@ -118,30 +113,23 @@ function dashboard() {
       };
 
       this.eventSource.onerror = (error) => {
-        console.error("EventSource error:", error);
         this.connectionStatus = "disconnected";
         this.eventSource.close();
 
-        // Increment reconnect attempts
         this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
 
-        // Fixed 2-second retry interval
-        const delay = 2000; // Always 2 seconds
+        const delay = 2000;
 
-        // Show disconnection message
         this.showConnectionToast(
           `Connection lost. Reconnecting in 2s (attempt ${this.reconnectAttempts})`,
           "warning"
         );
 
-        // Attempt to reconnect after 2 seconds
         this.reconnectTimeout = setTimeout(() => {
           this.connectEventSource();
         }, delay);
       };
     },
-
-    // Handle real-time updates
     handleRealtimeUpdate(data) {
       const {
         event_type,
@@ -153,7 +141,7 @@ function dashboard() {
         total_steps,
         plan_summary,
       } = data.data;
-      console.log("event data:", data.data);
+
       switch (event_type) {
         case "task_created":
           this.tasks.unshift(task);
@@ -171,7 +159,6 @@ function dashboard() {
           this.tasks = this.tasks.filter((t) => t.id !== task_id);
           if (this.selectedTask && this.selectedTask.id === task_id) {
             this.selectedTask = null;
-            // Remove modal-open class from body when modal closes
             document.body.classList.remove("modal-open");
           }
           this.showToast("Task deleted", "info");
@@ -188,7 +175,7 @@ function dashboard() {
             icon: step.step_type === "plan" ? "🔍" : "🔨",
             timestamp: new Date(),
           });
-          // also need to reload loadTaskSteps
+
           if (!!this.selectedTask) {
             this.loadTaskSteps(this.selectedTask.id);
           }
@@ -215,19 +202,16 @@ function dashboard() {
       }
     },
 
-    // Update existing task
     updateTask(updatedTask) {
       const index = this.tasks.findIndex((t) => t.id === updatedTask.id);
       if (index !== -1) {
         this.tasks[index] = updatedTask;
 
-        // Update selected task if it's the same
         if (this.selectedTask && this.selectedTask.id === updatedTask.id) {
           this.selectedTask = updatedTask;
           this.loadTaskFiles(updatedTask.id);
         }
 
-        // Show progress notifications
         if (updatedTask.status === "completed") {
           this.showToast(`Task completed: ${updatedTask.title}`, "success");
         }
@@ -237,25 +221,19 @@ function dashboard() {
       }
     },
 
-    // Select a task and load its details
     async selectTask(task) {
       this.selectedTask = task;
       this.taskFiles = [];
       this.taskSteps = [];
 
-      console.log("Toggling detail view:", this.viewTaskSteps);
-
-      // Add modal-open class to body to hide scrollbar
       document.body.classList.add("modal-open");
 
-      // Load both files and steps
       await Promise.all([
         task.output_directory ? this.loadTaskFiles(task.id) : Promise.resolve(),
         this.loadTaskSteps(task.id),
       ]);
 
       if (task.status === "completed") {
-        // Choose an HTML file to show: prefer index.html, otherwise first .html, else empty
         let chosen = "";
         if (Array.isArray(this.taskFiles) && this.taskFiles.length > 0) {
           const indexFile = this.taskFiles.find((f) =>
@@ -283,18 +261,14 @@ function dashboard() {
         this.viewTaskSteps = true;
       }
     },
-
-    // Close task modal
     closeTaskModal() {
       this.selectedTask = null;
       this.taskFiles = [];
       this.taskSteps = [];
       this.viewTaskSteps = true;
-      // Remove modal-open class from body to restore scrollbar
       document.body.classList.remove("modal-open");
     },
 
-    // Load files for a task
     async loadTaskFiles(taskId) {
       try {
         const response = await fetch(`./api/tasks/${taskId}/files`);
@@ -307,7 +281,6 @@ function dashboard() {
       }
     },
 
-    // Load steps for a task
     async loadTaskSteps(taskId) {
       try {
         const response = await fetch(`./api/tasks/${taskId}/steps`);
@@ -317,16 +290,14 @@ function dashboard() {
           this.taskSteps = [];
         }
       } catch (error) {
-        console.error("Error loading task steps:", error);
         this.taskSteps = [];
       }
     },
-    // Save the content to local folder (stream download as ZIP)
+
     async downloadTask(taskId) {
       try {
         const response = await fetch(`./api/tasks/${taskId}/download`);
         if (response.ok) {
-          // Use the File System Access API if available
           if ("showSaveFilePicker" in window) {
             try {
               const options = {
@@ -342,18 +313,15 @@ function dashboard() {
               const writable = await handle.createWritable();
 
               if (response.body && writable) {
-                // Stream directly from response to file
                 await response.body.pipeTo(writable);
                 this.showToast("Saved to local folder", "success");
               } else {
-                // Fallback if streaming not supported
                 const blob = await response.blob();
                 await writable.write(blob);
                 await writable.close();
                 this.showToast("Saved to local folder", "success");
               }
             } catch (fsError) {
-              // If user cancels or error, fallback to download
               const blob = await response.blob();
               const url = window.URL.createObjectURL(blob);
               const a = document.createElement("a");
@@ -366,7 +334,6 @@ function dashboard() {
               this.showToast("Download started", "success");
             }
           } else {
-            // Fallback for browsers without File System Access API
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -382,18 +349,14 @@ function dashboard() {
           this.showToast("Download failed", "error");
         }
       } catch (error) {
-        console.error("Error saving task:", error);
         this.showToast("Save error", "error");
       }
     },
-
-    // Helper method to find the best HTML file to share
     findBestHtmlFile() {
       if (!Array.isArray(this.taskFiles) || this.taskFiles.length === 0) {
         return null;
       }
 
-      // Prefer index.html first
       const indexFile = this.taskFiles.find((f) =>
         f.path.toLowerCase().endsWith("index.html")
       );
@@ -401,14 +364,12 @@ function dashboard() {
         return indexFile.path;
       }
 
-      // Otherwise, use the first HTML file
       const firstHTML = this.taskFiles.find((f) =>
         f.path.toLowerCase().endsWith(".html")
       );
       return firstHTML ? firstHTML.path : null;
     },
 
-    // Helper method to copy share link to clipboard
     async copyShareLink(baseUrl, filePath) {
       const shareUrl = `${baseUrl}/${filePath}`;
       try {
@@ -423,7 +384,6 @@ function dashboard() {
       try {
         this.loadingShares[taskId] = true;
 
-        // Ensure task files are loaded
         if (!this.taskFiles || this.taskFiles.length === 0) {
           await this.loadTaskFiles(taskId);
         }
@@ -433,28 +393,18 @@ function dashboard() {
           return null;
         }
 
-        // Check if deployment already exists on EternalAI
-
         const chosenFile = this.findBestHtmlFile();
 
-        try {
-          const checkResponse = await fetch(
-            `${CDN_BASE_URL}/${taskId}/${chosenFile}`
-          );
-          if (checkResponse.ok) {
-            // Files already exist, use existing deployment
-            const baseUrl = `${CDN_BASE_URL}/${taskId}`;
-            return await this.handleExistingCdnLink(baseUrl);
-          }
-        } catch (error) {
-          // Deployment doesn't exist, proceed with upload
-          console.log("No existing deployment found, proceeding with upload");
+        const checkResponse = await fetch(
+          `${CDN_BASE_URL}/${taskId}/${chosenFile}`
+        );
+        if (checkResponse.ok) {
+          const baseUrl = `${CDN_BASE_URL}/${taskId}`;
+          return await this.handleExistingCdnLink(baseUrl);
         }
 
-        // No existing deployment, proceed with upload
         return await this.uploadNewFiles(taskId);
       } catch (error) {
-        console.error("Error uploading task files:", error);
         this.showToast("Upload failed", "error");
         return null;
       } finally {
@@ -462,7 +412,6 @@ function dashboard() {
       }
     },
 
-    // Handle existing CDN link
     async handleExistingCdnLink(existingUrl) {
       const chosenFile = this.findBestHtmlFile();
 
@@ -475,63 +424,67 @@ function dashboard() {
       return existingUrl;
     },
 
-    // Create ZIP file from task files
     async createZipFromTaskFiles(taskId) {
       try {
-        // use API
         const response = await fetch(`./api/tasks/${taskId}/download`);
         if (response.ok) {
           const zipBlob = await response.blob();
           return zipBlob;
         } else {
-          console.error("Failed to create ZIP file:", response.statusText);
           return null;
         }
       } catch (error) {
-        console.error("Error creating ZIP file:", error);
         return null;
       }
     },
 
-    // Upload new files to CDN
     async uploadNewFiles(taskId) {
       let progressToastId = null;
       try {
-        // First, create a ZIP file from task files
+        const startTime = Date.now();
+        progressToastId = this.showProgressToast("Preparing deployment...", 0);
+        await this.ensureMinimumStepTime(
+          startTime,
+          this.uploadConfig.minimumStepTimes.preparation,
+          progressToastId
+        );
+
+        const zipStartTime = Date.now();
+        this.updateProgressToast(
+          progressToastId,
+          "Creating deployment package...",
+          5
+        );
         const zipBlob = await this.createZipFromTaskFiles(taskId);
         if (!zipBlob) {
-          this.showToast("Failed to create ZIP file", "error");
+          this.showToast("Failed to create deployment package", "error");
           return null;
         }
+        await this.ensureMinimumStepTime(
+          zipStartTime,
+          this.uploadConfig.minimumStepTimes.zipCreation,
+          progressToastId
+        );
 
         const fileSizeFormatted = this.formatFileSize(zipBlob.size);
 
-        // Show initial progress
-        progressToastId = this.showProgressToast(
-          `Preparing upload (${fileSizeFormatted})...`,
-          0
+        const analysisStartTime = Date.now();
+        this.updateProgressToast(
+          progressToastId,
+          `Analyzing package (${fileSizeFormatted})...`,
+          5
+        );
+        await this.ensureMinimumStepTime(
+          analysisStartTime,
+          this.uploadConfig.minimumStepTimes.analysis,
+          progressToastId
         );
 
-        // Check if file is large enough to require chunking (5MB threshold)
-        const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
-        // const shouldChunk = zipBlob.size > CHUNK_SIZE;
-        const shouldChunk = false; // TODO: Update when API multipart is ready
-
-        let uploadResult;
-        if (shouldChunk) {
-          uploadResult = await this.uploadFileInChunks(
-            taskId,
-            zipBlob,
-            CHUNK_SIZE,
-            progressToastId
-          );
-        } else {
-          uploadResult = await this.uploadFileWhole(
-            taskId,
-            zipBlob,
-            progressToastId
-          );
-        }
+        let uploadResult = await this.uploadFileWhole(
+          taskId,
+          zipBlob,
+          progressToastId
+        );
 
         if (!uploadResult) {
           this.hideProgressToast(progressToastId);
@@ -539,21 +492,17 @@ function dashboard() {
           return null;
         }
 
-        this.hideProgressToast(progressToastId);
-        this.showToast("Deployment successful", "success");
-
         const chosenFile = this.findBestHtmlFile();
         if (!chosenFile) {
           this.showToast("No HTML file to share", "error");
           return null;
         }
 
-        // Construct the URL based on EternalAI's response structure
         const baseUrl = uploadResult.url || `${CDN_BASE_URL}/${taskId}`;
         await this.copyShareLink(baseUrl, chosenFile);
+
         return baseUrl;
       } catch (error) {
-        console.error("Upload error:", error);
         if (progressToastId) {
           this.hideProgressToast(progressToastId);
         }
@@ -562,163 +511,23 @@ function dashboard() {
       }
     },
 
-    // Upload file in chunks for large files
-    async uploadFileInChunks(taskId, fileBlob, chunkSize, progressToastId) {
-      const totalChunks = Math.ceil(fileBlob.size / chunkSize);
-      const fileName = `${taskId}.zip`;
+    async uploadFileWhole(taskId, fileBlob, progressToastId) {
       const fileSizeFormatted = this.formatFileSize(fileBlob.size);
+      const startTime = Date.now();
 
       try {
-        // Step 1: Initialize multipart upload
         this.updateProgressToast(
           progressToastId,
           `Preparing upload (${fileSizeFormatted})...`,
-          0
+          10
+        );
+        await this.ensureMinimumStepTime(
+          startTime,
+          this.uploadConfig.minimumStepTimes.uploadPrep,
+          progressToastId
         );
 
-        const initResponse = await fetch("./api/upload/init", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            filename: fileName,
-            folder_name: taskId,
-            total_size: fileBlob.size,
-            chunk_size: chunkSize,
-          }),
-        });
-
-        if (!initResponse.ok) {
-          throw new Error(
-            `Failed to initialize upload: ${initResponse.statusText}`
-          );
-        }
-
-        const { upload_id } = await initResponse.json();
-
-        // Step 2: Upload chunks with retry logic
-        const uploadedParts = [];
-        const maxRetries = 3;
-
-        for (let i = 0; i < totalChunks; i++) {
-          const start = i * chunkSize;
-          const end = Math.min(start + chunkSize, fileBlob.size);
-          const chunk = fileBlob.slice(start, end);
-          const chunkNumber = i + 1;
-          const chunkSizeFormatted = this.formatFileSize(chunk.size);
-
-          this.updateProgressToast(
-            progressToastId,
-            `Uploading chunk ${chunkNumber}/${totalChunks} (${chunkSizeFormatted})...`,
-            Math.round((i / totalChunks) * 80) // 80% for uploading, 20% for finalization
-          );
-
-          let chunkUploaded = false;
-          let retryCount = 0;
-
-          while (!chunkUploaded && retryCount < maxRetries) {
-            try {
-              const chunkFormData = new FormData();
-              chunkFormData.append("chunk", chunk);
-              chunkFormData.append("upload_id", upload_id);
-              chunkFormData.append("chunk_number", chunkNumber);
-
-              const chunkResponse = await Promise.race([
-                fetch("./api/upload/chunk", {
-                  method: "POST",
-                  body: chunkFormData,
-                }),
-                // Timeout after 60 seconds for chunk upload
-                new Promise((_, reject) =>
-                  setTimeout(
-                    () => reject(new Error("Chunk upload timeout")),
-                    60000
-                  )
-                ),
-              ]);
-
-              if (!chunkResponse.ok) {
-                throw new Error(
-                  `Failed to upload chunk ${chunkNumber}: ${chunkResponse.statusText}`
-                );
-              }
-
-              const chunkResult = await chunkResponse.json();
-              uploadedParts.push({
-                part_number: chunkNumber,
-                etag: chunkResult.etag,
-              });
-
-              chunkUploaded = true;
-            } catch (error) {
-              retryCount++;
-              if (retryCount < maxRetries) {
-                this.updateProgressToast(
-                  progressToastId,
-                  `Retrying chunk ${chunkNumber}/${totalChunks} (attempt ${
-                    retryCount + 1
-                  })...`,
-                  Math.round((i / totalChunks) * 80)
-                );
-                // Wait before retrying (exponential backoff)
-                await new Promise((resolve) =>
-                  setTimeout(resolve, Math.pow(2, retryCount) * 1000)
-                );
-              } else {
-                throw new Error(
-                  `Failed to upload chunk ${chunkNumber} after ${maxRetries} attempts: ${error.message}`
-                );
-              }
-            }
-          }
-        }
-
-        // Step 3: Complete multipart upload
-        this.updateProgressToast(progressToastId, "Finalizing upload...", 90);
-
-        const completeResponse = await fetch("./api/upload/complete", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            upload_id: upload_id,
-            parts: uploadedParts,
-          }),
-        });
-
-        if (!completeResponse.ok) {
-          throw new Error(
-            `Failed to complete upload: ${completeResponse.statusText}`
-          );
-        }
-
-        this.updateProgressToast(progressToastId, "Processing files...", 95);
-        const result = await completeResponse.json();
-
-        this.updateProgressToast(
-          progressToastId,
-          "Upload completed successfully!",
-          100
-        );
-        return result;
-      } catch (error) {
-        console.error("Chunked upload error:", error);
-        this.updateProgressToast(
-          progressToastId,
-          `Upload failed: ${error.message}`,
-          0
-        );
-        throw error;
-      }
-    },
-
-    // Upload file as a whole for smaller files
-    async uploadFileWhole(taskId, fileBlob, progressToastId) {
-      const fileSizeFormatted = this.formatFileSize(fileBlob.size);
-
-      try {
+        const uploadStartTime = Date.now();
         this.updateProgressToast(
           progressToastId,
           `Uploading file (${fileSizeFormatted})...`,
@@ -729,50 +538,118 @@ function dashboard() {
         formData.append("file", fileBlob, `${taskId}.zip`);
         formData.append("folder_name", taskId);
 
-        this.updateProgressToast(progressToastId, "Processing upload...", 60);
+        const uploadPromise = new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          let lastProgressUpdate = Date.now();
 
-        const response = await fetch("./api/upload/single", {
-          method: "POST",
-          body: formData,
+          xhr.upload.addEventListener("progress", (e) => {
+            const now = Date.now();
+            if (now - lastProgressUpdate >= 200 && e.lengthComputable) {
+              const uploadProgress = Math.round((e.loaded / e.total) * 60) + 20;
+              this.updateProgressToast(
+                progressToastId,
+                `Uploading... (${this.formatFileSize(
+                  e.loaded
+                )}/${fileSizeFormatted})`,
+                uploadProgress
+              );
+              lastProgressUpdate = now;
+            }
+          });
+
+          xhr.addEventListener("load", () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              reject(new Error(`Upload failed: ${xhr.statusText}`));
+            }
+          });
+
+          xhr.addEventListener("error", () => {
+            reject(new Error("Upload failed due to network error"));
+          });
+
+          xhr.open("POST", "./api/upload/single");
+          xhr.send(formData);
         });
 
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
-        }
+        await this.ensureMinimumStepTime(
+          uploadStartTime,
+          this.uploadConfig.minimumStepTimes.uploadStep,
+          progressToastId
+        );
 
-        this.updateProgressToast(progressToastId, "Extracting files...", 85);
-        const result = await response.json();
+        const processingStartTime = Date.now();
+        this.updateProgressToast(progressToastId, "Processing upload...", 80);
+
+        const result = await uploadPromise;
+        await this.ensureMinimumStepTime(
+          processingStartTime,
+          this.uploadConfig.minimumStepTimes.processing,
+          progressToastId
+        );
+
+        const extractionStartTime = Date.now();
+        this.updateProgressToast(progressToastId, "Extracting files...", 90);
+        await this.ensureMinimumStepTime(
+          extractionStartTime,
+          this.uploadConfig.minimumStepTimes.extraction,
+          progressToastId
+        );
 
         this.updateProgressToast(
           progressToastId,
           "Upload completed successfully!",
           100
         );
+
         return result;
       } catch (error) {
-        console.error("Whole file upload error:", error);
         this.updateProgressToast(
           progressToastId,
           `Upload failed: ${error.message}`,
-          0
+          -1
         );
         throw error;
       }
     },
 
-    // toggle detail view
+    async ensureMinimumStepTime(stepStartTime, minimumMs, toastId = null) {
+      if (!this.uploadConfig.enforceMinimumStepTiming) {
+        return;
+      }
+
+      const elapsed = Date.now() - stepStartTime;
+      if (elapsed < minimumMs) {
+        const remainingTime = minimumMs - elapsed;
+        await this.delay(remainingTime);
+      }
+    },
+
+    toggleMinimumStepTiming() {
+      this.uploadConfig.enforceMinimumStepTiming =
+        !this.uploadConfig.enforceMinimumStepTiming;
+      this.showToast(
+        `Minimum step timing ${
+          this.uploadConfig.enforceMinimumStepTiming ? "enabled" : "disabled"
+        }`,
+        "info"
+      );
+    },
+
+    delay(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    },
+
     toggleDetailView() {
-      console.log("Toggling detail view:", this.viewTaskSteps);
       this.viewTaskSteps = !this.viewTaskSteps;
     },
 
-    // Preview a file
     previewFile(taskId, filePath) {
       const url = `./api/tasks/${taskId}/preview/${filePath}`;
       window.open(url, "_blank");
     },
 
-    // Utility functions
     formatDate(dateString) {
       const date = new Date(dateString);
       return date.toLocaleString();
@@ -797,20 +674,16 @@ function dashboard() {
       return `${Math.floor(diffInSeconds / 86400)}d ago`;
     },
 
-    // Plan activity management
     addPlanActivity(activity) {
       this.planActivity.unshift(activity);
-      // Keep only last 20 activities
       if (this.planActivity.length > 20) {
         this.planActivity = this.planActivity.slice(0, 20);
       }
     },
 
-    // Update step status in real-time
     updateStepStatus(data) {
       const { task_id, step_id, status, output } = data;
 
-      // Update step in taskSteps if this task is currently selected
       if (this.selectedTask && this.selectedTask.id === task_id) {
         const stepIndex = this.taskSteps.findIndex(
           (step) => step.id === step_id
@@ -829,7 +702,6 @@ function dashboard() {
       }
     },
 
-    // Get step status styling
     getStepStatusColor(status) {
       const colors = {
         pending: "bg-gray-100 text-gray-600 border-gray-300",
@@ -840,7 +712,6 @@ function dashboard() {
       return colors[status] || colors.pending;
     },
 
-    // Get step status icon
     getStepStatusIcon(status) {
       const icons = {
         pending: "fas fa-clock text-gray-500",
@@ -851,7 +722,6 @@ function dashboard() {
       return icons[status] || icons.pending;
     },
 
-    // Get step type icon
     getStepTypeIcon(stepType) {
       return stepType === "plan" ? "🔍" : "🔨";
     },
@@ -866,13 +736,10 @@ function dashboard() {
       return colors[status] || "bg-gray-100 text-gray-800";
     },
 
-    // Utility function to escape HTML tags in markdown content
     escapeHtmlInMarkdown(text) {
-      // Replace HTML tags with markdown code syntax for proper rendering
       return text.replace(/<(\w+)>/g, "`<$1>`");
     },
 
-    // Get step type icon
     getStepTypeIcon(stepType) {
       return stepType === "research" ? "🔍" : "🔨";
     },
@@ -887,7 +754,6 @@ function dashboard() {
       return colors[status] || "bg-gray-400";
     },
 
-    // Get status text color for task details
     getStatusTextColor(status) {
       const colors = {
         pending: "text-gray-600",
@@ -898,7 +764,6 @@ function dashboard() {
       return colors[status] || "text-gray-600";
     },
 
-    // Show plan step creation notification
     showPlanStepNotification(step, stepNumber, title) {
       const stepTypeIcon = step.step_type === "plan" ? "🔍" : "🔨";
       const stepTypeText = step.step_type === "plan" ? "Research" : "Build";
@@ -913,7 +778,6 @@ function dashboard() {
       });
     },
 
-    // Show plan completion notification
     showPlanCompletedNotification(title, totalSteps, planSummary) {
       const planSteps = planSummary.plan_steps;
       const buildSteps = planSummary.build_steps;
@@ -928,7 +792,6 @@ function dashboard() {
       });
     },
 
-    // Toast notification system
     showToast(message, type = "info") {
       const container = document.getElementById("toast-container");
       const toast = document.createElement("div");
@@ -958,12 +821,10 @@ function dashboard() {
 
       container.appendChild(toast);
 
-      // Animate in
       setTimeout(() => {
         toast.classList.remove("translate-x-full", "opacity-0");
       }, 10);
 
-      // Auto remove after 5 seconds
       setTimeout(() => {
         if (toast.parentElement) {
           toast.classList.add("translate-x-full", "opacity-0");
@@ -976,9 +837,7 @@ function dashboard() {
       }, 5000);
     },
 
-    // Connection status toast notifications
     showConnectionToast(message, type = "info") {
-      // Remove any existing connection toasts first
       const existingToasts = document.querySelectorAll(".connection-toast");
       existingToasts.forEach((toast) => toast.remove());
 
@@ -1014,12 +873,10 @@ function dashboard() {
 
       container.appendChild(toast);
 
-      // Animate in
       setTimeout(() => {
         toast.classList.remove("translate-x-full", "opacity-0");
       }, 10);
 
-      // Auto remove success messages after 3 seconds
       if (type === "success") {
         setTimeout(() => {
           if (toast.parentElement) {
@@ -1034,7 +891,6 @@ function dashboard() {
       }
     },
 
-    // Advanced toast notification system for plan events
     showAdvancedToast({
       title,
       message,
@@ -1088,10 +944,8 @@ function dashboard() {
 
       container.appendChild(toast);
 
-      // Animate in
       setTimeout(() => {
         toast.classList.remove("translate-x-full", "opacity-0");
-        // Start progress bar animation
         const progressBar = toast.querySelector(".absolute.bottom-0");
         if (progressBar) {
           setTimeout(() => {
@@ -1100,7 +954,6 @@ function dashboard() {
         }
       }, 10);
 
-      // Auto remove
       setTimeout(() => {
         if (toast.parentElement) {
           toast.classList.add("translate-x-full", "opacity-0");
@@ -1113,66 +966,150 @@ function dashboard() {
       }, duration);
     },
 
-    // Progress toast notification system for file uploads
     showProgressToast(message, progress = 0, fileSize = null) {
       const container = document.getElementById("toast-container");
       const toast = document.createElement("div");
       const toastId = `progress-toast-${Date.now()}`;
 
       toast.id = toastId;
-      toast.className = `progress-toast relative p-4 mb-3 border rounded-lg shadow-xl bg-gradient-to-r from-blue-50 to-blue-100 border-blue-300 text-blue-900 transform transition-all duration-300 ease-in-out translate-x-full opacity-0 max-w-md`;
+      toast.className = `progress-toast relative p-4 mb-3 border rounded-lg shadow-xl bg-gradient-to-r from-blue-50 to-blue-100 border-blue-300 text-blue-900 transform transition-all duration-500 ease-in-out translate-x-full opacity-0 scale-95 w-[400px]`;
 
       const fileSizeInfo = fileSize ? `File size: ${fileSize}` : "";
 
       toast.innerHTML = `
-        <div class="flex items-center mb-2">
-          <div class="text-xl mr-3">📦</div>
+        <div class="flex items-center mb-3">
+          <div class="text-xl mr-3 animate-bounce-gentle">📦</div>
           <div class="flex-1">
-            <div class="font-bold text-sm">${message}</div>
-            <div class="text-xs opacity-75 mt-1">
-              <span class="progress-text">${progress}% complete</span>
+            <div class="font-bold text-sm transition-all duration-300">${message}</div>
+            <div class="text-xs opacity-75 mt-1 flex items-center justify-between">
+              <span class="progress-text transition-all duration-300">${progress}% complete</span>
+              <span class="ml-2 text-gray-500 eta-text"></span>
             </div>
+            <div class="text-xs opacity-60 mt-1 step-timing-info"></div>
           </div>
           <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-gray-400 hover:text-gray-600 transition-colors">
             <i class="fas fa-times text-xs"></i>
           </button>
         </div>
-        <div class="w-full bg-blue-200 rounded-full h-2 mb-1">
-          <div class="progress-bar bg-blue-500 h-2 rounded-full transition-all duration-500 ease-out" style="width: ${progress}%"></div>
+        <div class="w-full bg-blue-200 rounded-full h-3 mb-2 overflow-hidden">
+          <div class="progress-bar bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full transition-all duration-700 ease-out progress-bar-animated" style="width: ${progress}%"></div>
         </div>
         <div class="text-xs opacity-60">
           <span class="file-size-info">${fileSizeInfo}</span>
+          <span class="ml-2 speed-info"></span>
         </div>
       `;
 
       container.appendChild(toast);
 
-      // Animate in
       setTimeout(() => {
-        toast.classList.remove("translate-x-full", "opacity-0");
+        toast.classList.remove("translate-x-full", "opacity-0", "scale-95");
+        toast.classList.add("scale-100");
       }, 10);
+
+      toast.dataset.startTime = Date.now();
 
       return toastId;
     },
 
-    // Update progress toast
     updateProgressToast(toastId, message, progress, additionalInfo = null) {
       const toast = document.getElementById(toastId);
       if (!toast) return;
 
-      // Update message
-      const messageElement = toast.querySelector(".font-bold");
-      if (messageElement) {
-        messageElement.textContent = message;
+      const startTime = parseInt(toast.dataset.startTime);
+      const currentTime = Date.now();
+      const elapsedTime = currentTime - startTime;
+
+      if (!toast.dataset.lastUpdateTime) {
+        toast.dataset.lastUpdateTime = currentTime;
+        toast.dataset.lastMessage = message;
+        toast.dataset.updateCount = 0;
       }
 
-      // Update progress text
+      const lastUpdateTime = parseInt(toast.dataset.lastUpdateTime);
+      const lastMessage = toast.dataset.lastMessage;
+      const updateCount = parseInt(toast.dataset.updateCount);
+
+      const MIN_DISPLAY_TIME = 800;
+      const timeSinceLastUpdate = currentTime - lastUpdateTime;
+
+      if (message !== lastMessage && timeSinceLastUpdate < MIN_DISPLAY_TIME) {
+        toast.dataset.pendingMessage = message;
+        toast.dataset.pendingProgress = progress;
+        toast.dataset.pendingAdditionalInfo = additionalInfo || "";
+
+        setTimeout(() => {
+          const pendingMessage = toast.dataset.pendingMessage;
+          const pendingProgress = toast.dataset.pendingProgress;
+          const pendingAdditionalInfo = toast.dataset.pendingAdditionalInfo;
+
+          if (pendingMessage) {
+            this.updateProgressToast(
+              toastId,
+              pendingMessage,
+              parseInt(pendingProgress),
+              pendingAdditionalInfo
+            );
+            delete toast.dataset.pendingMessage;
+            delete toast.dataset.pendingProgress;
+            delete toast.dataset.pendingAdditionalInfo;
+          }
+        }, MIN_DISPLAY_TIME - timeSinceLastUpdate);
+
+        return;
+      }
+
+      toast.dataset.lastUpdateTime = currentTime;
+      toast.dataset.lastMessage = message;
+      toast.dataset.updateCount = updateCount + 1;
+
+      const messageElement = toast.querySelector(".font-bold");
+      if (messageElement && messageElement.textContent !== message) {
+        messageElement.style.opacity = "0.5";
+        setTimeout(() => {
+          messageElement.textContent = message;
+          messageElement.style.opacity = "1";
+        }, 150);
+      }
+
+      let etaText = "";
+      let speedText = "";
+      if (progress > 0 && progress < 100 && elapsedTime > 1000) {
+        const progressRate = progress / (elapsedTime / 1000);
+        const remainingProgress = 100 - progress;
+        const etaSeconds = remainingProgress / progressRate;
+
+        if (etaSeconds < 60) {
+          etaText = `~${Math.round(etaSeconds)}s remaining`;
+        } else {
+          etaText = `~${Math.round(etaSeconds / 60)}m remaining`;
+        }
+
+        speedText = `${progressRate.toFixed(1)}%/s`;
+      }
+
       const progressText = toast.querySelector(".progress-text");
       if (progressText) {
-        progressText.textContent = `${progress}% complete`;
+        const oldProgress = parseInt(progressText.textContent);
+        const newProgress = progress;
+
+        if (Math.abs(newProgress - oldProgress) > 5) {
+          this.animateProgressNumber(progressText, oldProgress, newProgress);
+        } else {
+          progressText.textContent = `${progress}% complete`;
+        }
       }
 
-      // Update additional info if provided
+      const etaElement = toast.querySelector(".eta-text");
+      if (etaElement) {
+        etaElement.textContent = etaText;
+      }
+
+      const speedElement = toast.querySelector(".speed-info");
+      if (speedElement) {
+        speedElement.textContent = speedText;
+      }
+
       if (additionalInfo) {
         const fileSizeInfo = toast.querySelector(".file-size-info");
         if (fileSizeInfo) {
@@ -1180,66 +1117,136 @@ function dashboard() {
         }
       }
 
-      // Update progress bar
       const progressBar = toast.querySelector(".progress-bar");
       if (progressBar) {
+        if (progress > 0 && progress < 100) {
+          progressBar.classList.add("progress-bar-animated");
+        }
+
         progressBar.style.width = `${Math.max(0, progress)}%`;
 
-        // Change color based on progress and status
         if (progress >= 100) {
           progressBar.className =
-            "progress-bar bg-green-500 h-2 rounded-full transition-all duration-500 ease-out";
+            "progress-bar bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-700 ease-out";
           toast.className = toast.className.replace(
             "from-blue-50 to-blue-100 border-blue-300 text-blue-900",
             "from-green-50 to-green-100 border-green-300 text-green-900"
           );
+
+          this.addSparkleEffect(toast);
         } else if (progress < 0) {
-          // Error state
           progressBar.className =
-            "progress-bar bg-red-500 h-2 rounded-full transition-all duration-500 ease-out";
+            "progress-bar bg-gradient-to-r from-red-400 to-red-600 h-3 rounded-full transition-all duration-700 ease-out";
           toast.className = toast.className.replace(
             "from-blue-50 to-blue-100 border-blue-300 text-blue-900",
             "from-red-50 to-red-100 border-red-300 text-red-900"
           );
           progressBar.style.width = "100%";
+
+          toast.classList.add("animate-shake");
+          setTimeout(() => toast.classList.remove("animate-shake"), 500);
         } else if (progress >= 80) {
           progressBar.className =
-            "progress-bar bg-green-400 h-2 rounded-full transition-all duration-500 ease-out";
+            "progress-bar bg-gradient-to-r from-green-300 to-blue-500 h-3 rounded-full transition-all duration-700 ease-out progress-bar-animated";
         }
       }
 
-      // Add completion effect
-      if (progress >= 100) {
-        const icon = toast.querySelector(".text-xl");
-        if (icon) {
+      const icon = toast.querySelector(".text-xl");
+      if (icon) {
+        if (progress >= 100) {
           icon.textContent = "✅";
-        }
-      } else if (progress < 0) {
-        // Error state
-        const icon = toast.querySelector(".text-xl");
-        if (icon) {
+          icon.classList.remove("animate-bounce-gentle");
+          icon.classList.add("animate-pulse");
+        } else if (progress < 0) {
           icon.textContent = "❌";
+          icon.classList.remove("animate-bounce-gentle");
+          icon.classList.add("animate-pulse");
+        } else if (progress > 0) {
+          icon.textContent = "🚀";
+          if (!icon.classList.contains("animate-bounce-gentle")) {
+            icon.classList.add("animate-bounce-gentle");
+          }
         }
       }
     },
 
-    // Hide progress toast
+    animateProgressNumber(element, start, end) {
+      const duration = 500;
+      const startTime = Date.now();
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + (end - start) * easeOut);
+
+        element.textContent = `${current}% complete`;
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+
+      animate();
+    },
+
+    addSparkleEffect(toast) {
+      const sparkles = ["✨", "⭐", "🌟", "💫"];
+      const sparkleContainer = document.createElement("div");
+      sparkleContainer.className =
+        "absolute inset-0 pointer-events-none overflow-hidden";
+
+      for (let i = 0; i < 6; i++) {
+        const sparkle = document.createElement("div");
+        sparkle.textContent =
+          sparkles[Math.floor(Math.random() * sparkles.length)];
+        sparkle.className = "absolute text-yellow-400 text-xs animate-ping";
+        sparkle.style.left = Math.random() * 100 + "%";
+        sparkle.style.top = Math.random() * 100 + "%";
+        sparkle.style.animationDelay = i * 100 + "ms";
+        sparkleContainer.appendChild(sparkle);
+
+        setTimeout(() => sparkle.remove(), 1000);
+      }
+
+      toast.style.position = "relative";
+      toast.appendChild(sparkleContainer);
+      setTimeout(() => sparkleContainer.remove(), 1200);
+    },
+
     hideProgressToast(toastId) {
       const toast = document.getElementById(toastId);
       if (!toast) return;
 
-      // Add a small delay before hiding to show completion
-      setTimeout(() => {
-        toast.classList.add("translate-x-full", "opacity-0");
+      const progressBar = toast.querySelector(".progress-bar");
+      const isSuccess =
+        progressBar && progressBar.classList.contains("from-green-400");
+
+      if (isSuccess) {
+        toast.classList.add("animate-bounce-gentle");
+
+        toast.style.boxShadow = "0 0 30px rgba(34, 197, 94, 0.6)";
+
         setTimeout(() => {
-          if (toast.parentElement) {
-            toast.remove();
-          }
-        }, 300);
-      }, 1000);
+          toast.style.boxShadow = "";
+          toast.classList.remove("animate-bounce-gentle");
+        }, 1000);
+      }
+
+      setTimeout(
+        () => {
+          toast.classList.add("translate-x-full", "opacity-0", "scale-95");
+          setTimeout(() => {
+            if (toast.parentElement) {
+              toast.remove();
+            }
+          }, 500);
+        },
+        isSuccess ? 2000 : 1000
+      );
     },
 
-    // Cleanup on destroy
     destroy() {
       if (this.eventSource) {
         this.eventSource.close();
@@ -1252,7 +1259,6 @@ function dashboard() {
       this.connectionStatus = "disconnected";
     },
 
-    // Manual reconnection function
     forceReconnect() {
       this.showConnectionToast("Manually reconnecting...", "info");
       this.destroy();
@@ -1261,15 +1267,11 @@ function dashboard() {
   };
 }
 
-// Initialize when DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
-  // Add some smooth scrolling
   document.documentElement.style.scrollBehavior = "smooth";
 });
 
-// Add keyboard shortcuts
 document.addEventListener("keydown", function (e) {
-  // ESC to close modal
   if (e.key === "Escape") {
     const dashboardData = Alpine.store("dashboard");
     if (dashboardData && dashboardData.selectedTask) {
@@ -1278,7 +1280,6 @@ document.addEventListener("keydown", function (e) {
   }
 });
 
-// Add some additional animations
 const observerOptions = {
   threshold: 0.1,
   rootMargin: "0px 0px -50px 0px",
@@ -1293,7 +1294,6 @@ const observer = new IntersectionObserver((entries) => {
   });
 }, observerOptions);
 
-// Observe elements for animation
 document.addEventListener("DOMContentLoaded", () => {
   const animatedElements = document.querySelectorAll(".task-card");
   animatedElements.forEach((el) => {
@@ -1304,7 +1304,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// Add click animations
 document.addEventListener("click", function (e) {
   if (e.target.matches("button") || e.target.closest("button")) {
     const button = e.target.matches("button")
