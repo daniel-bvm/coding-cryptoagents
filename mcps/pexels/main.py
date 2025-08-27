@@ -38,16 +38,8 @@ from urllib.parse import urlparse
 def get_name_from_url(url: str) -> str:
     parsed_url = urlparse(url)
     path = parsed_url.path
-    x = os.path.basename(path)
-    params = parsed_url.query.split('&')
-
-    if len(params) == 0:
-        return x
-    
-    params_dict = dict(item.split('=') for item in params if item)
-    file_ext = os.path.splitext(x)[1]
-    params_dict_str = '-'.join(list([e for e in params_dict.values() if e]))
-    return x.replace(file_ext, f'-{params_dict_str}{file_ext}')
+    file_ext = os.path.splitext(os.path.basename(path))[1]
+    return f"{os.urandom(4).hex()}{file_ext}"
 
 async def parse_pexels_search_response(response: dict, output_dir: str = 'assets/images') -> list[dict]:
     os.makedirs(output_dir, exist_ok=True)
@@ -61,16 +53,11 @@ async def parse_pexels_search_response(response: dict, output_dir: str = 'assets
             'alt': photo.get('alt', None),
         }
 
-        # src = {
-        #     key: await download_image(
-        #         value, 
-        #         os.path.join(output_dir, get_name_from_url(value))
-        #     )
-        #     for key, value in photo.get("src", {}).items()
-        # }
-
         src = {
-            key: value
+            key: await download_image(
+                value, 
+                os.path.join(output_dir, get_name_from_url(value))
+            )
             for key, value in photo.get("src", {}).items()
         }
 
@@ -84,7 +71,7 @@ async def parse_pexels_search_response(response: dict, output_dir: str = 'assets
 
     return results
 
-@app.tool(description="Search for images from Pexels in any topics")
+@app.tool(description="Search for images from Pexels in any topics. Return paths to local files.")
 async def search_pexels(topic: Annotated[str, "The topic to search for"]) -> list[dict]:
     params = {
         "query": topic,
