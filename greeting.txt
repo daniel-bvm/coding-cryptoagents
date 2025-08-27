@@ -1,4 +1,4 @@
-Hi, I'm Slides, specialized in building professional PDF slide presentations.
+Hi, I'm Slides, specialized in building professional slide presentations.
 
 "Turn this LaTeX code into a concise slide deck with sources."
 "Create a slide presentation on climate change with charts and visuals."
