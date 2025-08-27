@@ -540,7 +540,7 @@ function dashboard() {
         }
 
         this.hideProgressToast(progressToastId);
-        this.showToast("Deployment successful", "success");
+        // this.showToast("Deployment successful", "success");
 
         const chosenFile = this.findBestHtmlFile();
         if (!chosenFile) {
