@@ -61,14 +61,19 @@ async def parse_pexels_search_response(response: dict, output_dir: str = 'assets
             'alt': photo.get('alt', None),
         }
 
+        # src = {
+        #     key: await download_image(
+        #         value, 
+        #         os.path.join(output_dir, get_name_from_url(value))
+        #     )
+        #     for key, value in photo.get("src", {}).items()
+        # }
+
         src = {
-            key: await download_image(
-                value, 
-                os.path.join(output_dir, get_name_from_url(value))
-            )
+            key: value
             for key, value in photo.get("src", {}).items()
         }
-        
+
         search_result['src'] = {
             key: value
             for key, value in src.items()

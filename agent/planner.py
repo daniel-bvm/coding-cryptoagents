@@ -50,12 +50,17 @@ async def make_plan(title: str, user_request: str, max_steps: int = 5) -> list[S
             note=note
         )
 
-        response = await client.chat.completions.create(
-            model=settings.llm_model_id,
-            messages=[{"role": "user", "content": prompt}]
-        )
+        response = ''
 
-        response_text = strip_thinking_content(response.choices[0].message.content)
+        async with client.chat.completions.stream(
+            messages=[{"role": "user", "content": prompt}],
+            model=settings.llm_model_id
+        ) as stream:
+            async for event in stream:
+                if event.type == 'content.delta':
+                    response += event.delta
+
+        response_text = strip_thinking_content(response)
 
         if "<done/>" in response_text.strip().lower():
             reasoning = None
