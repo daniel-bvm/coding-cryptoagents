@@ -1,592 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Prototype - Task Dashboard</title>
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
-    <link href="./static/tailwind.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="./static/style.css" rel="stylesheet">
-    <script src="./static/script.js"></script>
-    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <!-- Marked.js for Markdown rendering -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>"
+    />
+    <link href="./static/tailwind.css" rel="stylesheet" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link href="./static/style.css" rel="stylesheet" />
+
+    <!-- Modular Scripts -->
+    <script src="./static/js/config/constants.js"></script>
+    <script src="./static/js/utils/formatters.js"></script>
+    <script src="./static/js/utils/api.js"></script>
+    <script src="./static/js/utils/dom.js"></script>
+    <script src="./static/js/components/toast.js"></script>
+    <script src="./static/js/components/progress.js"></script>
+    <script src="./static/js/components/fileTree.js"></script>
+    <script src="./static/js/components/upload.js"></script>
+    <script src="./static/js/components/templates.js"></script>
+    <script src="./static/js/dashboard/realtime.js"></script>
+    <script src="./static/js/dashboard/tasks.js"></script>
+    <script src="./static/js/dashboard/modals.js"></script>
+    <script src="./static/js/dashboard/dashboard.js"></script>
+    <script src="./static/js/main.js"></script>
+
+    <script
+      src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"
+      defer
+    ></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-</head>
+  </head>
 
-<body class="bg-gray-50 min-h-screen" x-data="dashboard()" x-init="init()" @keydown.window.escape="closeTaskModal()">
-    <!-- Header -->
-    <header class="gradient-bg text-white shadow-2xl">
-        <div class="container mx-auto px-6 py-8">
-            <div class="flex items-center justify-between flex-wrap w-full gap-3">
-                <div class="flex items-center space-x-4">
-                    <div class="bg-white bg-opacity-20 p-3 rounded-full">
-                        <i class="fas fa-robot text-2xl"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-3xl font-bold">Prototype</h1>
-                        <p class="text-blue-100">Task Dashboard</p>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4 min-w-36-">
-                    <div class="bg-white bg-opacity-20 px-4 py-2 rounded-full">
-                        <span class="text-sm">Total Tasks: <span x-text="tasks.length" class="font-bold"></span></span>
-                    </div>
-
-                    <!-- Connection Status Indicator -->
-                    <div class="flex items-center space-x-2">
-                <div class="w-md hidden"></div>
-
-                        <div class="bg-white bg-opacity-20 px-3 py-2 rounded-full flex items-center space-x-2">
-                            <div class="flex items-center space-x-1">
-                                <div class="w-2 h-2 rounded-full" :class="{
-                                         'bg-green-400 animate-pulse': connectionStatus === 'connected',
-                                         'bg-yellow-400 animate-ping': connectionStatus === 'connecting',
-                                         'bg-red-400': connectionStatus === 'disconnected'
-                                     }"></div>
-                                <span class="text-xs">
-                                    <span x-show="connectionStatus === 'connected'">Live</span>
-                                    <span x-show="connectionStatus === 'connecting'">Connecting</span>
-                                    <span x-show="connectionStatus === 'disconnected'">Offline</span>
-                                </span>
-                            </div>
-                            <button @click="forceReconnect()" x-show="connectionStatus === 'disconnected'"
-                                class="text-xs hover:text-gray-200 transition-colors">
-                                <i class="fas fa-redo"></i>
-                            </button>
-                        </div>
-                    </div>
-
-
-
-                    <button style="display: none;" @click="refreshTasks()"
-                        class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105">
-                        <i class="fas fa-sync-alt" :class="{ 'animate-spin': loading }"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
+  <body
+    class="bg-gray-50 min-h-screen"
+    x-data="dashboard()"
+    x-init="init()"
+    @keydown.window.escape="closeTaskModal()"
+  >
+    <!-- Dynamic Header -->
+    <div x-html="renderHeader()"></div>
 
     <!-- Main Content -->
     <main class="container mx-auto px-6 py-8">
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-2xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300">
-                <div class="flex items-center">
-                    <div class="bg-blue-100 rounded-full w-12 h-12 grid place-items-center">
-                        <i class="fas fa-tasks text-blue-600"></i>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <p class="text-gray-600 text-sm">Total Tasks</p>
-                        <p class="text-2xl font-bold text-gray-800" x-text="tasks.length"></p>
-                    </div>
-                </div>
-            </div>
+      <!-- Dynamic Stats Cards -->
+      <div x-html="renderStatsCards()"></div>
 
-            <div class="bg-white rounded-2xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300">
-                <div class="flex items-center">
-                    <div class="bg-green-100  w-12 h-12 grid place-items-center rounded-full">
-                        <i class="fas fa-check-circle text-green-600"></i>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <p class="text-gray-600 text-sm">Completed</p>
-                        <p class="text-2xl font-bold text-gray-800" x-text="completedTasks"></p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300">
-                <div class="flex items-center">
-                    <div class="bg-yellow-100  w-12 h-12 grid place-items-center rounded-full">
-                        <i class="fas fa-clock text-yellow-600"></i>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <p class="text-gray-600 text-sm">In Progress</p>
-                        <p class="text-2xl font-bold text-gray-800" x-text="inProgressTasks"></p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300">
-                <div class="flex items-center">
-                    <div class="bg-red-100  w-12 h-12 grid place-items-center rounded-full">
-                        <i class="fas fa-exclamation-triangle text-red-600"></i>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <p class="text-gray-600 text-sm">Failed</p>
-                        <p class="text-2xl font-bold text-gray-800" x-text="failedTasks"></p>
-                    </div>
-                </div>
-            </div>
+      <!-- Plan Activity Feed (Hidden by default) -->
+      <div
+        class="bg-white rounded-2xl shadow-xl overflow-hidden mb-8"
+        style="display: none"
+      >
+        <div
+          class="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6"
+        >
+          <h2 class="text-2xl font-bold flex items-center">
+            <i class="fas fa-brain mr-3"></i> Live Planning Activity
+          </h2>
         </div>
 
-        <!-- Plan Activity Feed -->
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden mb-8" style="display: none;">
-            <div class="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6">
-                <h2 class="text-2xl font-bold flex items-center">
-                    <i class="fas fa-brain mr-3"></i> Live Planning Activity
-                </h2>
-            </div>
-
-            <div class="p-6">
-                <div class="space-y-4 max-h-64 overflow-y-auto">
-                    <template x-for="activity in planActivity.slice().reverse()" :key="activity.id">
-                        <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg animate-fade-in">
-                            <div class="text-2xl animate-pulse" x-text="activity.icon"></div>
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between mb-1">
-                                    <h4 class="font-bold text-sm" x-text="activity.title"></h4>
-                                    <span class="text-xs text-gray-500"
-                                        x-text="formatTimeAgo(activity.timestamp)"></span>
-                                </div>
-                                <p class="text-sm text-gray-700 mb-1" x-text="activity.message"></p>
-                                <template x-if="activity.details">
-                                    <p class="text-xs text-gray-500" x-text="activity.details"></p>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
+        <div class="p-6">
+          <div class="space-y-4 max-h-64 overflow-y-auto">
+            <template
+              x-for="activity in planActivity.slice().reverse()"
+              :key="activity.id"
+            >
+              <div
+                class="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg animate-fade-in"
+              >
+                <div
+                  class="text-2xl animate-pulse"
+                  x-text="activity.icon"
+                ></div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between mb-1">
+                    <h4 class="font-bold text-sm" x-text="activity.title"></h4>
+                    <span
+                      class="text-xs text-gray-500"
+                      x-text="formatTimeAgo(activity.timestamp)"
+                    ></span>
+                  </div>
+                  <p
+                    class="text-sm text-gray-700 mb-1"
+                    x-text="activity.message"
+                  ></p>
+                  <template x-if="activity.details">
+                    <p
+                      class="text-xs text-gray-500"
+                      x-text="activity.details"
+                    ></p>
+                  </template>
                 </div>
-            </div>
+              </div>
+            </template>
+          </div>
         </div>
+      </div>
 
-        <!-- Task List -->
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 w-full">
-                <h2 class="text-2xl font-bold flex items-center">
-                    <i class="fas fa-list mr-3"></i> Recent Tasks
-                </h2>
-            </div>
-
-            <div class="p-6">
-                <template x-if="tasks.length === 0">
-                    <div class="text-center py-12">
-                        <div class="text-gray-400 text-6xl mb-4">
-                            <i class="fas fa-inbox"></i>
-                        </div>
-                        <p class="text-gray-600 text-lg">No tasks found</p>
-                        <p class="text-gray-400">Create your first task to get started</p>
-                    </div>
-                </template>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    <template x-for="task in tasks" :key="task.id">
-                        <div class="task-card bg-white border border-gray-200 rounded-xl shadow-lg p-6 transition-all duration-300 cursor-pointer animate-fade-in"
-                            @click="selectTask(task)">
-                            <!-- Task Header -->
-                            <div class="flex items-start justify-between mb-4">
-                                <div class="flex-1">
-                                    <h3 class="text-lg font-bold text-gray-800 mb-1" x-text="task.title"></h3>
-                                    <p class="text-sm text-gray-500" x-text="formatDate(task.created_at)"></p>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <span class="status-badge px-3 py-1 rounded-full text-xs font-medium"
-                                        :class="getStatusColor(task.status)" x-text="task.status"></span>
-
-                                    <template x-if="task.status === 'completed'">
-                                        <div class="flex items-center space-x-1">
-                                            <!-- <span class="tooltip-container" tabindex="0"
-                                                aria-label="Download now to save permanently">
-                                                <span class="text-yellow-600 text-xs">⚠️</span>
-                                                <span class="tooltip-box">Download now to save permanently
-                                                    <span class="tooltip-arrow" aria-hidden="true"></span>
-                                                </span>
-                                            </span> -->
-                                            <button @click.stop="uploadTaskFiles(task.id)"
-                                                :disabled="isTaskLoadingShare(task.id)"
-                                                class="text-green-600 hover:text-green-800 transition-colors bg-green-50 hover:bg-green-100 px-2 py-1 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed">
-                                                <i class="mr-1"
-                                                    :class="isTaskLoadingShare(task.id) ? 'fa-solid fa-circle-notch animate-spin' : 'fas fa-share'"></i>Share
-                                            </button>
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-
-                            <!-- Progress Bar -->
-                            <div class="mb-4">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-700">Progress</span>
-                                    <span class="text-sm text-gray-500" x-text="task.progress + '%'"></span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="progress-bar h-2 rounded-full transition-all duration-500 ease-out"
-                                        :class="[getProgressColor(task.status), { 'active': task.status !== 'completed' && task.status !== 'failed' }]"
-                                        :style="`width: ${task.progress}%`"></div>
-                                </div>
-                            </div>
-
-                            <!-- Task Details -->
-                            <template
-                                x-if="task.status !== 'completed' && task.status !== 'failed' && task.current_step">
-                                <div class="mb-3">
-                                    <p class="text-sm text-gray-600">
-                                        <i class="fas fa-cog animate-spin mr-1"></i>
-                                        <span x-text="task.current_step"></span>
-                                    </p>
-                                </div>
-                            </template>
-
-                            <!-- Steps Counter -->
-                            <template x-if="task.total_steps > 0">
-                                <div class="flex items-center text-sm text-gray-500 mb-3">
-                                    <i class="fas fa-list-ol mr-2"></i>
-                                    <span x-text="`${task.completed_steps}/${task.total_steps} steps`"></span>
-                                </div>
-                            </template>
-
-                            <!-- Features -->
-                            <div class="flex items-center text-sm gap-x-4">
-                                <template x-if="task.has_index_html">
-                                    <span class="flex items-center text-green-600">
-                                        <i class="fas fa-globe  mr-1"></i>
-                                        Website
-                                    </span>
-                                </template>
-                                <template x-if="task.output_directory">
-                                    <span class="flex items-center text-blue-600">
-                                        <i class="fas fa-folder mr-1"></i>
-                                        Files
-                                    </span>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-        </div>
+      <!-- Dynamic Task List -->
+      <div x-html="renderTaskList()"></div>
     </main>
 
-    <!-- Web Preview Modal -->
-    <div x-show="selectedTask" x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-        x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-        class="fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4 z-50"
-        @click.self="closeTaskModal()" <div
-        class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" x-show="selectedTask"
-        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95"
-        x-transition:enter-end="opacity-100 transform scale-100" x-transition:leave="transition ease-in duration-200"
-        x-transition:leave-start="opacity-100 transform scale-100"
-        x-transition:leave-end="opacity-0 transform scale-95">
+    <!-- Dynamic Modal -->
+    <div x-html="renderModal()"></div>
 
-        <!-- Modal Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 w-full">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-xl font-bold" x-text="selectedTask?.title"></h2>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <template x-if="selectedTask?.status === 'completed'">
-                        <div class="flex items-center space-x-3">
+    <!-- Toast Container -->
+    <div class="fixed top-4 right-4 z-50 space-y-2" id="toast-container"></div>
 
-                            <div class="flex items-center">
-                                <button x-show="showHTMLFile !== ''" @click="toggleDetailView()"
-                                    :title="viewTaskSteps ? 'Show Preview' : 'Show Steps'"
-                                    aria-label="Toggle preview / steps"
-                                    class="ml-2  bg-opacity-20 hover:bg-opacity-30 rounded-full transition-colors flex items-center">
-                                    <i :class="!viewTaskSteps ? 'fas fa-info-circle text-white scale-110' : 'fas fa-list text-white scale-110'"
-                                        class="text-lg"></i>
-                                </button>
-                            </div>
-                            <span class="tooltip-container tooltip-bottom" tabindex="0" aria-label="Deploy and share">
-                                <button @click="uploadTaskFiles(selectedTask.id)"
-                                    :disabled="isTaskLoadingShare(selectedTask?.id)"
-                                    class="px-4 py-3 rounded-lg transition-all flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <i
-                                        :class="isTaskLoadingShare(selectedTask?.id) ? 'fa-solid fa-circle-notch animate-spin scale-110' : 'fa-solid fa-share scale-110'"></i>
-                                </button>
-                                <span class="tooltip-box ">
-                                    <span class="text-black">
-                                        Deploy and share
-                                    </span>
-                                    <span class="tooltip-arrow" aria-hidden="true"></span>
-                                </span>
-                            </span>
-                        </div>
-                    </template>
-                    <button @click="closeTaskModal()"
-                        class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition-all w-10">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+    <!-- Footer Disclaimer (Hidden by default) -->
+    <footer class="bg-gray-800 text-gray-300 py-8 mt-16" style="display: none">
+      <div class="container mx-auto px-6">
+        <div class="border-t border-gray-600 pt-6">
+          <div class="flex flex-col md:flex-row justify-between items-center">
+            <div class="text-center md:text-left mb-4 md:mb-0">
+              <p class="text-sm">
+                © 2024 Prototype Agent. All rights reserved.
+              </p>
             </div>
+          </div>
         </div>
-
-        <!-- Modal Content -->
-        <div class="overflow-y-hidden bg-white w-full h-[90vh]">
-            <div x-show="!viewTaskSteps" class="h-full">
-                <template x-if="selectedTask?.status === 'completed' && showHTMLFile !== ''">
-
-                    <div class="h-full">
-                        <iframe :src="`./api/tasks/${selectedTask.id}/preview/${showHTMLFile}`"
-                            class="w-full h-full border-0"></iframe>
-                    </div>
-                    <!-- </div> -->
-                </template>
-            </div>
-            <div class="p-6 h-full overflow-y-auto">
-                <template x-if="selectedTask?.status !== 'completed'">
-                    <!-- Progress Section -->
-                    <div class="mb-6">
-                        <h3 class="text-lg text-black font-bold mb-4 flex items-center">
-                            <i class="fas fa-tasks mr-2 text-blue-600"></i>
-                            Progress
-                        </h3>
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="font-medium">Overall Progress</span>
-                                <span class="text-lg font-bold" x-text="selectedTask?.progress + '%'"></span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
-                                <div class="progress-bar h-3 rounded-full transition-all duration-500"
-                                    :class="[getProgressColor(selectedTask?.status), { 'active': selectedTask?.status !== 'completed' && selectedTask?.status !== 'failed' }]"
-                                    :style="`width: ${selectedTask?.progress}%`"></div>
-                            </div>
-                            <template x-if="selectedTask?.current_step">
-                                <div class="flex items-center text-sm text-gray-600">
-                                    <i class="fas fa-cog animate-spin mr-2"></i>
-                                    <span x-text="selectedTask?.current_step"></span>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                </template>
-                <div x-show="viewTaskSteps">
-                    <!-- File List -->
-                    <div class="mb-6" x-show="taskFiles.length > 0">
-                        <h3 class="text-lg font-bold mb-4 flex items-center">
-                            <i class="fas fa-folder-open mr-2 text-yellow-600"></i> Generated Files
-                        </h3>
-
-                        <div class="bg-gray-50 rounded-lg p-4" x-data="folderTree">
-                            <template x-for="item in getAllItems(taskFiles)" :key="item.data.path || item.data.name">
-                                <div :style="`margin-left: ${item.depth * 20}px`">
-                                    <!-- Folder -->
-                                    <template x-if="item.type === 'folder'">
-                                        <div class="flex items-center py-2 cursor-pointer hover:bg-gray-100 rounded px-2 mb-1" 
-                                             @click="toggleFolder(item.data.path)">
-                                            <i class="fas mr-2 text-yellow-600 transition-transform duration-200" 
-                                               :class="isFolderCollapsed(item.data.path) ? 'fa-folder' : 'fa-folder-open'"></i>
-                                            <i class="fas fa-chevron-right mr-2 text-gray-400 transition-transform duration-200 text-xs" 
-                                               :class="{'rotate-90': !isFolderCollapsed(item.data.path)}"></i>
-                                            <span class="font-medium text-gray-700" x-text="item.data.name"></span>
-                                            <span class="ml-2 text-xs text-gray-500" x-text="`(${item.data.files.length + Object.keys(item.data.folders).length} items)`"></span>
-                                        </div>
-                                    </template>
-                                    
-                                    <!-- File -->
-                                    <template x-if="item.type === 'file'">
-                                        <div class="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 hover:bg-white rounded px-2 transition-colors">
-                                            <div class="flex items-center">
-                                                <i class="fas fa-file mr-2 text-gray-400" :class="{
-                                                    'fa-file-code text-blue-500': item.data.name.endsWith('.html') || item.data.name.endsWith('.css') || item.data.name.endsWith('.js'),
-                                                    'fa-file-image text-green-500': item.data.name.match(/\.(jpg|jpeg|png|gif|svg)$/i),
-                                                    'fa-file-alt text-purple-500': item.data.name.endsWith('.md'),
-                                                    'fa-globe text-orange-500': item.data.is_index
-                                                }"></i>
-                                                <span x-text="item.data.name" class="font-medium"></span>
-                                                <template x-if="showHTMLFile === item.data.path">
-                                                    <span class="ml-2 bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">Index</span>
-                                                </template>
-                                            </div>
-                                            <div class="flex items-center space-x-2">
-                                                <span class="text-sm text-gray-500" x-text="formatFileSize(item.data.size)"></span>
-                                                <template x-if="item.data.is_html">
-                                                    <button @click="previewFile(selectedTask.id, item.data.path)"
-                                                        class="text-blue-600 hover:text-blue-800 text-sm">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                </template>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
-
-                    <!-- Task Steps -->
-                    <div class="mb-6" x-show="taskSteps.length > 0">
-                        <h3 class="text-lg font-bold mb-4 flex items-center text-black">
-                            <i class="fas fa-list-ol mr-2 text-purple-600"></i> Execution Steps
-                        </h3>
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <template x-for="(step, index) in taskSteps" :key="step.id">
-                                <div class="mb-4 p-4 border rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-md"
-                                    :class="getStepStatusColor(step.status)">
-                                    <div class="flex items-start justify-between mb-2">
-                                        <div class="flex items-center space-x-3">
-                                            <div class="text-lg" x-text="getStepTypeIcon(step.step_type)"></div>
-                                            <div>
-                                                <div class="flex items-center space-x-2">
-                                                    <span class="font-semibold text-sm">
-                                                        Step <span x-text="step.step_number"></span>:
-                                                        <span
-                                                            x-text="step.step_type === 'research' ? 'Research' : 'Build'"></span>
-                                                    </span>
-                                                </div>
-                                                <p class="text-sm text-gray-600 mt-1" x-text="step.reason"></p>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center space-x-2">
-                                            <i :class="getStepStatusIcon(step.status)"></i>
-                                            <span class="text-xs font-medium px-2 py-1 rounded border"
-                                                :class="getStepStatusColor(step.status)" x-text="step.status"></span>
-                                        </div>
-                                    </div>
-
-                                    <div class="text-sm mb-2">
-                                        <p class="text-gray-700" x-text="step.task_description"></p>
-                                    </div>
-
-                                    <template x-if="step.expectation">
-                                        <div class="text-xs text-gray-600 mb-2">
-                                            <strong>Expected:</strong> <span
-                                                x-html="marked.parse(escapeHtmlInMarkdown(step.expectation))"></span>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="step.output && step.status === 'completed'">
-                                        <div class="mt-3 p-3 bg-green-50 rounded border border-green-200">
-                                            <h5 class="text-xs font-semibold text-green-800 mb-1">Output:</h5>
-                                            <p class="text-xs text-green-700"
-                                                x-text="step.output.length > 200 ? step.output.substring(0, 200) + '...' : step.output">
-                                            </p>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="step.error_message && step.status === 'failed'">
-                                        <div class="mt-3 p-3 bg-red-50 rounded border border-red-200">
-                                            <h5 class="text-xs font-semibold text-red-800 mb-1">Error:</h5>
-                                            <p class="text-xs text-red-700" x-text="step.error_message"></p>
-                                        </div>
-                                    </template>
-
-                                    <div class="flex items-center justify-between mt-3 text-xs text-gray-500">
-                                        <div class="flex items-center space-x-4">
-                                            <template x-if="step.started_at">
-                                                <span>Started: <span x-text="formatDate(step.started_at)"></span></span>
-                                            </template>
-                                            <template x-if="step.completed_at">
-                                                <span>Completed: <span
-                                                        x-text="formatDate(step.completed_at)"></span></span>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
-
-                    <!-- Task Info -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <h4 class="font-bold mb-2">Task Details</h4>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Status:</span>
-                                    <span class="font-medium" :class="getStatusTextColor(selectedTask?.status)"
-                                        x-text="selectedTask?.status"></span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Created:</span>
-                                    <span x-text="formatDate(selectedTask?.created_at)"></span>
-                                </div>
-                                <template x-if="selectedTask?.completed_at">
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">Completed:</span>
-                                        <span x-text="formatDate(selectedTask?.completed_at)"></span>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        <template x-if="selectedTask?.expectation">
-                            <div class="bg-gray-50 rounded-lg p-4">
-                                <h4 class="font-bold mb-2">Description</h4>
-                                <p class="text-sm text-gray-700"
-                                    x-html="marked.parse(escapeHtmlInMarkdown(selectedTask?.expectation))"></p>
-                            </div>
-                        </template>
-                    </div>
-                    </d>
-
-                    <template x-if="selectedTask?.error_message">
-                        <div class="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-                            <h4 class="font-bold text-red-800 mb-2">Error Details</h4>
-                            <p class="text-sm text-red-700" x-text="selectedTask?.error_message"></p>
-                        </div>
-                    </template>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-
-    <!-- Toast Notifications -->
-    <div class="fixed top-4 right-4 z-50 space-y-2" id="toast-container">
-        <!-- Toasts will be added dynamically -->
-    </div>
-
-    <!-- Footer Disclaimer -->
-    <footer class="bg-gray-800 text-gray-300 py-8 mt-16" style="display: none;">
-        <div class="container mx-auto px-6">
-            <div class="border-t border-gray-600 pt-6">
-                <div class="flex flex-col md:flex-row justify-between items-center" style="display: none;">
-                    <div class="text-center md:text-left mb-4 md:mb-0">
-                        <h3 class="text-lg font-bold text-white mb-2">
-                            <i class="fas fa-robot mr-2 text-blue-400"></i> Prototype Dashboard
-                        </h3>
-                        <p class="text-gray-400 text-sm">
-                            Real-time task monitoring and file management system
-                        </p>
-                    </div>
-
-                    <div class="flex items-center space-x-6 text-sm">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-2 h-2 rounded-full" :class="{
-                                     'bg-green-400 animate-pulse': connectionStatus === 'connected',
-                                     'bg-yellow-400 animate-ping': connectionStatus === 'connecting',
-                                     'bg-red-400': connectionStatus === 'disconnected'
-                                 }"></div>
-                            <span class="text-gray-400">
-                                Real-time Status:
-                                <span :class="{
-                                    'text-green-400': connectionStatus === 'connected',
-                                    'text-yellow-400': connectionStatus === 'connecting',
-                                    'text-red-400': connectionStatus === 'disconnected'
-                                }">
-                                    <span x-show="connectionStatus === 'connected'">Connected</span>
-                                    <span x-show="connectionStatus === 'connecting'">Connecting...</span>
-                                    <span x-show="connectionStatus === 'disconnected'">Disconnected</span>
-                                </span>
-                            </span>
-                        </div>
-
-                        <div class="text-gray-500 text-xs">
-                            <i class="fas fa-clock mr-1"></i>
-                            <span x-text="new Date().toLocaleString()"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-4 pt-4 border-t border-gray-700 text-center text-gray-500 text-xs">
-                    <p>
-                        <i class="fas fa-info-circle mr-1"></i> This dashboard provides real-time monitoring but does
-                        not guarantee data persistence. Always backup important work locally.
-                    </p>
-                </div>
-            </div>
-        </div>
+      </div>
     </footer>
-
-</body>
-
+  </body>
 </html>
