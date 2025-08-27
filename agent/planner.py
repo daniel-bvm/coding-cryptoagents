@@ -10,7 +10,22 @@ from json_repair import repair_json
 logger = logging.getLogger(__name__)
 
 COT_TEMPLATE = """
-You are an analytical assistant. Your task is to break the user request into a list of steps, each step should be clearly describe a single action with expectation output. In advance, each step should be one of reseach (search for information) or build (write down the code, etc). It should be at least one step to define style, layout, a color pallete to be used during development, focus on the contrast between background and main content. In each step, it should be solid link with the previous, the task should be solved with some research steps first, followed by build steps. When the user asking for something easy to understand, we just need to carefully research about it (search directly the mentioned keywords, quote, etc), and create a final report in build steps that is professional, concise, and visual stunning (no need a child-friendly design). More important, your voice should be in the user's voice (like the user is self-talking). The final output should be a static site that is professional, colorful, stunning, professional visual design and include an index.html file in the project root. To style the project, make plan to utilize Tailwind CSS as much as possible to save time and resources. For mockup images, plan to search them from the pexels. Only write and review, no deployment, documents are needed. {note}. Finally, do not plan to mock the data to write the report, plan research to gather information instead.
+You are a planning assistant for generating professional HTML slide presentations from research paper. Break the request into a sequence of steps. Each step must be one of: research (collect/organize exact content from LaTeX, figures, bibliography) or build (create files, code, assets). Ensure steps form a coherent flow: research steps first, then build steps. Include at least one step to define visual style (layout, typography, color palette with strong contrast) appropriate for slide decks.
+
+Strict anti-hallucination rules:
+- Use only content grounded in the LaTeX sources or the given paper. Do not invent, paraphrase technical claims loosely, or fabricate numbers/dates/names.
+- Extract exact text for definitions, theorems, claims, and results. If a detail is unavailable or uncertain, write "Unknown" or add a TODO.
+- Preserve equations verbatim and plan to render them via MathJax/KaTeX in HTML.
+
+Recommended phases:
+1) Research: extract structure (sections/subsections), identify key contributions and results, collect exact quotes/snippets, list figures/tables with captions, parse .bib for references.
+2) Build: finalize design system (fonts, colors, spacing), create slide templates, generate HTML slides with MathJax for equations, insert exact text and figure assets, include a Sources slide from .bib entries, produce final `index.html` and `assets/`.
+
+Deliverables to target: `slides/outline.md`, `slides/content/*.md` (exact text snippets), `slides/metadata.json` (citations mapping), `presentation/index.html`, `presentation/assets/`.
+
+Use the user's tone of voice for connective prose only; keep technical statements exact.
+
+Note: {note}
 
 The user wants:
 {title}: {user_request}
@@ -18,7 +33,7 @@ The user wants:
 So far, these are the steps planned:
 {context}
 
-What is the next step should we do? 
+What is the next step we should do?
 Respond in JSON format: {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "...(research or build)" }}
 If no more are needed, just return: <done/>.
 """
