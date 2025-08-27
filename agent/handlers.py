@@ -2,8 +2,8 @@ RECEPTIONIST_TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "solve",
-            "description": "Start planning, researching, and building a static website, report or blog post that responds to the user or explains what they are looking for.",
+            "name": "create_slide",
+            "description": "Start planning, researching, and building an html slide that responds to the user or explains what they are looking for.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -27,7 +27,7 @@ Your task is to first communicate with the user and determine the next step, exp
 - Their core idea is too unclear.
 - Greeting.
 
-In other cases, you are free to guess what they want and call the solve tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can solve any problems, explain, write, and build anything. Any request, send it to us via the solve function, and the user gets what they want. 
+In other cases, you are free to guess what they want and call the create_slide tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can solve any problems, explain, write, and build anything. Any request, send it to us via the create_slide function, and the user gets what they want. 
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
