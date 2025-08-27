@@ -4,6 +4,7 @@ from typing import Optional, Union
 from agent.configs import settings
 from agent.opencode_sdk import OpenCodeSDKClient
 from agent.utils import strip_thinking_content
+import asyncio
 
 logger = logging.getLogger(__name__)
 from typing import Optional, Literal
@@ -15,14 +16,24 @@ BUILD_SYSTEM_PROMPT = """Your task is to build the project, a static site or a b
 async def execute_research_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None) -> ClaudeCodeStepOutput:
 
     async with OpenCodeSDKClient(workdir) as client:
-        output = await client.query(
-            agent="build",
-            system=PLANNING_SYSTEM_PROMPT,
-            message=steps.task,
-            session_id=session_id,
-            model_id=settings.llm_model_id,
-        )
-        output = strip_thinking_content(output).strip()
+        for i, msg in enumerate([steps.task, 'Seems you faced an issue, please try again.', 'One last try']):
+            logger.info(f"Try {i+1} of 3: {msg}")
+
+            output = await client.query(
+                agent="build",
+                system=PLANNING_SYSTEM_PROMPT,
+                message=msg,
+                session_id=session_id,
+                model_id=settings.llm_model_id,
+            )
+
+            output = strip_thinking_content(output).strip()
+
+            if output:
+                break
+
+            if i < 2:
+                await asyncio.sleep(2 ** (i + 2)) # wait for 4, 8, 16 seconds, wait until service available back
 
     if not output:
         return ClaudeCodeStepOutput(
@@ -39,23 +50,33 @@ async def execute_research_step(steps: StepV2, workdir: str, session_id: Optiona
 
 async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None) -> ClaudeCodeStepOutput:
     async with OpenCodeSDKClient(workdir) as client:
-        output = await client.query(
-            agent="build",
-            system=BUILD_SYSTEM_PROMPT,
-            message=[
-                {
-                    'type': 'text',
-                    'text': steps.task
-                },
-                # {
-                #     'type': 'text',
-                #     'text': '<system-reminder>\nCRITICAL: Build mode ACTIVE. All of your code, resources should be written into files. Make sure all folders created before using them.</system-reminder>'
-                # }
-            ],
-            session_id=session_id,
-            model_id=settings.llm_model_id_code,
-        )
-        output = strip_thinking_content(output).strip()
+        for i, msg in enumerate([steps.task, 'Seems you faced an issue, please try again.', 'One last try']):
+            logger.info(f"Try {i+1} of 3: {msg}")
+
+            output = await client.query(
+                agent="build",
+                system=BUILD_SYSTEM_PROMPT,
+                message=[
+                    {
+                        'type': 'text',
+                        'text': msg
+                    },
+                    # {
+                    #     'type': 'text',
+                    #     'text': '<system-reminder>\nCRITICAL: Build mode ACTIVE. All of your code, resources should be written into files. Make sure all folders created before using them.</system-reminder>'
+                    # }
+                ],
+                session_id=session_id,
+                model_id=settings.llm_model_id_code,
+            )
+
+            output = strip_thinking_content(output).strip()
+            
+            if output:
+                break
+
+            if i < 2:
+                await asyncio.sleep(2 ** (i + 2)) # wait for 4, 8, 16 seconds, wait until service available back
 
     if not output:
         return ClaudeCodeStepOutput(
