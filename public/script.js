@@ -22,7 +22,6 @@ function dashboard() {
       await this.refreshTasks();
       this.connectEventSource();
       this.setupEventListeners();
-      console.log("Toggling detail view:", this.viewTaskSteps);
     },
 
     // Setup additional event listeners for connection management
@@ -244,6 +243,8 @@ function dashboard() {
       this.taskFiles = [];
       this.taskSteps = [];
 
+      console.log("Toggling detail view:", this.viewTaskSteps);
+
       // Add modal-open class to body to hide scrollbar
       document.body.classList.add("modal-open");
 
@@ -288,7 +289,7 @@ function dashboard() {
       this.selectedTask = null;
       this.taskFiles = [];
       this.taskSteps = [];
-
+      this.viewTaskSteps = true;
       // Remove modal-open class from body to restore scrollbar
       document.body.classList.remove("modal-open");
     },
@@ -418,7 +419,6 @@ function dashboard() {
       }
     },
 
-    // From taskId, upload its taskFiles to CDN (API provided later), after upload success, return url contain index.html or first html file available
     async uploadTaskFiles(taskId) {
       try {
         this.loadingShares[taskId] = true;
@@ -495,6 +495,7 @@ function dashboard() {
 
     // Upload new files to CDN
     async uploadNewFiles(taskId) {
+      let progressToastId = null;
       try {
         // First, create a ZIP file from task files
         const zipBlob = await this.createZipFromTaskFiles(taskId);
@@ -503,26 +504,42 @@ function dashboard() {
           return null;
         }
 
-        // Upload ZIP to EternalAI API
-        const formData = new FormData();
-        formData.append("file", zipBlob, `${taskId}.zip`);
-        formData.append("folder_name", taskId);
+        const fileSizeFormatted = this.formatFileSize(zipBlob.size);
 
-        const response = await fetch(
-          "https://api.eternalai.org/api/agent/file/upload-zip-extract?admin_key=eai2024",
-          {
-            method: "POST",
-            body: formData,
-          }
+        // Show initial progress
+        progressToastId = this.showProgressToast(
+          `Preparing upload (${fileSizeFormatted})...`,
+          0
         );
 
-        if (!response.ok) {
-          console.error("Upload failed:", response.statusText);
+        // Check if file is large enough to require chunking (5MB threshold)
+        const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+        // const shouldChunk = zipBlob.size > CHUNK_SIZE;
+        const shouldChunk = false; // TODO: Update when API multipart is ready
+
+        let uploadResult;
+        if (shouldChunk) {
+          uploadResult = await this.uploadFileInChunks(
+            taskId,
+            zipBlob,
+            CHUNK_SIZE,
+            progressToastId
+          );
+        } else {
+          uploadResult = await this.uploadFileWhole(
+            taskId,
+            zipBlob,
+            progressToastId
+          );
+        }
+
+        if (!uploadResult) {
+          this.hideProgressToast(progressToastId);
           this.showToast("Upload failed", "error");
           return null;
         }
 
-        const data = await response.json();
+        this.hideProgressToast(progressToastId);
         this.showToast("Deployment successful", "success");
 
         const chosenFile = this.findBestHtmlFile();
@@ -532,13 +549,214 @@ function dashboard() {
         }
 
         // Construct the URL based on EternalAI's response structure
-        const baseUrl = data.url || `https://api.eternalai.org/files/${taskId}`;
+        const baseUrl = uploadResult.url || `${CDN_BASE_URL}/${taskId}`;
         await this.copyShareLink(baseUrl, chosenFile);
         return baseUrl;
       } catch (error) {
         console.error("Upload error:", error);
+        if (progressToastId) {
+          this.hideProgressToast(progressToastId);
+        }
         this.showToast("Upload failed", "error");
         return null;
+      }
+    },
+
+    // Upload file in chunks for large files
+    async uploadFileInChunks(taskId, fileBlob, chunkSize, progressToastId) {
+      const totalChunks = Math.ceil(fileBlob.size / chunkSize);
+      const fileName = `${taskId}.zip`;
+      const fileSizeFormatted = this.formatFileSize(fileBlob.size);
+
+      try {
+        // Step 1: Initialize multipart upload
+        this.updateProgressToast(
+          progressToastId,
+          `Preparing upload (${fileSizeFormatted})...`,
+          0
+        );
+
+        const initResponse = await fetch("./api/upload/init", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            filename: fileName,
+            folder_name: taskId,
+            total_size: fileBlob.size,
+            chunk_size: chunkSize,
+          }),
+        });
+
+        if (!initResponse.ok) {
+          throw new Error(
+            `Failed to initialize upload: ${initResponse.statusText}`
+          );
+        }
+
+        const { upload_id } = await initResponse.json();
+
+        // Step 2: Upload chunks with retry logic
+        const uploadedParts = [];
+        const maxRetries = 3;
+
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * chunkSize;
+          const end = Math.min(start + chunkSize, fileBlob.size);
+          const chunk = fileBlob.slice(start, end);
+          const chunkNumber = i + 1;
+          const chunkSizeFormatted = this.formatFileSize(chunk.size);
+
+          this.updateProgressToast(
+            progressToastId,
+            `Uploading chunk ${chunkNumber}/${totalChunks} (${chunkSizeFormatted})...`,
+            Math.round((i / totalChunks) * 80) // 80% for uploading, 20% for finalization
+          );
+
+          let chunkUploaded = false;
+          let retryCount = 0;
+
+          while (!chunkUploaded && retryCount < maxRetries) {
+            try {
+              const chunkFormData = new FormData();
+              chunkFormData.append("chunk", chunk);
+              chunkFormData.append("upload_id", upload_id);
+              chunkFormData.append("chunk_number", chunkNumber);
+
+              const chunkResponse = await Promise.race([
+                fetch("./api/upload/chunk", {
+                  method: "POST",
+                  body: chunkFormData,
+                }),
+                // Timeout after 60 seconds for chunk upload
+                new Promise((_, reject) =>
+                  setTimeout(
+                    () => reject(new Error("Chunk upload timeout")),
+                    60000
+                  )
+                ),
+              ]);
+
+              if (!chunkResponse.ok) {
+                throw new Error(
+                  `Failed to upload chunk ${chunkNumber}: ${chunkResponse.statusText}`
+                );
+              }
+
+              const chunkResult = await chunkResponse.json();
+              uploadedParts.push({
+                part_number: chunkNumber,
+                etag: chunkResult.etag,
+              });
+
+              chunkUploaded = true;
+            } catch (error) {
+              retryCount++;
+              if (retryCount < maxRetries) {
+                this.updateProgressToast(
+                  progressToastId,
+                  `Retrying chunk ${chunkNumber}/${totalChunks} (attempt ${
+                    retryCount + 1
+                  })...`,
+                  Math.round((i / totalChunks) * 80)
+                );
+                // Wait before retrying (exponential backoff)
+                await new Promise((resolve) =>
+                  setTimeout(resolve, Math.pow(2, retryCount) * 1000)
+                );
+              } else {
+                throw new Error(
+                  `Failed to upload chunk ${chunkNumber} after ${maxRetries} attempts: ${error.message}`
+                );
+              }
+            }
+          }
+        }
+
+        // Step 3: Complete multipart upload
+        this.updateProgressToast(progressToastId, "Finalizing upload...", 90);
+
+        const completeResponse = await fetch("./api/upload/complete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            upload_id: upload_id,
+            parts: uploadedParts,
+          }),
+        });
+
+        if (!completeResponse.ok) {
+          throw new Error(
+            `Failed to complete upload: ${completeResponse.statusText}`
+          );
+        }
+
+        this.updateProgressToast(progressToastId, "Processing files...", 95);
+        const result = await completeResponse.json();
+
+        this.updateProgressToast(
+          progressToastId,
+          "Upload completed successfully!",
+          100
+        );
+        return result;
+      } catch (error) {
+        console.error("Chunked upload error:", error);
+        this.updateProgressToast(
+          progressToastId,
+          `Upload failed: ${error.message}`,
+          0
+        );
+        throw error;
+      }
+    },
+
+    // Upload file as a whole for smaller files
+    async uploadFileWhole(taskId, fileBlob, progressToastId) {
+      const fileSizeFormatted = this.formatFileSize(fileBlob.size);
+
+      try {
+        this.updateProgressToast(
+          progressToastId,
+          `Uploading file (${fileSizeFormatted})...`,
+          20
+        );
+
+        const formData = new FormData();
+        formData.append("file", fileBlob, `${taskId}.zip`);
+        formData.append("folder_name", taskId);
+
+        this.updateProgressToast(progressToastId, "Processing upload...", 60);
+
+        const response = await fetch("./api/upload/single", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        this.updateProgressToast(progressToastId, "Extracting files...", 85);
+        const result = await response.json();
+
+        this.updateProgressToast(
+          progressToastId,
+          "Upload completed successfully!",
+          100
+        );
+        return result;
+      } catch (error) {
+        console.error("Whole file upload error:", error);
+        this.updateProgressToast(
+          progressToastId,
+          `Upload failed: ${error.message}`,
+          0
+        );
+        throw error;
       }
     },
 
@@ -893,6 +1111,132 @@ function dashboard() {
           }, 500);
         }
       }, duration);
+    },
+
+    // Progress toast notification system for file uploads
+    showProgressToast(message, progress = 0, fileSize = null) {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      const toastId = `progress-toast-${Date.now()}`;
+
+      toast.id = toastId;
+      toast.className = `progress-toast relative p-4 mb-3 border rounded-lg shadow-xl bg-gradient-to-r from-blue-50 to-blue-100 border-blue-300 text-blue-900 transform transition-all duration-300 ease-in-out translate-x-full opacity-0 max-w-md`;
+
+      const fileSizeInfo = fileSize ? `File size: ${fileSize}` : "";
+
+      toast.innerHTML = `
+        <div class="flex items-center mb-2">
+          <div class="text-xl mr-3">📦</div>
+          <div class="flex-1">
+            <div class="font-bold text-sm">${message}</div>
+            <div class="text-xs opacity-75 mt-1">
+              <span class="progress-text">${progress}% complete</span>
+            </div>
+          </div>
+          <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-gray-400 hover:text-gray-600 transition-colors">
+            <i class="fas fa-times text-xs"></i>
+          </button>
+        </div>
+        <div class="w-full bg-blue-200 rounded-full h-2 mb-1">
+          <div class="progress-bar bg-blue-500 h-2 rounded-full transition-all duration-500 ease-out" style="width: ${progress}%"></div>
+        </div>
+        <div class="text-xs opacity-60">
+          <span class="file-size-info">${fileSizeInfo}</span>
+        </div>
+      `;
+
+      container.appendChild(toast);
+
+      // Animate in
+      setTimeout(() => {
+        toast.classList.remove("translate-x-full", "opacity-0");
+      }, 10);
+
+      return toastId;
+    },
+
+    // Update progress toast
+    updateProgressToast(toastId, message, progress, additionalInfo = null) {
+      const toast = document.getElementById(toastId);
+      if (!toast) return;
+
+      // Update message
+      const messageElement = toast.querySelector(".font-bold");
+      if (messageElement) {
+        messageElement.textContent = message;
+      }
+
+      // Update progress text
+      const progressText = toast.querySelector(".progress-text");
+      if (progressText) {
+        progressText.textContent = `${progress}% complete`;
+      }
+
+      // Update additional info if provided
+      if (additionalInfo) {
+        const fileSizeInfo = toast.querySelector(".file-size-info");
+        if (fileSizeInfo) {
+          fileSizeInfo.textContent = additionalInfo;
+        }
+      }
+
+      // Update progress bar
+      const progressBar = toast.querySelector(".progress-bar");
+      if (progressBar) {
+        progressBar.style.width = `${Math.max(0, progress)}%`;
+
+        // Change color based on progress and status
+        if (progress >= 100) {
+          progressBar.className =
+            "progress-bar bg-green-500 h-2 rounded-full transition-all duration-500 ease-out";
+          toast.className = toast.className.replace(
+            "from-blue-50 to-blue-100 border-blue-300 text-blue-900",
+            "from-green-50 to-green-100 border-green-300 text-green-900"
+          );
+        } else if (progress < 0) {
+          // Error state
+          progressBar.className =
+            "progress-bar bg-red-500 h-2 rounded-full transition-all duration-500 ease-out";
+          toast.className = toast.className.replace(
+            "from-blue-50 to-blue-100 border-blue-300 text-blue-900",
+            "from-red-50 to-red-100 border-red-300 text-red-900"
+          );
+          progressBar.style.width = "100%";
+        } else if (progress >= 80) {
+          progressBar.className =
+            "progress-bar bg-green-400 h-2 rounded-full transition-all duration-500 ease-out";
+        }
+      }
+
+      // Add completion effect
+      if (progress >= 100) {
+        const icon = toast.querySelector(".text-xl");
+        if (icon) {
+          icon.textContent = "✅";
+        }
+      } else if (progress < 0) {
+        // Error state
+        const icon = toast.querySelector(".text-xl");
+        if (icon) {
+          icon.textContent = "❌";
+        }
+      }
+    },
+
+    // Hide progress toast
+    hideProgressToast(toastId) {
+      const toast = document.getElementById(toastId);
+      if (!toast) return;
+
+      // Add a small delay before hiding to show completion
+      setTimeout(() => {
+        toast.classList.add("translate-x-full", "opacity-0");
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.remove();
+          }
+        }, 300);
+      }, 1000);
     },
 
     // Cleanup on destroy
