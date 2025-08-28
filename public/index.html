@@ -472,7 +472,7 @@
                                             <template x-if="step.started_at">
                                                 <span>Started: <span x-text="formatDate(step.started_at)"></span></span>
                                             </template>
-                                            <template x-if="step.completed_at">
+                                            <template x-if="step.completed_at && step.status === 'completed'">
                                                 <span>Completed: <span
                                                         x-text="formatDate(step.completed_at)"></span></span>
                                             </template>
