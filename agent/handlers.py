@@ -648,7 +648,8 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
 
     n_calls, max_calls = 0, 1
     use_tool_calls = lambda: n_calls < max_calls and not finished
-    has_task_successfull = False
+
+    successfull_task_ids = []
 
     while not finished:
         completion_builder = ChatCompletionResponseBuilder()
@@ -660,7 +661,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             model=settings.llm_model_id
         )
 
-        if has_task_successfull:
+        if len(successfull_task_ids) > 0:
             payload.pop("tools")
             payload.pop("tool_choice")
 
@@ -687,7 +688,6 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             completion.choices[0].message.tool_calls = completion.choices[0].message.tool_calls[:1]
 
         messages.append(refine_assistant_message(completion.choices[0].message.model_dump()))
-        successfull_task_ids = []
 
         for call in (completion.choices[0].message.tool_calls or []):
             _id, _name, _args = call.id, call.function.name, call.function.arguments
@@ -701,7 +701,6 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             try:
                 repo = get_task_repository()
                 _result_gen: AsyncGenerator[ChatCompletionStreamResponse | str, None] = build(**_args)
-                has_task_successfull = True
                 successfull_task_ids.append(task_id)
 
                 async for chunk in _result_gen:
