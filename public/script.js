@@ -1164,7 +1164,6 @@ function dashboard() {
       }
 
       let etaText = "";
-      let speedText = "";
       if (progress > 0 && progress < 100 && elapsedTime > 1000) {
         const progressRate = progress / (elapsedTime / 1000);
         const remainingProgress = 100 - progress;
@@ -1175,8 +1174,6 @@ function dashboard() {
         } else {
           etaText = `~${Math.round(etaSeconds / 60)}m remaining`;
         }
-
-        speedText = `${progressRate.toFixed(1)}%/s`;
       }
 
       const progressText = toast.querySelector(".progress-text");
@@ -1194,11 +1191,6 @@ function dashboard() {
       const etaElement = toast.querySelector(".eta-text");
       if (etaElement) {
         etaElement.textContent = etaText;
-      }
-
-      const speedElement = toast.querySelector(".speed-info");
-      if (speedElement) {
-        speedElement.textContent = speedText;
       }
 
       if (additionalInfo) {
