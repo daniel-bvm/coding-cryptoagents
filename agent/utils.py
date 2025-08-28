@@ -4,7 +4,8 @@ from mcp.types import CallToolResult, TextContent, Tool, EmbeddedResource
 from pydantic import BaseModel
 from mcp.server.fastmcp import FastMCP
 import re
-import datetime
+from agent.configs import settings
+import json
 
 logger = logging.getLogger(__name__)
 T = TypeVar('T')
@@ -198,7 +199,7 @@ def refine_chat_history(messages: list[dict[str, str]], system_prompt: str = "")
 
             for item in content:
                 if item.get('type', 'undefined') == 'text':
-                    text_input += strip_thinking_content(item.get('text') or '', logging=True)
+                    text_input += strip_thinking_content(item.get('text') or '')
 
             refined_messages.append({
                 "role": "user",
@@ -208,7 +209,7 @@ def refine_chat_history(messages: list[dict[str, str]], system_prompt: str = "")
         else:
             _message = {
                 "role": message.get('role', 'assistant'),
-                "content": strip_toolcall_noti(strip_thinking_content(message.get("content", ""), logging=True))
+                "content": strip_toolcall_noti(strip_thinking_content(message.get("content", "")))
             }
 
             refined_messages.append(_message)
@@ -484,3 +485,27 @@ async def compress_output(folder: str, output_file: str = None) -> str | None:
                 )
 
     return output_file
+
+chat_histories_directory = os.path.join(settings.opencode_directory, "chat_histories")
+os.makedirs(chat_histories_directory, exist_ok=True)
+
+def save_chat_history(task_id: str, messages: list[dict[str, str]]) -> bool:
+    try:
+        with open(os.path.join(chat_histories_directory, f"{task_id}"), "w") as f:
+            json.dump(messages, f, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Error saving chat history for task {task_id}: {e}")
+        return False
+
+    return True
+
+def get_chat_history(task_id: str) -> list[dict[str, str]]:
+    if not os.path.exists(os.path.join(chat_histories_directory, f"{task_id}")):
+        return []
+
+    try:
+        with open(os.path.join(chat_histories_directory, f"{task_id}"), "r") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error getting chat history for task {task_id}: {e}")
+        return []
