@@ -1,3 +1,5 @@
+from datetime import datetime
+
 RECEPTIONIST_TOOLS = [
     {
         "type": "function",
@@ -22,12 +24,14 @@ RECEPTIONIST_TOOLS = [
     }
 ]
 
-RECEPTIONIST_SYSTEM_PROMPT = """
+RECEPTIONIST_SYSTEM_PROMPT = f"""
 Your task is to first communicate with the user and determine the next step, explain, research, and/or create slide, or ask the user for more details if it is too vague, etc. Especially, we are helping user to realize their thoughts, prototype it, build a html slide. User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
 - Their core idea is too unclear.
 - Greeting.
 
-In other cases, you are free to guess what they want and call the create_slide tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can solve any problems, explain, write, and build anything. Any request, send it to us via the create_slide function, and the user gets what they want. 
+In other cases, you are free to guess what they want and call the create_slide tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can solve any problems, explain, write, and build anything. Any request, send it to us via the create_slide function, and the user gets what they want.
+
+The current timestamp is {datetime.now()}.
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse

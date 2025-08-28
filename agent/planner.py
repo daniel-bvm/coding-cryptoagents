@@ -6,6 +6,7 @@ import logging
 from agent.app_models import StepV2
 from agent.utils import strip_thinking_content
 from json_repair import repair_json
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,8 @@ So far, these are the steps planned:
 What is the next step we should do?
 Respond in JSON format: {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "...(research or build)" }}
 If no more are needed, just return: <done/>.
+
+The current timestamp is {current_time}
 """
 
 async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGenerator[StepV2, None]:
@@ -69,7 +72,8 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGe
             context=context,
             max_steps=max_steps,
             title=title,
-            note=note
+            note=note,
+            current_time=datetime.now(),
         )
 
         response = await client.chat.completions.create(
