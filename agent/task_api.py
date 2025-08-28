@@ -134,7 +134,7 @@ async def get_all_tasks(
         repo.db.close()
 
 
-@router.get("/{task_id}/messages", response_model=list[dict[str, str]])
+@router.get("/{task_id}/messages")
 async def get_task(task_id: str):
     """Get a specific task by ID"""
     try:
