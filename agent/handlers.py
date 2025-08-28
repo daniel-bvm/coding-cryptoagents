@@ -2,7 +2,7 @@ RECEPTIONIST_TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "solve",
+            "name": "prototype",
             "description": "Start planning, researching, and building a static website, report or blog post that responds to the user or explains what they are looking for.",
             "parameters": {
                 "type": "object",
@@ -27,7 +27,7 @@ Your task is to first communicate with the user and determine the next step, exp
 - Their core idea is too unclear.
 - Greeting.
 
-In other cases, you are free to guess what they want and call the solve tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can solve any problems, explain, write, and build anything. Any request, send it to us via the solve function, and the user gets what they want. 
+In other cases, you are free to guess what they want and call the prototype tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can resolve any problems, explain, write, and prototype anything. Any request, send it to us via the prototype function, and the user gets what they want. 
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
@@ -341,7 +341,7 @@ async def build(
                 repo.db.close()
 
         if i == 0: # first step
-            composed_step.task = f"We are building a {title}, expected output: {expectation}\n\nYour task is to do it step-by-step\n{composed_step.task}"
+            composed_step.task = f"We are building a {title}, expected output: {expectation}\n\nYour task is to complete it step-by-step\n{composed_step.task}"
 
         is_last_build_step = ssteps[-1].step_type == "build"
 
@@ -351,15 +351,20 @@ async def build(
                 break
 
         html_files = glob.glob(os.path.join(workdir, "**/*.html"), recursive=True)
+        markdown_files = glob.glob(os.path.join(workdir, "**/*.md"), recursive=True)
         index_html_files = glob.glob(os.path.join(workdir, "**/index.html"), recursive=True)
         has_index_html = len(index_html_files) > 0
         has_any_html = len(html_files) > 0
-
+        has_markdown_files = len(markdown_files) > 0
+    
         if is_last_build_step and not has_index_html:
-            composed_step.task += f"\n\nImportant: The current project does not contain an index.html file to show. Please create it."
+            composed_step.task += f"\n\nImportant: The current project does not contain an index.html file to respond to the user. Create it now."
 
             if has_any_html:
-                composed_step.task += f"\n\nHint: If the main content is in another index.html file, just rename it to index.html then polish it."
+                composed_step.task += f"\n\nHint: If the main content is included in another index.html file, just rename it to index.html and polish it."
+
+            elif has_markdown_files:
+                composed_step.task += f"\n\nHint: Use the information from generated markdown files to create the final report."
 
         step_output: ClaudeCodeStepOutput = await execute_steps_v2(
             composed_step.step_type, 
@@ -438,6 +443,11 @@ async def build(
             # if os.path.exists(workdir): # disable for easier debugging
             #     shutil.rmtree(workdir, ignore_errors=True)
 
+    has_index_html = len(glob.glob(os.path.join(workdir, "**/*.html"), recursive=True)) > 0
+
+    if not has_index_html:
+        raise Exception("Task failed as the output does not meet the expectation.")
+
     # Update task as completed
     repo = get_task_repository()
     try:
@@ -477,6 +487,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
 
     n_calls, max_calls = 0, 1
     use_tool_calls = lambda: n_calls < max_calls and not finished
+    has_task_successfull = False
 
     while not finished:
         completion_builder = ChatCompletionResponseBuilder()
@@ -488,7 +499,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             model=settings.llm_model_id
         )
 
-        if not use_tool_calls():
+        if has_task_successfull:
             payload.pop("tools")
             payload.pop("tool_choice")
 
@@ -528,6 +539,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             try:
                 repo = get_task_repository()
                 _result_gen: AsyncGenerator[ChatCompletionStreamResponse | str, None] = build(**_args)
+                has_task_successfull = True
 
                 async for chunk in _result_gen:
                     if isinstance(chunk, ChatCompletionStreamResponse):

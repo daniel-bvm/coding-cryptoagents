@@ -10,9 +10,13 @@ from typing import AsyncGenerator
 import logging
 import time
 from agent.handlers import handle_request
+from agent.upload_api import router as upload_router
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Include upload endpoints
+router.include_router(upload_router)
 
 @router.post("/prompt")
 async def prompt(request: ChatCompletionRequest):

@@ -23,7 +23,7 @@ Respond in JSON format: {{ "reason": "...", "task": "...", "expectation": "...",
 If no more are needed, just return: <done/>.
 """
 
-async def make_plan(title: str, user_request: str, max_steps: int = 5) -> list[StepV2]:
+async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGenerator[StepV2, None]:
     logger.info(f"Making plan for user request: {user_request} (Title: {title})")
 
     list_of_steps: list[StepV2] = []
@@ -32,12 +32,12 @@ async def make_plan(title: str, user_request: str, max_steps: int = 5) -> list[S
 
     while True and len(list_of_steps) < max_steps:
         context = "\n".join([f"{i+1}. {step.task}: {step.expectation} ({step.step_type})" for i, step in enumerate(list_of_steps)])
-
+        
         if not has_plan_step:
-            note = 'The plan should include at least one research step to gather information.'
+            note = f'The plan should include at least one research step to gather information.'
 
         elif not has_build_step:
-            note = 'The plan should include at least one build step to create the final product or report.'
+            note = f'The plan should include at least one build step to create the final product or report.'
 
         else:
             note = f"The plan should be completed in maximum {max_steps} steps." if len(list_of_steps) > max_steps // 2 else ""
@@ -63,7 +63,6 @@ async def make_plan(title: str, user_request: str, max_steps: int = 5) -> list[S
             if 'reason' in response_text.lower():
                 l, r = response_text.find('{'), response_text.rfind('}')+1
                 no_thinking_text = response_text[l:r]
-
                 try:
                     resp_json: dict[str, Any] = json.loads(repair_json(no_thinking_text))
                     reasoning = resp_json.get('reason')
@@ -80,60 +79,10 @@ async def make_plan(title: str, user_request: str, max_steps: int = 5) -> list[S
             l, r = response_text.find('{'), response_text.rfind('}')+1
             step_data: dict = json.loads(repair_json(response_text[l:r]))
             step = StepV2(**step_data)
-            list_of_steps.append(step)
-            logger.info(f"Added {step.step_type} step: {step.task} (Reason: {step.reason}; Expectation: {step.expectation})")
-        except Exception as e:
-            logger.error(f"[1] Failed to parse response: {e}")
 
-    return list_of_steps
+            has_build_step = has_build_step or step.step_type == 'build'
+            has_plan_step = has_plan_step or step.step_type == 'research'
 
-
-
-async def gen_plan(title: str, user_request: str, max_steps: int = 15) -> AsyncGenerator[StepV2, None]:
-    logger.info(f"Making plan for user request: {user_request} (Title: {title})")
-
-    list_of_steps: list[StepV2] = []
-    client = AsyncClient(api_key=settings.llm_api_key, base_url=settings.llm_base_url)
-
-    while True and len(list_of_steps) < max_steps:
-        context = "\n".join([f"{i+1}. {step.task}: {step.expectation} ({step.step_type})" for i, step in enumerate(list_of_steps)])
-        prompt = COT_TEMPLATE.format(
-            user_request=user_request,
-            context=context,
-            max_steps=max_steps,
-            title=title,
-            note=f"The plan should be completed in maximum {max_steps} steps." if len(list_of_steps) >= max_steps // 2 else ""
-        )
-
-        response = await client.chat.completions.create(
-            model=settings.llm_model_id,
-            messages=[{"role": "user", "content": prompt}]
-        )
-
-        response_text = strip_thinking_content(response.choices[0].message.content)
-
-        if "<done/>" in response_text.strip().lower():
-            reasoning = None
-
-            if 'reason' in response_text.lower():
-                l, r = response_text.find('{'), response_text.rfind('}')+1
-                no_thinking_text = response_text[l:r]
-                try:
-                    resp_json: dict[str, Any] = json.loads(repair_json(no_thinking_text))
-                    reasoning = resp_json.get('reason')
-
-                except Exception as err:
-                    logger.error(f"Error parsing JSON: {err}; Response: {no_thinking_text}")
-
-            if not reasoning:
-                reasoning = response_text.strip()
-
-            break
-
-        try:
-            l, r = response_text.find('{'), response_text.rfind('}')+1
-            step_data: dict = json.loads(repair_json(response_text[l:r]))
-            step = StepV2(**step_data)
             list_of_steps.append(step)
             logger.info(f"Added {step.step_type} step: {step.task} (Reason: {step.reason}; Expectation: {step.expectation})")
             yield step
