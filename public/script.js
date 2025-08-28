@@ -1,5 +1,10 @@
 const CDN_BASE_URL = "https://cdn.eternalai.org/prototype-agent";
 
+const CONFIG = {
+  AGENT_ID: "15873", // Set your actual agent ID
+  AGENT_SLUG: "9003-prototype", // Set your actual agent slug
+};
+
 // Folder tree utility functions
 function createFolderTreeData() {
   return {
@@ -462,8 +467,8 @@ function dashboard() {
       return firstHTML ? firstHTML.path : null;
     },
 
-    async copyShareLink(baseUrl, filePath) {
-      const shareUrl = `${baseUrl}/${filePath}`;
+    async copyShareLink(shareUrl) {
+      // const shareUrl = `${baseUrl}/${filePath}`;
       try {
         await navigator.clipboard.writeText(shareUrl);
         this.showToast("Share link copied to clipboard", "success");
@@ -485,14 +490,15 @@ function dashboard() {
           return null;
         }
         const chosenFile = this.findBestHtmlFile();
+        console.log("🚀 ~ uploadTaskFiles ~ chosenFile:", chosenFile);
 
-        const checkResponse = await fetch(
-          `${CDN_BASE_URL}/${taskId}/${chosenFile}`
-        );
-        if (checkResponse.ok) {
-          const baseUrl = `${CDN_BASE_URL}/${taskId}`;
-          return await this.handleExistingCdnLink(baseUrl);
-        }
+        // const checkResponse = await fetch(
+        //   `${CDN_BASE_URL}/${taskId}/${chosenFile}`
+        // );
+        // if (checkResponse.ok) {
+        //   const baseUrl = `${CDN_BASE_URL}/${taskId}`;
+        //   return await this.handleExistingCdnLink(baseUrl);
+        // }
 
         return await this.uploadNewFiles(taskId);
       } catch (error) {
@@ -510,6 +516,8 @@ function dashboard() {
         this.showToast("No HTML file to share", "error");
         return null;
       }
+
+      //
 
       await this.copyShareLink(existingUrl, chosenFile);
       return existingUrl;
@@ -571,11 +579,14 @@ function dashboard() {
           progressToastId
         );
 
+        console.log("🚀 ~ uploadNewFiles ~ zipBlob:", zipBlob);
+
         let uploadResult = await this.uploadFileWhole(
           taskId,
           zipBlob,
           progressToastId
         );
+        console.log("🚀 ~ uploadNewFiles ~ uploadResult:", uploadResult);
 
         if (!uploadResult) {
           this.hideProgressToast(progressToastId);
@@ -584,17 +595,45 @@ function dashboard() {
         }
 
         const chosenFile = this.findBestHtmlFile();
+        console.log("🚀 ~ uploadNewFiles ~ chosenFile:", chosenFile);
         if (!chosenFile) {
           this.showToast("No HTML file to share", "error");
           return null;
         }
         const folderPath = uploadResult.data.folder_path;
+        console.log("🚀 ~ uploadNewFiles ~ folderPath:", folderPath);
         const baseUrl = folderPath ? folderPath : `${CDN_BASE_URL}/${taskId}`;
 
         if (baseUrl) {
-          // add small delay
-          // await new Promise((resolve) => setTimeout(resolve, 1000));
-          await this.copyShareLink(baseUrl, chosenFile);
+          // call API to create share link 'https://api-dojo2.eternalai.org/api/shared-agent-chat' + body { ""wallet_address"": taskId, "shared_message": "My Share", "processing_url": baseUrl }
+
+          const MOCK_MSG = `[{\"role\":\"user\",\"content\":\"\\\"Build an interactive report about climate change with charts and visuals.\\\"\"},{\"role\":\"assistant\",\"content\":\"\\n<think>The user wants me to build an interactive report about climate change with charts and visuals. This is a clear request that fits well with the prototype function. They want:\\n\\n1. An interactive report about climate change\\n2.\\"}]`;
+
+          const res = await fetch(
+            "https://api-dojo2.eternalai.org/api/shared-agent-chat",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+              body: JSON.stringify({
+                wallet_address: taskId,
+                shared_message: MOCK_MSG,
+                processing_url: `${baseUrl}/${chosenFile}`,
+                agent_id: CONFIG.AGENT_ID,
+              }),
+            }
+          );
+          console.log("🚀 ~ uploadNewFiles ~ res:", res);
+
+          if (res && res.ok) {
+            const data = await res.json();
+            const shareId = data.data.unique_number;
+            const shareUrl = `https://eternalai.org/${CONFIG.AGENT_SLUG}/${shareId}`;
+            console.log("🚀 ~ uploadNewFiles ~ shareUrl:", shareUrl);
+            await this.copyShareLink(shareUrl);
+          }
         }
 
         return baseUrl;
@@ -602,7 +641,8 @@ function dashboard() {
         if (progressToastId) {
           this.hideProgressToast(progressToastId);
         }
-        this.showToast("Upload failed", "error");
+        console.log("Upload failed", error);
+        this.showToast("Upload failed", error.message);
         return null;
       } finally {
         this.hideProgressToast(progressToastId);
@@ -702,6 +742,8 @@ function dashboard() {
           100
         );
         this.hideProgressToast(progressToastId);
+        console.log("🚀 ~ uploadFileWhole ~ result:", result);
+
         if (result) return result;
       } catch (error) {
         this.updateProgressToast(
