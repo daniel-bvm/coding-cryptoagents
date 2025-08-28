@@ -6,12 +6,12 @@ import logging
 from agent.app_models import StepV2
 from agent.utils import strip_thinking_content
 from json_repair import repair_json
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
 COT_TEMPLATE = """
-You are a planning assistant for generating professional HTML presentations from various content sources. Break the request into a sequence of steps. Each step must be one of: research (collect/organize exact content from source materials) or build (create files, code, assets). Ensure steps form a coherent flow: research steps first, then build steps. Include at least one step to define visual style (layout, typography, color palette with strong contrast) appropriate for presentations.
+You are a planning assistant for generating professional HTML presentations from various content sources. Break the request into a sequence of steps. Each step must be one of: research (collect/organize exact content from source materials) or build (create files, code, assets). Ensure steps form a coherent flow: research steps first, then build steps. The FIRST step MUST be a research step. Never start with a build step, even if sources seem obvious. If no sources are provided, plan research to gather them before any build.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
@@ -34,6 +34,7 @@ Deliverables to target: `slides/outline.md`, `slides/content/*.md` (exact conten
 Use the user's tone of voice for connective prose only; keep all factual statements exact from source materials.
 
 Note: {note}
+Current UTC time: {current_time}
 
 The user wants:
 {title}: {user_request}
@@ -59,7 +60,7 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGe
         context = "\n".join([f"{i+1}. {step.task}: {step.expectation} ({step.step_type})" for i, step in enumerate(list_of_steps)])
         
         if not has_plan_step:
-            note = f'The plan should include at least one research step to gather information.'
+            note = f'The plan should include at least one research step to gather information. The first step MUST be research.'
 
         elif not has_build_step:
             note = f'The plan should include at least one build step to create the final slide presentation.'
