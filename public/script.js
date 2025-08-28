@@ -588,9 +588,14 @@ function dashboard() {
           this.showToast("No HTML file to share", "error");
           return null;
         }
+        const folderPath = uploadResult.data.folder_path;
+        const baseUrl = folderPath ? folderPath : `${CDN_BASE_URL}/${taskId}`;
 
-        const baseUrl = uploadResult.url || `${CDN_BASE_URL}/${taskId}`;
-        await this.copyShareLink(baseUrl, chosenFile);
+        if (baseUrl) {
+          // add small delay
+          // await new Promise((resolve) => setTimeout(resolve, 1000));
+          await this.copyShareLink(baseUrl, chosenFile);
+        }
 
         return baseUrl;
       } catch (error) {
@@ -599,6 +604,8 @@ function dashboard() {
         }
         this.showToast("Upload failed", "error");
         return null;
+      } finally {
+        this.hideProgressToast(progressToastId);
       }
     },
 
@@ -674,6 +681,7 @@ function dashboard() {
         this.updateProgressToast(progressToastId, "Processing upload...", 80);
 
         const result = await uploadPromise;
+
         await this.ensureMinimumStepTime(
           processingStartTime,
           this.uploadConfig.minimumStepTimes.processing,
@@ -693,8 +701,8 @@ function dashboard() {
           "Upload completed successfully!",
           100
         );
-
-        return result;
+        this.hideProgressToast(progressToastId);
+        if (result) return result;
       } catch (error) {
         this.updateProgressToast(
           progressToastId,
