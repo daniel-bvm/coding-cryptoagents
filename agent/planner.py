@@ -26,7 +26,7 @@ Respond in JSON format: {{ "reason": "...", "task": "...", "expectation": "...",
 If no more are needed, just return: <done/> (no need to explain anything).
 """
 
-async def gen_plan(title: str, user_request: str, information: str, max_steps: int = 3) -> AsyncGenerator[StepV2, None]:
+async def gen_plan(title: str, information: str, user_request: str, max_steps: int = 3) -> AsyncGenerator[StepV2, None]:
     logger.info(f"Making plan for user request: {user_request} (Title: {title})")
 
     list_of_steps: list[StepV2] = []
