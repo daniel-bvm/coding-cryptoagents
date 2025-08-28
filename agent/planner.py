@@ -10,20 +10,27 @@ from json_repair import repair_json
 logger = logging.getLogger(__name__)
 
 COT_TEMPLATE = """
-You are a planning assistant for generating professional HTML slide presentations from research paper. Break the request into a sequence of steps. Each step must be one of: research (collect/organize exact content from LaTeX, figures, bibliography) or build (create files, code, assets). Ensure steps form a coherent flow: research steps first, then build steps. Include at least one step to define visual style (layout, typography, color palette with strong contrast) appropriate for slide decks.
+You are a planning assistant for generating professional HTML slide presentations from various content sources. Break the request into a sequence of steps. Each step must be one of: research (collect/organize exact content from source materials) or build (create files, code, assets). Ensure steps form a coherent flow: research steps first, then build steps. Include at least one step to define visual style (layout, typography, color palette with strong contrast) appropriate for slide decks.
+
+Content types and handling:
+- LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
+- Company introductions: Gather company info, products, team, mission, vision, achievements from provided materials
+- Problem statements: Extract problem context, challenges, requirements, constraints from source documents
+- General presentations: Organize any structured content into logical slide flow
 
 Strict anti-hallucination rules:
-- Use only content grounded in the LaTeX sources or the given paper. Do not invent, paraphrase technical claims loosely, or fabricate numbers/dates/names.
-- Extract exact text for definitions, theorems, claims, and results. If a detail is unavailable or uncertain, write "Unknown" or add a TODO.
-- Preserve equations verbatim and plan to render them via MathJax/KaTeX in HTML.
+- Use ONLY content grounded in the provided source materials. Do not invent, fabricate, or add external information.
+- Extract exact text, numbers, dates, names, and claims. If a detail is unavailable or uncertain, write "Unknown" or add a TODO.
+- For LaTeX sources: preserve equations verbatim and plan to render them via MathJax/KaTeX in HTML.
+- For any content: maintain original meaning; avoid interpretations not explicitly supported by sources.
 
 Recommended phases:
-1) Research: extract structure (sections/subsections), identify key contributions and results, collect exact quotes/snippets, list figures/tables with captions, parse .bib for references.
-2) Build: finalize design system (fonts, colors, spacing), create slide templates, generate HTML slides with MathJax for equations, insert exact text and figure assets, include a Sources slide from .bib entries, produce final `index.html` and `assets/`.
+1) Research: analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions, organize content hierarchy for slides
+2) Build: finalize design system (fonts, colors, spacing), create slide templates, generate HTML slides, insert exact content and assets, produce final `index.html` and `assets/`
 
-Deliverables to target: `slides/outline.md`, `slides/content/*.md` (exact text snippets), `slides/metadata.json` (citations mapping), `presentation/index.html`, `presentation/assets/`.
+Deliverables to target: `slides/outline.md`, `slides/content/*.md` (exact content snippets), `slides/metadata.json` (content mapping), `presentation/index.html`, `presentation/assets/`.
 
-Use the user's tone of voice for connective prose only; keep technical statements exact.
+Use the user's tone of voice for connective prose only; keep all factual statements exact from source materials.
 
 Note: {note}
 
@@ -39,7 +46,7 @@ If no more are needed, just return: <done/>.
 """
 
 async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGenerator[StepV2, None]:
-    logger.info(f"Making plan for user request: {user_request} (Title: {title})")
+    logger.info(f"Generating plan for user request: {user_request} (Title: {title})")
 
     list_of_steps: list[StepV2] = []
     client = AsyncClient(api_key=settings.llm_api_key, base_url=settings.llm_base_url)
@@ -52,7 +59,7 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGe
             note = f'The plan should include at least one research step to gather information.'
 
         elif not has_build_step:
-            note = f'The plan should include at least one build step to create the final product or report.'
+            note = f'The plan should include at least one build step to create the final slide presentation.'
 
         else:
             note = f"The plan should be completed in maximum {max_steps} steps." if len(list_of_steps) > max_steps // 2 else ""
