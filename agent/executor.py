@@ -36,11 +36,7 @@ async def execute_research_step(steps: StepV2, workdir: str, session_id: Optiona
                 await asyncio.sleep(2 ** (i + 2)) # wait for 4, 8, 16 seconds, wait until service available back
 
     if not output:
-        return ClaudeCodeStepOutput(
-            step_id=steps.id,
-            full=f'{steps.task} completed without generating any output',
-            session_id=session_id
-        )
+        raise Exception(f"Research step {steps.id} failed to generate any output")
 
     return ClaudeCodeStepOutput(
         step_id=steps.id,
@@ -79,11 +75,7 @@ async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[U
                 await asyncio.sleep(2 ** (i + 2)) # wait for 4, 8, 16 seconds, wait until service available back
 
     if not output:
-        return ClaudeCodeStepOutput(
-            step_id=steps.id,
-            full=f'{steps.task} completed without any output',
-            session_id=session_id
-        )
+        raise Exception(f"Build step {steps.id} failed to generate any output")
 
     return ClaudeCodeStepOutput(
         step_id=steps.id,
