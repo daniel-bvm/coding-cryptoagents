@@ -10,20 +10,23 @@ from json_repair import repair_json
 logger = logging.getLogger(__name__)
 
 COT_TEMPLATE = """
-You are an analytical assistant. Your task is to break the user request into a list of steps, each step should be clearly describe a single action with expectation output. In advance, each step should be one of reseach (search for information) or build (write down the code, etc). It should be at least one step to define style, layout, a color pallete to be used during development, focus on the contrast between background and main content. In each step, it should be solid link with the previous, the task should be solved with some research steps first, followed by build steps. When the user asking for something easy to understand, we just need to carefully research about it (search directly the mentioned keywords, quote, etc), and create a final report in build steps that is professional, concise, and visual stunning (no need a child-friendly design). More important, your voice should be in the user's voice (like the user is self-talking). The final output should be a static site that is professional, colorful, stunning, professional visual design and include an index.html file in the project root. To style the project, make plan to utilize Tailwind CSS as much as possible to save time and resources. For mockup images, plan to search them from the pexels. Only write and review, no deployment, documents are needed. {note}. Finally, do not plan to mock the data to write the report, plan research to gather information instead.
+You are an analytical assistant. Your task is to read the information and break the user request into a list of steps, each step should be clearly describe a single action with expectation output. In advance, each step should be one of research (search for information) or build (write down the HTML report, etc). It should be at least one step to define style, layout, a color palette to be used during development, focus on the contrast between background and main content. In each step, it should be solid link with the previous, the task should be solved with some research steps first, followed by build steps. Output must be professional, visual stunning, rich of meaningful content, no need to use any images. More important, your voice should be in the user's voice (like the user is self-talking). The final output must include an index.html file in the project root. To style the project, make plans to utilize Tailwind CSS as much as possible to save time and resources. Only write and review, no deployment, documents are needed. {note}. Finally, do not plan to mock the data to write the report, plan research to collect more information instead.
 
 The user wants:
 {title}: {user_request}
+
+These information are gathered:
+{information}
 
 So far, these are the steps planned:
 {context}
 
 What is the next step should we do? 
 Respond in JSON format: {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "...(research or build)" }}
-If no more are needed, just return: <done/>.
+If no more are needed, just return: <done/> (no need to explain anything).
 """
 
-async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGenerator[StepV2, None]:
+async def gen_plan(title: str, user_request: str, information: str, max_steps: int = 3) -> AsyncGenerator[StepV2, None]:
     logger.info(f"Making plan for user request: {user_request} (Title: {title})")
 
     list_of_steps: list[StepV2] = []
@@ -45,6 +48,7 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGe
         prompt = COT_TEMPLATE.format(
             user_request=user_request,
             context=context,
+            information=information,
             max_steps=max_steps,
             title=title,
             note=note
@@ -58,21 +62,6 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGe
         response_text = strip_thinking_content(response.choices[0].message.content)
 
         if "<done/>" in response_text.strip().lower():
-            reasoning = None
-
-            if 'reason' in response_text.lower():
-                l, r = response_text.find('{'), response_text.rfind('}')+1
-                no_thinking_text = response_text[l:r]
-                try:
-                    resp_json: dict[str, Any] = json.loads(repair_json(no_thinking_text))
-                    reasoning = resp_json.get('reason')
-
-                except Exception as err:
-                    logger.error(f"Error parsing JSON: {err}; Response: {no_thinking_text}")
-
-            if not reasoning:
-                reasoning = response_text.strip()
-
             break
 
         try:

@@ -56,13 +56,13 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                 "finance": {
                     "type": "local",
                     "command": [sys.executable, financial_datasets_path],
-                    "enabled": True,
+                    "enabled": False,
                     "environment": mcp_env
                 },
                 "pexels": {
                     "type": "local",
                     "command": [sys.executable, pexels_path],
-                    "enabled": True,
+                    "enabled": False,
                     "environment": mcp_env
                 }
             }
@@ -130,6 +130,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "description": "Financial expert for equities, crypto, and macro; fetches structured data via Finance MCP tools and context via Tavily; runs advanced analysis, and provides actionable investment insights.",
                             "mode": "subagent",
                             "temperature": 0.1,
+                            "enabled": False,
                             "tools": {
                                 "write": True,
                                 "edit": False,
