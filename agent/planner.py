@@ -73,7 +73,7 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGe
             max_steps=max_steps,
             title=title,
             note=note,
-            current_time=datetime.now(),
+            current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
         response = await client.chat.completions.create(
