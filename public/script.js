@@ -2,13 +2,13 @@ const CDN_BASE_URL = "https://cdn.eternalai.org/prototype-agent";
 
 // Update according to your agent
 const CONFIG = {
-  AGENT_ID: "15873", // Set your actual agent ID
-  AGENT_SLUG: "9003-prototype", // Set your actual agent slug
+  AGENT_ID: "15934", // Set your actual agent ID
+  AGENT_SLUG: "9050-market-research", // Set your actual agent slug
 };
 
 // Shared constants and utilities
 const SHARED_CONSTANTS = {
-  DEFAULT_GREETING_MESSAGE: `[{"role":"assistant","content":"Hi, I'm Prototype agent, specialized in building websites, reports and blogs.\\n\\n\\"Research the latest trends in AI and create a blog post about it.\\"\\n\\"Build an interactive report about climate change with charts and visuals.\\"\\n\\"Plan and build a landing page for a crypto exchange named Binance\\"\\n\\nJust tell me, what do you want to create?"}]`,
+  DEFAULT_GREETING_MESSAGE: `[{"role":"assistant","content":"Hi, I'm Market Research agent, specialized in building websites, reports and blogs.\\n\\n\\"Research the latest trends in AI and create a blog post about it.\\"\\n\\"Build an interactive report about climate change with charts and visuals.\\"\\n\\"Plan and build a landing page for a crypto exchange named Binance\\"\\n\\nJust tell me, what do you want to create?"}]`,
   SHARED_AGENT_CHAT_API:
     "https://api-dojo2.eternalai.org/api/shared-agent-chat",
   TOAST_DURATION: {
