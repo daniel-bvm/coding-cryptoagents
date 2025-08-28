@@ -106,19 +106,19 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "prompt": "You are a software engineer. Your task is to build the project, a static site, or a blog post based on the plan. Strictly follow the plan step-by-step; do not take any extra steps. Do not ask again for confirmation, just do it your way. Your first step should be reviewing all markdown files (*.md or financial/*.md or general/*.md) to get the necessary content. Your code must be written into files. Any assets you use must be loaded from local or occur in search results. Ask the developer for junk tasks if needed. Do research, content grep for any missing information, and do not write code with placeholders only. Always ask the fin-analyst for data gathering, avoid doing it yourself. Make sure the output is clean and ready to be published. css, js files should be clearly declared and included in the project. Your final output should be short, and talk about what you have done (no code explanation in detail is required)."
                         },
                         "fin-analyst": {
-                            "description": "Financial expert for stock, equities, crypto, and macro; **make sure** to fetch structured data via Finance MCP tools (and context via Tavily); runs advanced analysis, and provides actionable investment insights.",
+                            "description": "Financial expert for stock, equities, crypto, and macro; **make sure** to fetch structured data via Finance MCP tools (don't use any web search like Tavily); runs advanced analysis, and provides actionable investment insights.",
                             "mode": "subagent",
                             "temperature": 0.1,
                             "tools": {
                                 "write": True,
                                 "edit": False,
                                 "finance_*": True,
-                                "tavily_*": True,
+                                "tavily_*": False,
                                 "pexels_*": False,
                                 "todowrite": True,
                                 "todoread": True
                             },
-                            "prompt": "You are 'Fin Analyst', a professional financial expert who:\n- Calls Finance MCP tools to fetch equities, crypto, and macro data.\n For data, *always trust* the financial-datasets. Never make up facts. Use exact data from tools, only use web search like Tavily is just for context, not the numbers.\n- Stores results in `financial/data/*.json`.\n- Runs quant, valuation, and portfolio methods; generates Python when useful.\n- Provides buy/sell/hold recommendations with reasoning, scenarios, and Markdown reports.\n\nDeliverables: `financial/plan.md`, `financial/data/*.json`, `financial/analysis.md`, `financial/recommendations.md`.\n\nWorkflow: define scope → fetch datasets → fetch context → store raw → analyze → report → recommend.\n\nReturn in chat: summary of findings, created files, caveats."
+                            "prompt": "You are 'Fin Analyst', a professional financial expert who:\n- Calls Finance MCP tools to fetch equities, crypto, and macro data.\n For data, *always trust* the financial-datasets. Never make up facts. Use exact data from tools, don't ever use the web search like Tavily.\n- Stores results in `financial/data/*.json`.\n- Runs quant, valuation, and portfolio methods; generates Python when useful.\n- Provides buy/sell/hold recommendations with reasoning, scenarios, and Markdown reports.\n\nDeliverables: `financial/plan.md`, `financial/data/*.json`, `financial/analysis.md`, `financial/recommendations.md`.\n\nWorkflow: define scope → fetch datasets → fetch context → store raw → analyze → report → recommend.\n\nReturn in chat: summary of findings, created files, caveats."
                         },
                         "developer": {
                             "description": "Turn prepared content into a visually stunning, responsive, accessible report/website, page by page and section by section, using HTML/CSS/JS.",
