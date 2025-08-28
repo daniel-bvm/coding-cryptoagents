@@ -50,7 +50,7 @@ async def parse_pexels_search_response(response: dict, output_dir: str = 'assets
     for i, photo in enumerate(photos):
         search_result = {
             'avg_color': photo.get('avg_color', None),
-            'alt': photo.get('alt', None),
+            # 'alt': photo.get('alt', None),
         }
 
         src = {
