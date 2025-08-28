@@ -595,13 +595,11 @@ function dashboard() {
         }
 
         const chosenFile = this.findBestHtmlFile();
-        console.log("🚀 ~ uploadNewFiles ~ chosenFile:", chosenFile);
         if (!chosenFile) {
           this.showToast("No HTML file to share", "error");
           return null;
         }
         const folderPath = uploadResult.data.folder_path;
-        console.log("🚀 ~ uploadNewFiles ~ folderPath:", folderPath);
         const baseUrl = folderPath ? folderPath : `${CDN_BASE_URL}/${taskId}`;
 
         if (baseUrl) {
