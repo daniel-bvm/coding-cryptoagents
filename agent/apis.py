@@ -11,6 +11,7 @@ import logging
 import time
 from agent.handlers import handle_request
 from agent.upload_api import router as upload_router
+from agent.task_api import save_chat_history
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -23,7 +24,7 @@ async def prompt(request: ChatCompletionRequest):
     enqueued = time.time()
     ttft, tps, n_tokens = float("inf"), None, 0
     req_id = request.request_id or f"req-{random_uuid()}"
-    
+
     generator = handle_request(request)
 
     if request.stream:
