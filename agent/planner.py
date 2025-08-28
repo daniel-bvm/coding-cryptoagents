@@ -77,12 +77,17 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGe
             current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-        response = await client.chat.completions.create(
+        response = ''
+
+        async with client.chat.completions.stream(
             model=settings.llm_model_id,
             messages=[{"role": "user", "content": prompt}]
-        )
+        ) as stream:
+            async for event in stream:
+                if event.type == 'content.delta':
+                    response += event.delta
 
-        response_text = strip_thinking_content(response.choices[0].message.content)
+        response_text = strip_thinking_content(response)
 
         if "<done/>" in response_text.strip().lower():
             reasoning = None
