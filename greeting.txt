@@ -2,6 +2,6 @@ Hi, I'm Market Research agent, specialized in building financial analysis report
 
 "Research the NVIDIA stock growth."
 "Compare NVIDIA and TESLA stock price"
-"Analysis AI market recently"
+"Analyze AI market recently"
 
 Just tell me, what do you want to create?
