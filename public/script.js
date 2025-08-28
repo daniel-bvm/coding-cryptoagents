@@ -1,8 +1,228 @@
 const CDN_BASE_URL = "https://cdn.eternalai.org/prototype-agent";
 
+// Update according to your agent
 const CONFIG = {
   AGENT_ID: "15873", // Set your actual agent ID
   AGENT_SLUG: "9003-prototype", // Set your actual agent slug
+};
+
+// Shared constants and utilities
+const SHARED_CONSTANTS = {
+  DEFAULT_GREETING_MESSAGE: `[{"role":"assistant","content":"Hi, I'm Prototype agent, specialized in building websites, reports and blogs.\\n\\n\\"Research the latest trends in AI and create a blog post about it.\\"\\n\\"Build an interactive report about climate change with charts and visuals.\\"\\n\\"Plan and build a landing page for a crypto exchange named Binance\\"\\n\\nJust tell me, what do you want to create?"}]`,
+  SHARED_AGENT_CHAT_API:
+    "https://api-dojo2.eternalai.org/api/shared-agent-chat",
+  TOAST_DURATION: {
+    DEFAULT: 5000,
+    CONNECTION: 3000,
+    ADVANCED: 5000,
+    SUCCESS_EXTENDED: 6000,
+  },
+};
+
+// Utility functions
+const utils = {
+  // API Helper
+  async makeApiCall(url, options = {}) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...options.headers,
+        },
+        ...options,
+      });
+      return response.ok ? response : null;
+    } catch (error) {
+      console.error(`API call failed: ${url}`, error);
+      return null;
+    }
+  },
+
+  // HTML file finding logic
+  findBestHtmlFile(taskFiles) {
+    if (!Array.isArray(taskFiles) || taskFiles.length === 0) {
+      return null;
+    }
+
+    const indexFile = taskFiles.find((f) =>
+      f.path.toLowerCase().endsWith("index.html")
+    );
+    if (indexFile) {
+      return indexFile.path;
+    }
+
+    const firstHTML = taskFiles.find((f) =>
+      f.path.toLowerCase().endsWith(".html")
+    );
+    return firstHTML ? firstHTML.path : null;
+  },
+
+  // Status color mappings
+  getStatusColor(status) {
+    const colors = {
+      pending: "bg-gray-100 text-gray-800",
+      processing: "bg-blue-100 text-blue-800",
+      completed: "bg-green-100 text-green-800",
+      failed: "bg-red-100 text-red-800",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
+  },
+
+  getProgressColor(status) {
+    const colors = {
+      pending: "bg-gray-400",
+      processing: "bg-blue-500",
+      completed: "bg-green-500",
+      failed: "bg-red-500",
+    };
+    return colors[status] || "bg-gray-400";
+  },
+
+  getStatusTextColor(status) {
+    const colors = {
+      pending: "text-gray-600",
+      processing: "text-blue-600",
+      completed: "text-green-600",
+      failed: "text-red-600",
+    };
+    return colors[status] || "text-gray-600";
+  },
+
+  getStepStatusColor(status) {
+    const colors = {
+      pending: "bg-gray-100 text-gray-600 border-gray-300",
+      executing: "bg-blue-100 text-blue-700 border-blue-300",
+      completed: "bg-green-100 text-green-700 border-green-300",
+      failed: "bg-red-100 text-red-700 border-red-300",
+    };
+    return colors[status] || colors.pending;
+  },
+
+  getStepStatusIcon(status) {
+    const icons = {
+      pending: "fas fa-clock text-gray-500",
+      executing: "fas fa-cog fa-spin text-blue-500",
+      completed: "fas fa-check-circle text-green-500",
+      failed: "fas fa-times-circle text-red-500",
+    };
+    return icons[status] || icons.pending;
+  },
+
+  getStepTypeIcon(stepType) {
+    return stepType === "plan" || stepType === "research" ? "🔍" : "🔨";
+  },
+
+  // Shared link creation
+  async createSharedLink(taskId, chosenFile) {
+    const response = await utils.makeApiCall(
+      SHARED_CONSTANTS.SHARED_AGENT_CHAT_API,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          wallet_address: taskId,
+          shared_message: SHARED_CONSTANTS.DEFAULT_GREETING_MESSAGE,
+          processing_url: `${CDN_BASE_URL}/${taskId}/${chosenFile}`,
+          agent_id: CONFIG.AGENT_ID,
+        }),
+      }
+    );
+
+    if (response) {
+      const data = await response.json();
+      const shareId = data.data.unique_number;
+      return `https://eternalai.org/${CONFIG.AGENT_SLUG}/${shareId}`;
+    }
+    return null;
+  },
+
+  // Format utilities
+  formatFileSize(bytes) {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  },
+
+  formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  },
+
+  formatTimeAgo(date) {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
+
+    if (diffInSeconds < 60) return "just now";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  },
+
+  escapeHtmlInMarkdown(text) {
+    return text.replace(/<(\w+)>/g, "`<$1>`");
+  },
+};
+
+// Toast utility functions
+const toastUtils = {
+  getContainer() {
+    return document.getElementById("toast-container");
+  },
+
+  createToast(content, className) {
+    const toast = document.createElement("div");
+    toast.className = className;
+    toast.innerHTML = content;
+    return toast;
+  },
+
+  showToast(
+    toast,
+    container,
+    duration = SHARED_CONSTANTS.TOAST_DURATION.DEFAULT
+  ) {
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.remove("translate-x-full", "opacity-0");
+    }, 10);
+
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.classList.add("translate-x-full", "opacity-0");
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.remove();
+          }
+        }, 300);
+      }
+    }, duration);
+  },
+
+  getToastColors(type) {
+    return (
+      {
+        success: "bg-green-50 border-green-200 text-green-800",
+        error: "bg-red-50 border-red-200 text-red-800",
+        info: "bg-blue-50 border-blue-200 text-blue-800",
+        warning: "bg-yellow-50 border-yellow-200 text-yellow-800",
+      }[type] || "bg-blue-50 border-blue-200 text-blue-800"
+    );
+  },
+
+  getToastIcons(type) {
+    return (
+      {
+        success: "fas fa-check-circle text-green-500",
+        error: "fas fa-exclamation-circle text-red-500",
+        info: "fas fa-info-circle text-blue-500",
+        warning: "fas fa-exclamation-triangle text-yellow-500",
+      }[type] || "fas fa-info-circle text-blue-500"
+    );
+  },
 };
 
 // Folder tree utility functions
@@ -331,28 +551,11 @@ function dashboard() {
       ]);
 
       if (task.status === "completed") {
-        let chosen = "";
-        if (Array.isArray(this.taskFiles) && this.taskFiles.length > 0) {
-          const indexFile = this.taskFiles.find((f) =>
-            f.path.toLowerCase().endsWith("index.html")
-          );
-          if (indexFile) {
-            chosen = indexFile.path;
-          } else {
-            const firstHTML = this.taskFiles.find((f) =>
-              f.path.toLowerCase().endsWith(".html")
-            );
-            if (firstHTML) {
-              chosen = firstHTML.path;
-            }
-          }
-        }
-
-        if (!!chosen) {
+        const chosen = this.findBestHtmlFile();
+        if (chosen) {
           this.viewTaskSteps = false;
         }
-
-        this.showHTMLFile = chosen;
+        this.showHTMLFile = chosen || "";
       } else {
         this.showHTMLFile = "";
         this.viewTaskSteps = true;
@@ -450,21 +653,7 @@ function dashboard() {
       }
     },
     findBestHtmlFile() {
-      if (!Array.isArray(this.taskFiles) || this.taskFiles.length === 0) {
-        return null;
-      }
-
-      const indexFile = this.taskFiles.find((f) =>
-        f.path.toLowerCase().endsWith("index.html")
-      );
-      if (indexFile) {
-        return indexFile.path;
-      }
-
-      const firstHTML = this.taskFiles.find((f) =>
-        f.path.toLowerCase().endsWith(".html")
-      );
-      return firstHTML ? firstHTML.path : null;
+      return utils.findBestHtmlFile(this.taskFiles);
     },
 
     async copyShareLink(shareUrl) {
@@ -490,15 +679,18 @@ function dashboard() {
           return null;
         }
         const chosenFile = this.findBestHtmlFile();
-        console.log("🚀 ~ uploadTaskFiles ~ chosenFile:", chosenFile);
 
-        // const checkResponse = await fetch(
-        //   `${CDN_BASE_URL}/${taskId}/${chosenFile}`
-        // );
-        // if (checkResponse.ok) {
-        //   const baseUrl = `${CDN_BASE_URL}/${taskId}`;
-        //   return await this.handleExistingCdnLink(baseUrl);
-        // }
+        const checkResponse = await fetch(
+          `${CDN_BASE_URL}/${taskId}/${chosenFile}`
+        );
+        if (checkResponse.ok) {
+          const shareUrl = await utils.createSharedLink(taskId, chosenFile);
+          if (shareUrl) {
+            return await this.copyShareLink(shareUrl);
+          } else {
+            this.showToast("Failed to create shared link", "error");
+          }
+        }
 
         return await this.uploadNewFiles(taskId);
       } catch (error) {
@@ -507,20 +699,6 @@ function dashboard() {
       } finally {
         delete this.loadingShares[taskId];
       }
-    },
-
-    async handleExistingCdnLink(existingUrl) {
-      const chosenFile = this.findBestHtmlFile();
-
-      if (!chosenFile) {
-        this.showToast("No HTML file to share", "error");
-        return null;
-      }
-
-      //
-
-      await this.copyShareLink(existingUrl, chosenFile);
-      return existingUrl;
     },
 
     async createZipFromTaskFiles(taskId) {
@@ -579,14 +757,11 @@ function dashboard() {
           progressToastId
         );
 
-        console.log("🚀 ~ uploadNewFiles ~ zipBlob:", zipBlob);
-
         let uploadResult = await this.uploadFileWhole(
           taskId,
           zipBlob,
           progressToastId
         );
-        console.log("🚀 ~ uploadNewFiles ~ uploadResult:", uploadResult);
 
         if (!uploadResult) {
           this.hideProgressToast(progressToastId);
@@ -603,33 +778,8 @@ function dashboard() {
         const baseUrl = folderPath ? folderPath : `${CDN_BASE_URL}/${taskId}`;
 
         if (baseUrl) {
-          // call API to create share link 'https://api-dojo2.eternalai.org/api/shared-agent-chat' + body { ""wallet_address"": taskId, "shared_message": "My Share", "processing_url": baseUrl }
-
-          const MOCK_MSG = `[{\"role\":\"user\",\"content\":\"\\\"Build an interactive report about climate change with charts and visuals.\\\"\"},{\"role\":\"assistant\",\"content\":\"\\n<think>The user wants me to build an interactive report about climate change with charts and visuals. This is a clear request that fits well with the prototype function. They want:\\n\\n1. An interactive report about climate change\\n2.\\"}]`;
-
-          const res = await fetch(
-            "https://api-dojo2.eternalai.org/api/shared-agent-chat",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-              },
-              body: JSON.stringify({
-                wallet_address: taskId,
-                shared_message: MOCK_MSG,
-                processing_url: `${baseUrl}/${chosenFile}`,
-                agent_id: CONFIG.AGENT_ID,
-              }),
-            }
-          );
-          console.log("🚀 ~ uploadNewFiles ~ res:", res);
-
-          if (res && res.ok) {
-            const data = await res.json();
-            const shareId = data.data.unique_number;
-            const shareUrl = `https://eternalai.org/${CONFIG.AGENT_SLUG}/${shareId}`;
-            console.log("🚀 ~ uploadNewFiles ~ shareUrl:", shareUrl);
+          const shareUrl = await utils.createSharedLink(taskId, chosenFile);
+          if (shareUrl) {
             await this.copyShareLink(shareUrl);
           }
         }
@@ -790,27 +940,15 @@ function dashboard() {
     },
 
     formatDate(dateString) {
-      const date = new Date(dateString);
-      return date.toLocaleString();
+      return utils.formatDate(dateString);
     },
 
     formatFileSize(bytes) {
-      if (bytes === 0) return "0 Bytes";
-      const k = 1024;
-      const sizes = ["Bytes", "KB", "MB", "GB"];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+      return utils.formatFileSize(bytes);
     },
 
     formatTimeAgo(date) {
-      const now = new Date();
-      const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
-
-      if (diffInSeconds < 60) return "just now";
-      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-      if (diffInSeconds < 86400)
-        return `${Math.floor(diffInSeconds / 3600)}h ago`;
-      return `${Math.floor(diffInSeconds / 86400)}d ago`;
+      return utils.formatTimeAgo(date);
     },
 
     addPlanActivity(activity) {
@@ -842,65 +980,31 @@ function dashboard() {
     },
 
     getStepStatusColor(status) {
-      const colors = {
-        pending: "bg-gray-100 text-gray-600 border-gray-300",
-        executing: "bg-blue-100 text-blue-700 border-blue-300",
-        completed: "bg-green-100 text-green-700 border-green-300",
-        failed: "bg-red-100 text-red-700 border-red-300",
-      };
-      return colors[status] || colors.pending;
+      return utils.getStepStatusColor(status);
     },
 
     getStepStatusIcon(status) {
-      const icons = {
-        pending: "fas fa-clock text-gray-500",
-        executing: "fas fa-cog fa-spin text-blue-500",
-        completed: "fas fa-check-circle text-green-500",
-        failed: "fas fa-times-circle text-red-500",
-      };
-      return icons[status] || icons.pending;
+      return utils.getStepStatusIcon(status);
     },
 
     getStepTypeIcon(stepType) {
-      return stepType === "plan" ? "🔍" : "🔨";
+      return utils.getStepTypeIcon(stepType);
     },
 
     getStatusColor(status) {
-      const colors = {
-        pending: "bg-gray-100 text-gray-800",
-        processing: "bg-blue-100 text-blue-800",
-        completed: "bg-green-100 text-green-800",
-        failed: "bg-red-100 text-red-800",
-      };
-      return colors[status] || "bg-gray-100 text-gray-800";
+      return utils.getStatusColor(status);
     },
 
     escapeHtmlInMarkdown(text) {
-      return text.replace(/<(\w+)>/g, "`<$1>`");
-    },
-
-    getStepTypeIcon(stepType) {
-      return stepType === "research" ? "🔍" : "🔨";
+      return utils.escapeHtmlInMarkdown(text);
     },
 
     getProgressColor(status) {
-      const colors = {
-        pending: "bg-gray-400",
-        processing: "bg-blue-500",
-        completed: "bg-green-500",
-        failed: "bg-red-500",
-      };
-      return colors[status] || "bg-gray-400";
+      return utils.getProgressColor(status);
     },
 
     getStatusTextColor(status) {
-      const colors = {
-        pending: "text-gray-600",
-        processing: "text-blue-600",
-        completed: "text-green-600",
-        failed: "text-red-600",
-      };
-      return colors[status] || "text-gray-600";
+      return utils.getStatusTextColor(status);
     },
 
     showPlanStepNotification(step, stepNumber, title) {
@@ -932,48 +1036,22 @@ function dashboard() {
     },
 
     showToast(message, type = "info") {
-      const container = document.getElementById("toast-container");
-      const toast = document.createElement("div");
+      const container = toastUtils.getContainer();
+      const colors = toastUtils.getToastColors(type);
+      const icon = toastUtils.getToastIcons(type);
 
-      const icons = {
-        success: "fas fa-check-circle text-green-500",
-        error: "fas fa-exclamation-circle text-red-500",
-        info: "fas fa-info-circle text-blue-500",
-        warning: "fas fa-exclamation-triangle text-yellow-500",
-      };
+      const content = `
+        <i class="${icon} mr-3"></i>
+        <span class="flex-1">${message}</span>
+        <button onclick="this.parentElement.remove()" class="ml-3 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+        </button>
+      `;
 
-      const colors = {
-        success: "bg-green-50 border-green-200 text-green-800",
-        error: "bg-red-50 border-red-200 text-red-800",
-        info: "bg-blue-50 border-blue-200 text-blue-800",
-        warning: "bg-yellow-50 border-yellow-200 text-yellow-800",
-      };
+      const className = `flex items-center p-4 mb-2 border rounded-lg shadow-lg transform transition-all duration-300 ease-in-out translate-x-full opacity-0 ${colors}`;
 
-      toast.className = `flex items-center p-4 mb-2 border rounded-lg shadow-lg transform transition-all duration-300 ease-in-out translate-x-full opacity-0 ${colors[type]}`;
-      toast.innerHTML = `
-                <i class="${icons[type]} mr-3"></i>
-                <span class="flex-1">${message}</span>
-                <button onclick="this.parentElement.remove()" class="ml-3 text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-
-      container.appendChild(toast);
-
-      setTimeout(() => {
-        toast.classList.remove("translate-x-full", "opacity-0");
-      }, 10);
-
-      setTimeout(() => {
-        if (toast.parentElement) {
-          toast.classList.add("translate-x-full", "opacity-0");
-          setTimeout(() => {
-            if (toast.parentElement) {
-              toast.remove();
-            }
-          }, 300);
-        }
-      }, 5000);
+      const toast = toastUtils.createToast(content, className);
+      toastUtils.showToast(toast, container);
     },
 
     showConnectionToast(message, type = "info") {
