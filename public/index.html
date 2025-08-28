@@ -348,7 +348,7 @@
                             </div>
                             <template x-if="selectedTask?.current_step">
                                 <div class="flex items-center text-sm text-gray-600">
-                                    <i class="fas fa-cog animate-spin mr-2"></i>
+                                    <i class="fas fa-cog mr-2" :class="{'animate-spin': selectedTask?.status !== 'completed' && selectedTask?.status !== 'failed'}"></i>
                                     <span x-text="selectedTask?.current_step"></span>
                                 </div>
                             </template>
