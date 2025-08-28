@@ -120,7 +120,7 @@ const utils = {
       const response = await utils.makeApiCall(`/api/tasks/${taskId}/messages`);
       if (response) {
         const data = await response.json();
-        userPrompt = data?.messages?.[0]?.content || "";
+        userPrompt = data || "";
       }
     } catch (error) {
       console.log("API call failed, using default message:", error);
