@@ -588,9 +588,14 @@ function dashboard() {
           this.showToast("No HTML file to share", "error");
           return null;
         }
+        const folderPath = uploadResult.data.folder_path;
+        const baseUrl = folderPath ? folderPath : `${CDN_BASE_URL}/${taskId}`;
 
-        const baseUrl = uploadResult.url || `${CDN_BASE_URL}/${taskId}`;
-        await this.copyShareLink(baseUrl, chosenFile);
+        if (baseUrl) {
+          // add small delay
+          // await new Promise((resolve) => setTimeout(resolve, 1000));
+          await this.copyShareLink(baseUrl, chosenFile);
+        }
 
         return baseUrl;
       } catch (error) {
@@ -599,6 +604,8 @@ function dashboard() {
         }
         this.showToast("Upload failed", "error");
         return null;
+      } finally {
+        this.hideProgressToast(progressToastId);
       }
     },
 
@@ -674,6 +681,7 @@ function dashboard() {
         this.updateProgressToast(progressToastId, "Processing upload...", 80);
 
         const result = await uploadPromise;
+
         await this.ensureMinimumStepTime(
           processingStartTime,
           this.uploadConfig.minimumStepTimes.processing,
@@ -693,8 +701,8 @@ function dashboard() {
           "Upload completed successfully!",
           100
         );
-
-        return result;
+        this.hideProgressToast(progressToastId);
+        if (result) return result;
       } catch (error) {
         this.updateProgressToast(
           progressToastId,
@@ -1164,7 +1172,6 @@ function dashboard() {
       }
 
       let etaText = "";
-      let speedText = "";
       if (progress > 0 && progress < 100 && elapsedTime > 1000) {
         const progressRate = progress / (elapsedTime / 1000);
         const remainingProgress = 100 - progress;
@@ -1175,8 +1182,6 @@ function dashboard() {
         } else {
           etaText = `~${Math.round(etaSeconds / 60)}m remaining`;
         }
-
-        speedText = `${progressRate.toFixed(1)}%/s`;
       }
 
       const progressText = toast.querySelector(".progress-text");
@@ -1194,11 +1199,6 @@ function dashboard() {
       const etaElement = toast.querySelector(".eta-text");
       if (etaElement) {
         etaElement.textContent = etaText;
-      }
-
-      const speedElement = toast.querySelector(".speed-info");
-      if (speedElement) {
-        speedElement.textContent = speedText;
       }
 
       if (additionalInfo) {
