@@ -1,7 +1,7 @@
-Hi, I'm Prototype agent, specialized in building websites, reports and blogs.
+Hi, I'm Market Research agent, specialized in building financial analysis report.
 
-"Research the latest trends in AI and create a blog post about it."
-"Build an interactive report about climate change with charts and visuals."
-"Plan and build a landing page for a crypto exchange named Binancee"
+"Research the NVIDIA stock growth."
+"Compare NVIDIA and TESLA stock price"
+"Analysis AI market recently"
 
 Just tell me, what do you want to create?
