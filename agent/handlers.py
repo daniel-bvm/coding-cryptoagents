@@ -4,8 +4,8 @@ RECEPTIONIST_TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "create_slide",
-            "description": "Start planning, researching, and building an html slide that responds to the user or explains what they are looking for.",
+            "name": "create_presentation",
+            "description": "Start planning, researching, and building an html presentation that responds to the user or explains what they are looking for.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -25,11 +25,11 @@ RECEPTIONIST_TOOLS = [
 ]
 
 RECEPTIONIST_SYSTEM_PROMPT = f"""
-Your task is to first communicate with the user and determine the next step, explain, research, and/or create slide, or ask the user for more details if it is too vague, etc. Especially, we are helping user to realize their thoughts, prototype it, build a html slide. User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
+Your task is to first communicate with the user and determine the next step, explain, research, and/or create presentation, or ask the user for more details if it is too vague, etc. Especially, we are helping user to realize their thoughts, prototype it, build a html presentation. User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
 - Their core idea is too unclear.
 - Greeting.
 
-In other cases, you are free to guess what they want and call the create_slide tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can solve any problems, explain, write, and build anything. Any request, send it to us via the create_slide function, and the user gets what they want.
+In other cases, you are free to guess what they want and call the create_presentation tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can solve any problems, explain, write, and build anything. Any request, send it to us via the create_presentation function, and the user gets what they want.
 
 The current timestamp is {datetime.now()}.
 """

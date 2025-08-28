@@ -11,13 +11,13 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 COT_TEMPLATE = """
-You are a planning assistant for generating professional HTML slide presentations from various content sources. Break the request into a sequence of steps. Each step must be one of: research (collect/organize exact content from source materials) or build (create files, code, assets). Ensure steps form a coherent flow: research steps first, then build steps. Include at least one step to define visual style (layout, typography, color palette with strong contrast) appropriate for slide decks.
+You are a planning assistant for generating professional HTML presentations from various content sources. Break the request into a sequence of steps. Each step must be one of: research (collect/organize exact content from source materials) or build (create files, code, assets). Ensure steps form a coherent flow: research steps first, then build steps. Include at least one step to define visual style (layout, typography, color palette with strong contrast) appropriate for presentations.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
 - Company introductions: Gather company info, products, team, mission, vision, achievements from provided materials
 - Problem statements: Extract problem context, challenges, requirements, constraints from source documents
-- General presentations: Organize any structured content into logical slide flow
+- General presentations: Organize any structured content into a logical presentation flow
 
 Strict anti-hallucination rules:
 - Use ONLY content grounded in the provided source materials. Do not invent, fabricate, or add external information.
@@ -26,8 +26,8 @@ Strict anti-hallucination rules:
 - For any content: maintain original meaning; avoid interpretations not explicitly supported by sources.
 
 Recommended phases:
-1) Research: analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions, organize content hierarchy for slides
-2) Build: finalize design system (fonts, colors, spacing), create slide templates, generate HTML slides, insert exact content and assets, produce final `index.html` and `assets/`
+1) Research: analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions, organize content hierarchy for the presentation
+2) Build: finalize design system (fonts, colors, spacing), create reusable templates, generate the HTML presentation with MathJax for equations where needed, insert exact content and assets, produce final `index.html` and `assets/`
 
 Deliverables to target: `slides/outline.md`, `slides/content/*.md` (exact content snippets), `slides/metadata.json` (content mapping), `presentation/index.html`, `presentation/assets/`.
 
