@@ -1,7 +1,7 @@
-Hi, I'm Prototype agent, specialized in building websites, reports and blogs.
+Hi! I’m here to plan, research, and build landing pages. Try:
 
-"Research the latest trends in AI and create a blog post about it."
-"Build an interactive report about climate change with charts and visuals."
-"Plan and build a landing page for a crypto exchange named Binance"
+“Build a landing page for a fitness app with clear benefits and an interactive preview”
+“Build a prelaunch landing page for a new token with a waitlist sign up form”
+“Create an AI webcam product page inspired by the iPhone 16’s minimal showcase”
 
-Just tell me, what do you want to create?
+How can I help you?
