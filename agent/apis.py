@@ -11,7 +11,6 @@ import logging
 import time
 from agent.handlers import handle_request
 from agent.upload_api import router as upload_router
-from agent.task_api import save_chat_history
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
