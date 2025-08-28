@@ -115,16 +115,18 @@ const utils = {
 
   // Shared link creation
   async createSharedLink(taskId, chosenFile) {
-    const userPrompt = await utils
-      .makeApiCall(`/api/tasks/${taskId}/messages`)
-      .then((res) => res.json())
-      .then((data) => data?.messages?.[0]?.content || "");
+    // const userPrompt = await utils
+    //   .makeApiCall(`/api/tasks/${taskId}/messages`)
+    //   .then((res) => res.json())
+    //   .then((data) => data?.messages?.[0]?.content || "");
+
+    // console.log("🚀 ~ createSharedLink ~ userPrompt:", userPrompt);
 
     let shareMessage = SHARED_CONSTANTS.DEFAULT_GREETING_MESSAGE;
 
-    if (userPrompt && userPrompt.trim() !== "") {
-      shareMessage = userPrompt;
-    }
+    // if (userPrompt && userPrompt.trim() !== "") {
+    //   shareMessage = userPrompt;
+    // }
 
     const response = await utils.makeApiCall(
       SHARED_CONSTANTS.SHARED_AGENT_CHAT_API,
