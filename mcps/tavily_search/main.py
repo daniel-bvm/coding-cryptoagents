@@ -280,7 +280,7 @@ async def fetch(url: Annotated[str, "The URL to fetch content from"]) -> str:
     
     if ETERNALAI_MCP_PROXY_URL:
         full_body = {
-            "url": f"{TAVILY_BASE_URL}/search",
+            "url": f"{TAVILY_BASE_URL}/extract",
             "headers": {
                 "Content-Type": "application/json",
             },
