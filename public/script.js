@@ -117,7 +117,7 @@ const utils = {
   async createSharedLink(taskId, chosenFile) {
     let userPrompt = "";
     try {
-      const response = await utils.makeApiCall(`/api/tasks/${taskId}/messages`);
+      const response = await utils.makeApiCall(`./api/tasks/${taskId}/messages`);
       if (response) {
         const data = await response.json();
         userPrompt = data || "";
