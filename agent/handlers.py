@@ -341,7 +341,7 @@ async def build(
                 repo.db.close()
 
         if i == 0: # first step
-            composed_step.task = f"We are building a {title}, expected output: {expectation}\n\nYour task is to do it step-by-step\n{composed_step.task}"
+            composed_step.task = f"We are building a {title}, expected output: {expectation}\n\nYour task is to complete it step-by-step\n{composed_step.task}"
 
         is_last_build_step = ssteps[-1].step_type == "build"
 
