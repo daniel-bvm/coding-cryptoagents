@@ -6,6 +6,7 @@ class UploadManager {
     this.config = window.APP_CONFIG?.UPLOAD_CONFIG || {};
     this.api = new ApiClient();
     this.progressManager = new ProgressManager(dashboard.toastManager);
+    this.taskManager = new TaskManager(dashboard);
   }
 
   async uploadTaskFiles(taskId) {
@@ -13,13 +14,16 @@ class UploadManager {
       this.loadingShares[taskId] = true;
 
       if (!this.dashboard.taskFiles || this.dashboard.taskFiles.length === 0) {
-        await this.dashboard.taskManager.loadTaskFiles(taskId);
+        console.log("Loading task files before upload...");
+        await this.taskManager.loadTaskFiles(taskId);
       }
 
       if (!this.dashboard.taskFiles || this.dashboard.taskFiles.length === 0) {
         this.dashboard.toastManager.showToast("No files to upload", "error");
         return null;
       }
+      console.log("file 1: ", this.dashboard.taskFiles);
+      console.log("file 2: ", this.dashboard.selectedTask);
 
       const chosenFile = this.findBestHtmlFile();
       console.log(
@@ -209,6 +213,10 @@ class UploadManager {
   }
 
   findBestHtmlFile() {
+    console.log(
+      "🚀 ~ UploadManager ~ findBestHtmlFile ~ this.dashboard.taskFiles:",
+      this.dashboard.taskFiles
+    );
     if (
       !Array.isArray(this.dashboard.taskFiles) ||
       this.dashboard.taskFiles.length === 0
@@ -226,6 +234,7 @@ class UploadManager {
     const firstHTML = this.dashboard.taskFiles.find((f) =>
       f.path.toLowerCase().endsWith(".html")
     );
+
     return firstHTML ? firstHTML.path : null;
   }
 

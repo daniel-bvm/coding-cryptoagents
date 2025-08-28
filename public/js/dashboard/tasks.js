@@ -22,13 +22,14 @@ class TaskManager {
     this.dashboard.selectedTask = task;
     this.dashboard.taskFiles = [];
     this.dashboard.taskSteps = [];
-
+    console.log("opening modal");
     document.body.classList.add("modal-open");
 
-    await Promise.all([
+    const [file, step] = await Promise.all([
       task.output_directory ? this.loadTaskFiles(task.id) : Promise.resolve(),
       this.loadTaskSteps(task.id),
     ]);
+    console.log("🚀 ~ TaskManager ~ selectTask ~ file, step:", { file, step });
 
     if (task.status === "completed") {
       let chosen = "";
@@ -71,8 +72,10 @@ class TaskManager {
   }
 
   async loadTaskFiles(taskId) {
+    console.log("🚀 ~ TaskManager ~ loadTaskFiles ~ loadTaskFiles:");
     try {
       const files = await this.api.getTaskFiles(taskId);
+      console.log("🚀 ~ TaskManager ~ loadTaskFiles ~ files:", files);
       this.dashboard.taskFiles = files;
     } catch (error) {
       console.error("Error loading task files:", error);
