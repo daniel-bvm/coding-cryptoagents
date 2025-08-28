@@ -31,7 +31,7 @@ In other cases, you are free to guess what they want and call the prototype tool
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
-from agent.utils import refine_chat_history, refine_assistant_message
+from agent.utils import refine_chat_history, refine_assistant_message, save_chat_history
 from agent.configs import settings
 from agent.oai_streaming import create_streaming_response, ChatCompletionResponseBuilder
 from typing import AsyncGenerator, Any, List
@@ -487,7 +487,8 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
 
     n_calls, max_calls = 0, 1
     use_tool_calls = lambda: n_calls < max_calls and not finished
-    has_task_successfull = False
+
+    successfull_task_ids = []
 
     while not finished:
         completion_builder = ChatCompletionResponseBuilder()
@@ -499,7 +500,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             model=settings.llm_model_id
         )
 
-        if has_task_successfull:
+        if len(successfull_task_ids) > 0:
             payload.pop("tools")
             payload.pop("tool_choice")
 
@@ -539,7 +540,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             try:
                 repo = get_task_repository()
                 _result_gen: AsyncGenerator[ChatCompletionStreamResponse | str, None] = build(**_args)
-                has_task_successfull = True
+                successfull_task_ids.append(task_id)
 
                 async for chunk in _result_gen:
                     if isinstance(chunk, ChatCompletionStreamResponse):
@@ -551,7 +552,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
                 logger.error(f"Error executing tool call: {_name} with args: {_args}")
                 logger.error(f"Error: {e}", exc_info=True)
                 _result = f"Error: {e}"
-                
+
                 try:
                     task = repo.update_task_status(
                         task_id, 
@@ -582,3 +583,14 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
         finished = len((completion.choices[0].message.tool_calls or [])) == 0
 
     yield completion
+
+    compact_messages = [
+        e
+        for e in messages
+        if isinstance(e, dict) 
+        and e.get("role") in ["user", "assistant"]
+    ]
+
+    for task_id in successfull_task_ids:
+        if not save_chat_history(task_id, compact_messages):
+            logger.error(f"Error saving chat history for task {task_id}")

@@ -23,7 +23,7 @@ async def prompt(request: ChatCompletionRequest):
     enqueued = time.time()
     ttft, tps, n_tokens = float("inf"), None, 0
     req_id = request.request_id or f"req-{random_uuid()}"
-    
+
     generator = handle_request(request)
 
     if request.stream:
