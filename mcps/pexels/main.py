@@ -71,7 +71,7 @@ async def parse_pexels_search_response(response: dict, output_dir: str = 'assets
 
     return results
 
-@app.tool(description="Search for images from Pexels in any topics. Return paths to local files.")
+@app.tool(description="Search for images in any topics and return paths to local files. Just use <img src=\"path/to/local.jpeg\"> to load it!")
 async def search_pexels(topic: Annotated[str, "The topic to search for"]) -> list[dict]:
     params = {
         "query": topic,
