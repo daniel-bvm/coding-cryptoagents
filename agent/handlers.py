@@ -647,8 +647,6 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
     finished = False
 
     n_calls, max_calls = 0, 1
-    use_tool_calls = lambda: n_calls < max_calls and not finished
-
     successfull_task_ids = []
 
     while not finished:
@@ -701,13 +699,14 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             try:
                 repo = get_task_repository()
                 _result_gen: AsyncGenerator[ChatCompletionStreamResponse | str, None] = build(**_args)
-                successfull_task_ids.append(task_id)
 
                 async for chunk in _result_gen:
                     if isinstance(chunk, ChatCompletionStreamResponse):
                         yield chunk
                     else:
                         _result = chunk
+
+                successfull_task_ids.append(task_id)
 
             except Exception as e:
                 logger.error(f"Error executing tool call: {_name} with args: {_args}")

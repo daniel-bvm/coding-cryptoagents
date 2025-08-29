@@ -3,6 +3,7 @@ import httpx
 from typing import Literal
 import logging
 import json
+import sys
 
 logger = logging.getLogger(__name__) 
 
@@ -98,17 +99,20 @@ async def pick_random_available_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(('', 0))
         return s.getsockname()[1]
-    
-async def wait_until_port_is_ready_to_connect(port: int, timeout: float = 60) -> bool:
+
+async def wait_until_port_is_ready_to_connect(port: int, process: asyncio.subprocess.Process, timeout: float = 60) -> bool:
     async with httpx.AsyncClient() as client:
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
+                if process.returncode is not None:
+                    raise RuntimeError(f"OpenCode server process exited with code {process.returncode}")
+
                 resp = await client.get(f"http://localhost:{port}/app", timeout=httpx.Timeout(1, connect=1))
                 assert resp.status_code == 200, f"Failed to connect to OpenCode: {resp.status_code} {resp.text}"
                 return True
             except Exception as e:
-                pass
+                logger.info(f"Waiting for OpenCode server to start on port {port}...")
 
             await asyncio.sleep(1)
 
@@ -124,14 +128,26 @@ class OpenCodeSDKClient:
         
         logger.info(f"Starting OpenCode server on port {port}")
         self.process = await asyncio.create_subprocess_exec(
-            await find_opencode_binary(), "serve", f"--port={port}",
+            await find_opencode_binary(), "serve", f"--port={port}", "--print-logs", "--log-level", "WARN",
             cwd=self.working_dir,
+            stderr=sys.stderr,
+            stdout=sys.stdout
         )
 
-        if not await wait_until_port_is_ready_to_connect(port):
-            raise RuntimeError("Failed to start OpenCode server")
-
         self.port = port
+
+        try:
+            if not await wait_until_port_is_ready_to_connect(port, self.process):
+                raise RuntimeError("Failed to start OpenCode server")
+
+        except Exception as e:
+            if self.process:
+                self.process.kill()
+                self.process = None
+                self.port = None
+
+            raise e
+
 
     async def disconnect(self):
         if self.process:
