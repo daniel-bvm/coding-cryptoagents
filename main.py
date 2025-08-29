@@ -98,8 +98,8 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "patch": True,
                                 "todowrite": True,
                                 "todoread": True,
-                                "webfetch": True,
-                                "tavily_*": True,
+                                "webfetch": False,
+                                "tavily_*": False,
                                 "finance_*": False,
                                 "pexels_*": False
                             },
@@ -135,7 +135,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "bash": True,
                                 "finance_*": False,
                                 "tavily_search": False,
-                                "tavily_fetch": True,
+                                "tavily_fetch": False,
                                 "todowrite": True,
                                 "todoread": True,
                                 "pexels_*": False

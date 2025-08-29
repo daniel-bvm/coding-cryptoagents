@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 def get_current_time_details():
     """Get current time details for the planning template"""
-    return datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    return now.strftime("%Y-%m-%d %H:%M:%S UTC")
 
 COT_TEMPLATE = """
 You are an analytical assistant with access to ONLY Financial Datasets API tools for financial data. 

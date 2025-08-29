@@ -2,7 +2,7 @@ RECEPTIONIST_TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "prototype",
+            "name": "analyze",
             "description": "Start planning, researching, and building a static website, report or blog post that responds to the user or explains what they are looking for.",
             "parameters": {
                 "type": "object",
@@ -27,7 +27,7 @@ Your task is to first communicate with the user and determine the next step, exp
 - Their core idea is too unclear.
 - Greeting.
 
-In other cases, you are free to guess what they want and call the prototype tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can resolve any problems, explain, write, and prototype anything. Any request, send it to us via the prototype function, and the user gets what they want. 
+In other cases, you are free to guess what they want and call the analyze tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can resolve any problems, explain, write, and prototype anything. Any request, send it to us via the analyze function, and the user gets what they want. 
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
