@@ -94,21 +94,6 @@ async def gen_plan(title: str, user_request: str, max_steps: int = 5) -> AsyncGe
         response_text = strip_thinking_content(response)
 
         if "<done/>" in response_text.strip().lower():
-            reasoning = None
-
-            if 'reason' in response_text.lower():
-                l, r = response_text.find('{'), response_text.rfind('}')+1
-                no_thinking_text = response_text[l:r]
-                try:
-                    resp_json: dict[str, Any] = json.loads(repair_json(no_thinking_text))
-                    reasoning = resp_json.get('reason')
-
-                except Exception as err:
-                    logger.error(f"Error parsing JSON: {err}; Response: {no_thinking_text}")
-
-            if not reasoning:
-                reasoning = response_text.strip()
-
             break
 
         try:

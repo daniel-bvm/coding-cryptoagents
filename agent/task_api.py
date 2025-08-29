@@ -11,6 +11,7 @@ from io import BytesIO
 from agent.database import TaskRepository, get_task_repository, Task, TaskStep
 from agent.pubsub import EventHandler, EventPayload, EventType
 import logging
+from agent.utils import get_chat_history
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +132,21 @@ async def get_all_tasks(
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         repo.db.close()
+
+
+@router.get("/{task_id}/messages")
+async def get_task(task_id: str):
+    """Get a specific task by ID"""
+    try:
+        return get_chat_history(task_id)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Error getting task {task_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task(task_id: str, repo: TaskRepository = Depends(get_task_repository)):

@@ -2,13 +2,13 @@ const CDN_BASE_URL = "https://cdn.eternalai.org/prototype-agent";
 
 // Update according to your agent
 const CONFIG = {
-  AGENT_ID: "15934", // Set your actual agent ID
-  AGENT_SLUG: "9050-market-research", // Set your actual agent slug
+  AGENT_ID: "15873", // Set your actual agent ID
+  AGENT_SLUG: "9003-prototype", // Set your actual agent slug
 };
 
 // Shared constants and utilities
 const SHARED_CONSTANTS = {
-  DEFAULT_GREETING_MESSAGE: `[{"role":"assistant","content":"Hi, I'm Market Research agent, specialized in building websites, reports and blogs.\\n\\n\\"Research the latest trends in AI and create a blog post about it.\\"\\n\\"Build an interactive report about climate change with charts and visuals.\\"\\n\\"Plan and build a landing page for a crypto exchange named Binance\\"\\n\\nJust tell me, what do you want to create?"}]`,
+  DEFAULT_GREETING_MESSAGE: `[{"role":"assistant","content":"Hi, I'm Prototype agent, specialized in building websites, reports and blogs.\\n\\n\\"Research the latest trends in AI and create a blog post about it.\\"\\n\\"Build an interactive report about climate change with charts and visuals.\\"\\n\\"Plan and build a landing page for a crypto exchange named Binance\\"\\n\\nJust tell me, what do you want to create?"}]`,
   SHARED_AGENT_CHAT_API:
     "https://api-dojo2.eternalai.org/api/shared-agent-chat",
   TOAST_DURATION: {
@@ -115,13 +115,35 @@ const utils = {
 
   // Shared link creation
   async createSharedLink(taskId, chosenFile) {
+    let userPrompt = "";
+    try {
+      const response = await utils.makeApiCall(
+        `./api/tasks/${taskId}/messages`
+      );
+      if (response) {
+        const data = await response.json();
+        userPrompt = JSON.stringify(data) || "";
+      }
+    } catch (error) {
+      console.log("API call failed, using default message:", error);
+      // Ignore error and continue with empty userPrompt
+    }
+
+    console.log("🚀 ~ createSharedLink ~ userPrompt:", userPrompt);
+
+    let shareMessage = SHARED_CONSTANTS.DEFAULT_GREETING_MESSAGE;
+
+    if (userPrompt && userPrompt.trim() !== "") {
+      shareMessage = userPrompt;
+    }
+
     const response = await utils.makeApiCall(
       SHARED_CONSTANTS.SHARED_AGENT_CHAT_API,
       {
         method: "POST",
         body: JSON.stringify({
           wallet_address: taskId,
-          shared_message: SHARED_CONSTANTS.DEFAULT_GREETING_MESSAGE,
+          shared_message: shareMessage,
           processing_url: `${CDN_BASE_URL}/${taskId}/${chosenFile}`,
           agent_id: CONFIG.AGENT_ID,
         }),
@@ -330,6 +352,9 @@ function dashboard() {
     reconnectTimeout: null,
     loadingShares: {},
 
+    // Share link cache to avoid redundant API calls
+    shareLinkCache: new Map(),
+
     // Folder tree instance
     folderTree: createFolderTreeData(),
 
@@ -474,6 +499,8 @@ function dashboard() {
 
         case "task_deleted":
           this.tasks = this.tasks.filter((t) => t.id !== task_id);
+          // Clear cached share link for deleted task
+          this.shareLinkCache.delete(task_id);
           if (this.selectedTask && this.selectedTask.id === task_id) {
             this.selectedTask = null;
             document.body.classList.remove("modal-open");
@@ -670,6 +697,12 @@ function dashboard() {
       try {
         this.loadingShares[taskId] = true;
 
+        // Check if we already have a cached share link for this task
+        if (this.shareLinkCache.has(taskId)) {
+          const cachedShareUrl = this.shareLinkCache.get(taskId);
+          return await this.copyShareLink(cachedShareUrl);
+        }
+
         if (!this.taskFiles || this.taskFiles.length === 0) {
           await this.loadTaskFiles(taskId);
         }
@@ -686,6 +719,8 @@ function dashboard() {
         if (checkResponse.ok) {
           const shareUrl = await utils.createSharedLink(taskId, chosenFile);
           if (shareUrl) {
+            // Cache the share link for future use
+            this.shareLinkCache.set(taskId, shareUrl);
             return await this.copyShareLink(shareUrl);
           } else {
             this.showToast("Failed to create shared link", "error");
@@ -780,6 +815,8 @@ function dashboard() {
         if (baseUrl) {
           const shareUrl = await utils.createSharedLink(taskId, chosenFile);
           if (shareUrl) {
+            // Cache the share link for future use
+            this.shareLinkCache.set(taskId, shareUrl);
             await this.copyShareLink(shareUrl);
           }
         }
@@ -1472,6 +1509,24 @@ function dashboard() {
       this.showConnectionToast("Manually reconnecting...", "info");
       this.destroy();
       this.connectEventSource();
+    },
+
+    // Share link cache management methods
+    clearShareLinkCache() {
+      this.shareLinkCache.clear();
+      this.showToast("Share link cache cleared", "info");
+    },
+
+    removeFromShareLinkCache(taskId) {
+      this.shareLinkCache.delete(taskId);
+    },
+
+    getShareLinkFromCache(taskId) {
+      return this.shareLinkCache.get(taskId);
+    },
+
+    getCacheSize() {
+      return this.shareLinkCache.size;
     },
   };
 }
