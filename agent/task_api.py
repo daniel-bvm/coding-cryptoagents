@@ -360,7 +360,9 @@ async def download_task(task_id: str, repo: TaskRepository = Depends(get_task_re
 
         response = StreamingResponse(
             content_generator(zip_buffer),
-            headers={"Content-Disposition": f"attachment; filename={task.title.replace(' ', '_')}_{task_id}.zip"}
+            headers={
+                "Content-Disposition": f"attachment; filename={task_id}.zip"
+            }
         )
 
         return response

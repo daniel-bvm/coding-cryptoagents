@@ -2,8 +2,8 @@ const CDN_BASE_URL = "https://cdn.eternalai.org/prototype-agent";
 
 // Update according to your agent
 const CONFIG = {
-  AGENT_ID: "15873", // Set your actual agent ID
-  AGENT_SLUG: "9003-prototype", // Set your actual agent slug
+  AGENT_ID: "15942", // Set your actual agent ID
+  AGENT_SLUG: "9070-eli5", // Set your actual agent slug
 };
 
 // Shared constants and utilities
