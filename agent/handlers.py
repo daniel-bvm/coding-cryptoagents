@@ -31,7 +31,7 @@ In other cases, you are free to guess what they want and call the prototype tool
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
-from agent.utils import refine_chat_history, refine_assistant_message, save_chat_history
+from agent.utils import refine_chat_history, refine_assistant_message, save_chat_history, remove_toolcall_messages
 from agent.configs import settings
 from agent.oai_streaming import create_streaming_response, ChatCompletionResponseBuilder
 from typing import AsyncGenerator, Any, List
@@ -501,6 +501,8 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
         if len(successfull_task_ids) > 0:
             payload.pop("tools")
             payload.pop("tool_choice")
+            
+            payload["messages"] = remove_toolcall_messages(payload["messages"])
 
         logger.info(f"Payload - URL: {settings.llm_base_url}, API Key: {'*' * len(settings.llm_api_key)}, Model: {settings.llm_model_id}")
         streaming_iter = create_streaming_response(

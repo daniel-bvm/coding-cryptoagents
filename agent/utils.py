@@ -509,3 +509,32 @@ def get_chat_history(task_id: str) -> list[dict[str, str]]:
     except Exception as e:
         logger.error(f"Error getting chat history for task {task_id}: {e}")
         return []
+    
+def remove_toolcall_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    return messages
+
+    system_message_template = '<system-message>{}</system-message>'
+    system_message_body = 'These information below is gathered after receiving the user\'s message, just use it to answer, do not ask anything else.'
+
+    for i, message in enumerate(messages):
+        message: dict[str, str]
+        role = message.get("role", "assistant")
+
+        if role == "assistant":
+            if 'tool_calls' in message:
+                messages[i].pop("tool_calls")
+    
+    last_user_message_idx = -1
+    for i, message in enumerate(messages):
+        message: dict[str, str]
+
+        if message.get("role", "assistant") == "user":
+            last_user_message_idx = i
+
+    messages = messages[:last_user_message_idx + 1]
+    messages.insert(0, {
+        "role": "system",
+        "content": system_message_template.format(system_message_body)
+    })
+
+    return messages
