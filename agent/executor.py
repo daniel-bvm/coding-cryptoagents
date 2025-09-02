@@ -9,9 +9,25 @@ import asyncio
 logger = logging.getLogger(__name__)
 from typing import Optional, Literal
 
-PLANNING_SYSTEM_PROMPT = """Your task is to collect information that needed to respond to the user request including text and imge urls if needed. Do not ask again for confirmation, just do it your way. Do not take any extra steps. Your output should include what you have found related to the request. You dont need to plan or write any code, just collect information."""
+PLANNING_SYSTEM_PROMPT = """Your task is to collect information that needed to respond to the user request including text and image urls if needed. Do not ask again for confirmation, just do it your way. Do not take any extra steps. Your output should include what you have found related to the request. You dont need to plan or write any code, just collect information.
 
-BUILD_SYSTEM_PROMPT = """Your task is to build the project, a static site or a blog post based on the plan. Strictly, follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Code and assets must be written into files. Your final output should be short, talk about what you have done (no code explanation in detail is required)."""
+CRITICAL DATA ACCURACY REQUIREMENTS:
+- When working with financial data, you MUST use ONLY real data from the financial datasets tools (get_income_statements, get_balance_sheets, get_cash_flow_statements, get_current_stock_price, get_historical_stock_prices, etc.)
+- NEVER fabricate, estimate, or make up any financial numbers, percentages, or data points
+- If financial data is not available through the tools, clearly state this limitation rather than creating fictional data
+- All numerical data in your research must be sourced from actual API calls to financial datasets
+- When collecting information, prioritize accuracy over completeness - it's better to have limited real data than comprehensive fake data"""
+
+BUILD_SYSTEM_PROMPT = """Your task is to build the project, a static site or a blog post based on the plan. Strictly, follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Code and assets must be written into files. Your final output should be short, talk about what you have done (no code explanation in detail is required).
+
+CRITICAL VISUALIZATION DATA REQUIREMENTS:
+- When creating charts, graphs, or visualizations, you MUST use ONLY the real financial data that was collected in the research phase
+- NEVER generate, fabricate, or make up any data points, numbers, or values for visualizations
+- If you need additional data for charts, you MUST call the financial datasets tools to get real data
+- All chart data must be sourced from actual API responses from financial datasets tools
+- If insufficient data is available for a complete visualization, create a partial chart with available data and clearly label what data is missing
+- Do not interpolate, estimate, or fill in missing data points - use only what is actually available
+- When building visualizations, prioritize data accuracy over visual completeness"""
 
 async def execute_research_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None) -> ClaudeCodeStepOutput:
 
