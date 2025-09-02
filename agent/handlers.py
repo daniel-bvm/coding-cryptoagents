@@ -186,7 +186,7 @@ def segment_steps_by_type(steps: list[StepV2]) -> List[List[StepV2]]:
         seg.append(steps[it])
         it += 1
 
-        while it < len(steps) and steps[it].step_type == steps[it-1].step_type and len(seg) < 2:
+        while it < len(steps) - 1 and steps[it].step_type == steps[it-1].step_type and len(seg) < 2:
             seg.append(steps[it])
             it += 1
 
