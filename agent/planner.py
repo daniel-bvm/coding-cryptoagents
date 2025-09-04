@@ -70,9 +70,9 @@ Strict anti-hallucination rules:
 Recommended 2-phase approach:
 
 1) Research: analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions, organize content hierarchy for the presentation
-2) Build: finalize design system (fonts, colors, spacing), create reusable templates, generate the HTML presentation with MathJax for equations where needed, insert exact content and assets. Write E2E test to make sure that `index.html` results in a working, navigable presentation that fits both width and height of the user's screen, and the interactive feature works as intended. Produce final `index.html`, `assets/`, `tests/` (presentation test).
+2) Build: finalize design system (fonts, colors, spacing), create reusable templates, generate the HTML presentation with MathJax for equations where needed, insert exact content and assets.
 
-Deliverables to target: `slides/outline.md`, `slides/content/*.md` (exact content snippets), `slides/metadata.json` (content mapping), `slides/design.md` (theme documentation), `presentation/index.html`, `presentation/assets/`, `presentation/tests` (presentation test).
+Deliverables to target: `slides/outline.md`, `slides/content/*.md` (exact content snippets), `slides/metadata.json` (content mapping), `slides/design.md` (theme documentation), `presentation/index.html`, `presentation/assets/`.
 
 Use the user's tone of voice for connective prose only; keep all factual statements exact from source materials.
 
