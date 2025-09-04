@@ -45,7 +45,7 @@ import json
 logger = logging.getLogger(__name__)
 
 import os
-from agent.planner import StepV2, gen_plan
+from agent.planner import StepV2, gen_plan_v2
 from agent.app_models import StepOutput, ClaudeCodeStepOutput
 from agent.executor import execute_steps_v2
 from agent.opencode_sdk import OpenCodeSDKClient
@@ -182,7 +182,7 @@ async def build(
     steps: List[StepV2] = []
     max_steps = 5
     
-    async for step in gen_plan(title, expectation, max_steps):
+    async for step in gen_plan_v2(title, expectation, max_steps):
         steps.append(step)
 
         # Create step in database

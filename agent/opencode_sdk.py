@@ -48,6 +48,7 @@ async def call_opencode_api_query(
     response_text = ''
 
     async with httpx.AsyncClient() as client:
+        logger.info(f"Calling OpenCode API: url=\"http://{opencode_host}:{opencode_port}/session/{session_id}/message\", message_data={json.dumps(message_data, indent=2)}")
         response = await client.post(
             f"http://{opencode_host}:{opencode_port}/session/{session_id}/message",
             headers={"Content-Type": "application/json"},

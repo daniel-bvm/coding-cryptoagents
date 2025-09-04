@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, TypeAdapter
 from typing import Literal, Optional
 import uuid
 
@@ -10,6 +10,8 @@ class Step(BaseModel):
     
 class StepV2(Step):
     step_type: Literal["research", "build"] = "research"
+
+StepV2List = TypeAdapter(list[StepV2])
 
 class StepOutput(BaseModel):
     step_id: str
