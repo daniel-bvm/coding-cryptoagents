@@ -128,12 +128,6 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 - Ensure all text is formatted as intended (headings, bullets, emphasis).  
                                 - Use layout instructions from `slides/layout_plan.json` (e.g., text + image, full-bleed image, code slide).  
 
-                                ### NAVIGATION & UX
-                                - Navigation: arrow keys only → Left (←) = previous, Right (→) = next.  
-                                - Include slide counter (e.g., 'Slide 3 of 15').  
-                                - Smooth transitions between slides.  
-                                - Keep navigation consistent and keyboard accessible.  
-
                                 ### RESPONSIVE DESIGN REQUIREMENTS
                                 - Presentation MUST be fully responsive on tablet (≥768px) and desktop (≥1280px).  
                                 - CRITICAL: No content overflow. Apply:  
@@ -144,9 +138,10 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 - `word-wrap: break-word; overflow-wrap: break-word;` for text wrapping  
                                 - `.content-container { max-width: 90%; margin: 0 auto; padding: 1rem; }`  
                                 - Images/media must scale with `object-fit: contain; max-width: 90%; max-height: 70vh; height: auto;`.  
-                                - Allow vertical scrolling (`overflow-y: auto;`) for slides with long content.  
-                                - Ensure high contrast and readability.  
-
+                                - Do not allow long content and vertical scrolling. 
+                                - Ensure high contrast between text and background for readability.  
+                                - Each slide must be fit within the viewport, with no overflow.
+                                
                                 ### CRITICAL OUTPUT REQUIREMENTS
                                 - Generate `index.html` as the main entry point.  
                                 - Place CSS, JS, and images in an `assets/` folder.  
@@ -157,16 +152,15 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 
                                 ### WORKFLOW
                                 1. Parse content from `slides/outline.md`, `slides/content/*.md`, and `slides/layout_plan.json`.  
-                                2. Merge structured content into HTML slide deck.  
+                                2. For each slides/content/slide_*.md, generate a HTML file for that slide to `slides/content/Slide_*.html` 
                                 3. Apply responsive styles and ensure accessibility.  
                                 4. Integrate images from `slides/images.json`.  
                                 5. Add a final 'Sources' slide with entries from `slides/sources.json`.  
-                                6. Generate `index.html` and supporting `assets/`.  
-                                7. Validate output: no overflow, navigation works, presentation loads offline.  
+                                6. Validate output: no overflow, navigation works, presentation loads offline.  
 
                                 ### DELIVERABLE
                                 - A complete presentation folder containing:  
-                                - `index.html` (entry point)  
+                                - `slides/content/Slide_*.html` files, one per slide
                                 - `assets/` (CSS, JS, fonts, images)  
                                 - Responsive, offline-ready HTML presentation, keyboard navigable, consistent with the prepared content."""
 
@@ -245,6 +239,56 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 - (e) List of files saved in `slides/` for the `build` agent."""
 
                         },   
+                        "finalize": {
+                                "mode": "subagent",
+                                "tools": {
+                                    "bash": True,
+                                    "edit": True,
+                                    "write": True,
+                                    "read": True,
+                                    "grep": True,
+                                    "glob": True,
+                                    "list": True,
+                                    "patch": True,
+                                    "todowrite": True,
+                                    "todoread": True,
+                                    "webfetch": False,
+                                    "tavily_*": False,
+                                    "finance_*": False,
+                                    "pexels_*": False
+                                },
+                                "prompt": """You are the HTML Presentation Finalizer.
+                                Your job is to take the prepared Slide_*.html files from the `slides/content/` folder and generate a professional, standalone, responsive HTML presentation.
+                                
+                                ### INPUT SOURCES
+                                - Read all prepared files from `slides/content/` created by the `build` agent.  
+                                - Each `Slide_*.html` file contains the HTML code for a single slide.  
+
+                                ### NAVIGATION & UX
+                                - Navigation: arrow keys only → Left (←) = previous, Right (→) = next.  
+                                - Dynamically load the correct `Slide_*.html` file based on the current slide number.  
+                                - Display a slide counter (e.g., "Slide 3 of 15").  
+                                - Ensure smooth transitions between slides.  
+                                - Maintain consistent, keyboard-accessible navigation.  
+
+                                ### RESPONSIVE DESIGN REQUIREMENTS
+                                - Presentation MUST be fully responsive for tablet (≥768px) and desktop (≥1280px).  
+                                - Each slide must be fit within the viewport, with no overflow. It must be centered.
+
+                                ### CRITICAL OUTPUT REQUIREMENTS
+                                - Generate a single `index.html` file as the main entry point.  
+                                - `index.html` should dynamically load the content of `Slide_*.html` files when navigating.  
+
+                                ### WORKFLOW
+                                1. Collect all `Slide_*.html` files from `slides/content/`.  
+                                2. Count total slides and assign sequential order.  
+                                3. Build navigation logic to load slides dynamically into the presentation container.  
+                                4. Implement responsive layout and smooth slide transitions.  
+                                5. Output the final `index.html`.  
+
+                                ### DELIVERABLE
+                                - A fully functional `index.html` presentation that dynamically loads all slides and supports smooth navigation."""
+                            },
                     },
                     "permission": {
                         "*": "allow"
