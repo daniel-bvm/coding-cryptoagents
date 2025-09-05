@@ -159,6 +159,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "bash": False,
                                 "pexels_*": True,
                                 "tavily_*": True,
+                                "webfetch": True,
                                 "finance_*": False,
                                 "todowrite": True,
                                 "todoread": True
@@ -275,7 +276,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 - Images/media must scale with `object-fit: contain; max-width: 90%; max-height: 70vh; height: auto;`.  
                                 - Do not allow long content and vertical scrolling. 
                                 - Ensure high contrast between text and background for readability.  
-                                - Each slide must be fit within the viewport, with no overflow.
+                                - Text must be fit within the viewport/container/card in each slide. If the content is too long, seperate it to multiple containers/cards to avoid overflow, don't make it scrollable.
 
                                 ### SLIDE GENERATION REQUIREMENTS
                                 - For each `slides/content/slide_*.md`, generate a corresponding `slides/content/Slide_*.html` file

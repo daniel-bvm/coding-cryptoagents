@@ -361,14 +361,14 @@ async def build(
         has_any_html = len(html_files) > 0
         has_markdown_files = len(markdown_files) > 0
     
-        if is_last_finalize_step and not has_index_html:
-            composed_step.task += f"\n\nImportant: The current project does not contain an index.html file to respond to the user. Create it now."
+        # if is_last_finalize_step and not has_index_html:
+        #     composed_step.task += f"\n\nImportant: The current project does not contain an index.html file to respond to the user. Create it now."
 
-            if has_any_html:
-                composed_step.task += f"\n\nHint: If the main content is included in another index.html file, just rename it to index.html and polish it."
+        #     if has_any_html:
+        #         composed_step.task += f"\n\nHint: If the main content is included in another index.html file, just rename it to index.html and polish it."
 
-            elif has_markdown_files:
-                composed_step.task += f"\n\nHint: Use the information from generated markdown files to create the final report."
+        #     elif has_markdown_files:
+        #         composed_step.task += f"\n\nHint: Use the information from generated markdown files to create the final report."
 
         step_output: ClaudeCodeStepOutput = await execute_steps_v2(
             composed_step.step_type, 
@@ -532,6 +532,8 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
         
         if (completion.choices[0].message.tool_calls or []):
             completion.choices[0].message.tool_calls = completion.choices[0].message.tool_calls[:1]
+        
+        logger.info(f"Completion: {completion.choices[0].message.content}")
 
         messages.append(refine_assistant_message(completion.choices[0].message.model_dump()))
 
