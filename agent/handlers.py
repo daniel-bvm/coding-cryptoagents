@@ -287,15 +287,13 @@ async def build(
     segmented_steps: List[List[StepV2]] = segment_steps_by_type(steps)
     steps_output: list[StepOutput] = []
     
-    async with OpenCodeSDKClient(workdir) as client:
-        session_id = await client.create_session(title)
-
-    logger.info(f"Task {task_id}; Building... (Session ID: {session_id})")
-
     yield wrap_chunk(random_uuid(), f"<action>Building...</action>\n")
 
     for i in range(len(steps_output), len(segmented_steps)):
-        logger.info(f"Task {task_id} ({expectation[:128]}); Progress: {len(steps_output)}/{len(segmented_steps)}")
+        async with OpenCodeSDKClient(workdir) as client:
+            session_id = await client.create_session(title)
+
+        logger.info(f"Task {task_id} ({expectation[:128]}); Progress: {len(steps_output)}/{len(segmented_steps)}; Session ID: {session_id}")
         
         ssteps = segmented_steps[i]
 
