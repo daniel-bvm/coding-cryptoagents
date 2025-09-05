@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 
 ONE_SHOT_TEMPLATE = """
-You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps following the 4-phase approach. Each step must be one of: research (collect/organize exact content from source materials) or build (create files, code, assets). The plan should have at most {max_steps} steps.
+You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps following the 4-phase approach. Each step must be one of: research (collect/organize exact content from source materials), build (create files, code, assets), finalize (create the main index.html with navigation and responsive design). The plan should have at most {max_steps} steps.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
@@ -67,12 +67,16 @@ Strict anti-hallucination rules:
 - For LaTeX sources: preserve equations verbatim and plan to render them via MathJax/KaTeX in HTML.
 - For any content: maintain original meaning; avoid interpretations not explicitly supported by sources.
 
-Recommended 2-phase approach:
+Recommended 3-phase orchestration approach (aligned with sub-agent workflow):
 
-1) Research: analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions, organize content hierarchy for the presentation
-2) Build: finalize design system (fonts, colors, spacing), create reusable templates, generate the HTML presentation with MathJax for equations where needed, insert exact content and assets.
+1) Content Preparation Phase (research): Delegate to content-prep agent - analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions, organize content hierarchy, fetch images, prepare all structured files for presentation
+2) HTML Generation Phase (build): Delegate to slide-builder agent - convert prepared markdown content into individual responsive HTML slides with proper formatting, styling, and image integration
+3) Final Assembly Phase (finalize): Delegate to finalize agent - create main index.html with navigation, responsive design, and dynamic slide loading functionality
 
-Deliverables to target: `slides/outline.md`, `slides/content/*.md` (exact content snippets), `slides/metadata.json` (content mapping), `slides/design.md` (theme documentation), `presentation/index.html`, `presentation/assets/`.
+Phase-specific deliverables:
+- Phase 1 (Content Preparation): `slides/outline.md`, `slides/content/*.md`, `slides/layout_plan.json`, `slides/images.json`, `slides/metadata.json`, `slides/sources.json`
+- Phase 2 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides)
+- Phase 3 (Final Assembly): `index.html` (main presentation with navigation and responsive design)
 
 Use the user's tone of voice for connective prose only; keep all factual statements exact from source materials.
 
@@ -84,7 +88,7 @@ The user wants:
 Generate the complete plan as a JSON array of steps. Each step should have: "reason", "task", "expectation", "step_type".
 
 Respond in JSON format: [
-  {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "research/build" }},
+  {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "research/build/finalize" }},
   ...
 ]
 
@@ -203,10 +207,10 @@ async def gen_plan_v2(title: str, user_request: str, max_steps: int = 5) -> Asyn
             step_data: dict = json.loads(repair_json(response_text))
             step_list = StepV2List.validate_python(step_data)
 
-            if step_list[0].step_type == 'build':
+            if step_list[0].step_type != 'research':
                 error_note += "The first step must be a research step\n"
-            if step_list[-1].step_type == 'research':
-                error_note += "The last step must be a build step\n"
+            if step_list[-1].step_type != 'finalize':
+                error_note += "The last step must be a finalize step\n"
 
             if error_note:
                 raise Exception(error_note)

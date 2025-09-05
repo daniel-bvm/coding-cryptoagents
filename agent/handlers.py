@@ -347,11 +347,11 @@ async def build(
         if i == 0: # first step
             composed_step.task = f"We are building a {title}, expected output: {expectation}\n\nYour task is to complete it step-by-step\n{composed_step.task}"
 
-        is_last_build_step = ssteps[-1].step_type == "build"
+        is_last_finalize_step = ssteps[-1].step_type == "finalize"
 
         for j in range(i + 1, len(segmented_steps)):
-            if segmented_steps[j][-1].step_type == "build":
-                is_last_build_step = False
+            if segmented_steps[j][-1].step_type == "finalize":
+                is_last_finalize_step = False
                 break
 
         html_files = glob.glob(os.path.join(workdir, "**/*.html"), recursive=True)
@@ -361,7 +361,7 @@ async def build(
         has_any_html = len(html_files) > 0
         has_markdown_files = len(markdown_files) > 0
     
-        if is_last_build_step and not has_index_html:
+        if is_last_finalize_step and not has_index_html:
             composed_step.task += f"\n\nImportant: The current project does not contain an index.html file to respond to the user. Create it now."
 
             if has_any_html:
@@ -374,7 +374,8 @@ async def build(
             composed_step.step_type, 
             composed_step, 
             workdir,
-            session_id
+            session_id,
+            task_id,
         )
 
         logger.info(f"Task {task_id} ({expectation[:128]}...); Step output: {step_output.full}")
@@ -509,6 +510,8 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             payload.pop("tool_choice")
 
         logger.info(f"Payload - URL: {settings.llm_base_url}, API Key: {'*' * len(settings.llm_api_key)}, Model: {settings.llm_model_id}")
+        logger.info(f"Payload: {json.dumps(payload, indent=2)}")
+        
         streaming_iter = create_streaming_response(
             settings.llm_base_url,
             headers={"Authorization": f"Bearer {settings.llm_api_key}"},

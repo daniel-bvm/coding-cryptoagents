@@ -9,7 +9,7 @@ class Step(BaseModel):
     reason: str = ""
     
 class StepV2(Step):
-    step_type: Literal["research", "build"] = "research"
+    step_type: Literal["research", "build", "finalize"] = "research"
 
 StepV2List = TypeAdapter(list[StepV2])
 

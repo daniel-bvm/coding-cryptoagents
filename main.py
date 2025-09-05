@@ -85,86 +85,65 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                         }
                     },
                     "agent":  {
-                        "build": {
-                            "mode": "primary",
-                            "tools": {
-                                "bash": True,
-                                "edit": True,
-                                "write": True,
-                                "read": True,
-                                "grep": True,
-                                "glob": True,
-                                "list": True,
-                                "patch": True,
-                                "todowrite": True,
-                                "todoread": True,
-                                "webfetch": True,
-                                "tavily_*": True,
-                                "finance_*": False,
-                                "pexels_*": True
-                            },
-                            "prompt": """You are the **HTML Presentation Builder**.  
-                                Your job is to take the prepared files from the `slides/` folder and generate a professional, standalone, responsive HTML presentation.  
+                        # "build": {
+                        #     "mode": "primary",
+                        #     "tools": {
+                        #         "bash": True,
+                        #         "edit": True,
+                        #         "write": True,
+                        #         "read": True,
+                        #         "grep": True,
+                        #         "glob": True,
+                        #         "list": True,
+                        #         "patch": True,
+                        #         "todowrite": True,
+                        #         "todoread": True,
+                        #         "webfetch": True,
+                        #         "tavily_*": True,
+                        #         "finance_*": False,
+                        #         "pexels_*": True
+                        #     },
+                        #     "prompt": """You are the **HTML Presentation Orchestrator**.  
+                        #         Your role is to coordinate the entire presentation creation workflow by delegating tasks to specialized sub-agents.  
 
-                                ### INPUT SOURCES
-                                - Read all prepared files from `slides/` created by the `content-prep` agent:  
-                                - `slides/outline.md` → full structure and flow  
-                                - `slides/content/*.md` → individual slide content with layout instructions  
-                                - `slides/layout_plan.json` → layout specifications per slide  
-                                - `slides/images.json` → image references and visual assets  
-                                - `slides/metadata.json` → presentation metadata (title, theme, author, etc.)  
-                                - `slides/sources.json` → citations and research references  
+                        #         ### ORCHESTRATION WORKFLOW
+                        #         1. **Content Preparation Phase**
+                        #            - Delegate to `content-prep` agent: Research, analyze, and prepare all presentation content
+                        #            - Wait for `content-prep` to complete and verify all required files are created in `slides/`
+                        #            - Required outputs from content-prep: outline.md, content/*.md, layout_plan.json, images.json, metadata.json, sources.json
 
-                                ### HALLUCINATION GUARDRAILS (STRICT)
-                                - Only use content provided in `slides/` and included assets.  
-                                - Do NOT invent facts, quotes, numbers, or attributions.  
-                                - If any slide is incomplete, insert placeholder text: `TODO: Content missing`.  
-                                - Always preserve meaning and wording from content-prep files.  
-                                - If citations exist in `slides/sources.json`, include them in a final 'Sources' section.  
+                        #         2. **HTML Generation Phase**  
+                        #            - Delegate to `slide-builder` agent: Convert prepared content into individual HTML slides
+                        #            - Wait for `slide-builder` to complete and verify Slide_*.html files are created in `slides/content/`
 
-                                ### CONTENT HANDLING
-                                - Preserve math equations with MathJax/KaTeX.  
-                                - Display code blocks with syntax highlighting.  
-                                - Ensure all text is formatted as intended (headings, bullets, emphasis).  
-                                - Use layout instructions from `slides/layout_plan.json` (e.g., text + image, full-bleed image, code slide).  
+                        #         3. **Final Assembly Phase**
+                        #            - Delegate to `finalize` agent: Create the main index.html with navigation and responsive design
+                        #            - Wait for `finalize` to complete and verify the final presentation is ready
 
-                                ### RESPONSIVE DESIGN REQUIREMENTS
-                                - Presentation MUST be fully responsive on tablet (≥768px) and desktop (≥1280px).  
-                                - CRITICAL: No content overflow. Apply:  
-                                - `max-width: 100vw; max-height: 100vh;` on slide containers  
-                                - `font-size: clamp(14px, 2vw, 20px)` for body text  
-                                - `font-size: clamp(20px, 3vw, 32px)` for h2  
-                                - `font-size: clamp(24px, 4vw, 42px)` for h1  
-                                - `word-wrap: break-word; overflow-wrap: break-word;` for text wrapping  
-                                - `.content-container { max-width: 90%; margin: 0 auto; padding: 1rem; }`  
-                                - Images/media must scale with `object-fit: contain; max-width: 90%; max-height: 70vh; height: auto;`.  
-                                - Do not allow long content and vertical scrolling. 
-                                - Ensure high contrast between text and background for readability.  
-                                - Each slide must be fit within the viewport, with no overflow.
-                                
-                                ### CRITICAL OUTPUT REQUIREMENTS
-                                - Generate `index.html` as the main entry point.  
-                                - Place CSS, JS, and images in an `assets/` folder.  
-                                - Presentation must work offline, self-contained.  
-                                - All frameworks (e.g., Reveal.js, Marp) must be included locally in `assets/`.  
-                                - Opening `index.html` in any modern browser should immediately load a functional, responsive, keyboard-navigable presentation.  
-                                - If any prepared file is missing, handle gracefully with fallback slides (e.g., 'TODO: Missing content').  
+                        #         ### COORDINATION RESPONSIBILITIES
+                        #         - **Task Management**: Create and track progress through each phase
+                        #         - **Quality Control**: Verify each sub-agent completes their deliverables before proceeding
+                        #         - **Error Handling**: If any sub-agent fails, diagnose issues and retry or provide fallback solutions
+                        #         - **Communication**: Provide clear status updates and coordinate handoffs between agents
 
-                                ### WORKFLOW
-                                1. Parse content from `slides/outline.md`, `slides/content/*.md`, and `slides/layout_plan.json`.  
-                                2. For each slides/content/slide_*.md, generate a HTML file for that slide to `slides/content/Slide_*.html` 
-                                3. Apply responsive styles and ensure accessibility.  
-                                4. Integrate images from `slides/images.json`.  
-                                5. Add a final 'Sources' slide with entries from `slides/sources.json`.  
-                                6. Validate output: no overflow, navigation works, presentation loads offline.  
+                        #         ### SUB-AGENT DELEGATION
+                        #         - Use `@content-prep` for research, content structuring, and file preparation
+                        #         - Use `@slide-builder` for converting markdown content to individual HTML slides  
+                        #         - Use `@finalize` for creating the main presentation with navigation and responsive design
 
-                                ### DELIVERABLE
-                                - A complete presentation folder containing:  
-                                - `slides/content/Slide_*.html` files, one per slide
-                                - `assets/` (CSS, JS, fonts, images)  
-                                - Responsive, offline-ready HTML presentation, keyboard navigable, consistent with the prepared content."""
+                        #         ### SUCCESS CRITERIA
+                        #         - All three phases complete successfully
+                        #         - Final deliverable: A fully functional, responsive, offline-ready HTML presentation
+                        #         - Presentation opens correctly in any modern browser with keyboard navigation
 
-                        },
+                        #         ### ERROR RECOVERY
+                        #         - If content-prep fails: Retry with simplified requirements or create minimal content structure
+                        #         - If slide-builder fails: Fall back to basic HTML templates or retry with reduced complexity
+                        #         - If finalize fails: Create a simple navigation wrapper or provide individual slide files
+
+                        #         Remember: You are the conductor, not the performer. Delegate work to specialists and ensure the overall process succeeds."""
+
+                        # },
                         "content-prep": {
                             "description": "Plan research, analyze, and prepare rich content (text + visuals) for presentations from various sources; fetch illustrative images via Pexels; use Tavily to search and fetch web content when needed.",
                             "mode": "subagent",
@@ -238,6 +217,86 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 - (d) Visual and layout strategy.  
                                 - (e) List of files saved in `slides/` for the `build` agent."""
 
+                        },
+                        "slide-builder": {
+                            "description": "Convert prepared markdown content into individual HTML slides with responsive design and proper formatting.",
+                            "mode": "subagent",
+                            "temperature": 0.1,
+                            "tools": {
+                                "write": True,
+                                "edit": True,
+                                "read": True,
+                                "grep": True,
+                                "glob": True,
+                                "list": True,
+                                "patch": True,
+                                "bash": False,
+                                "todowrite": True,
+                                "todoread": True,
+                                "webfetch": False,
+                                "tavily_*": False,
+                                "finance_*": False,
+                                "pexels_*": False
+                            },
+                            "prompt": """You are the **HTML Slide Builder**.  
+                                Your job is to convert prepared markdown content from the `slides/` folder into individual, responsive HTML slide files.
+
+                                ### INPUT SOURCES
+                                - Read all prepared files from `slides/` created by the `content-prep` agent:  
+                                - `slides/outline.md` → full structure and flow  
+                                - `slides/content/*.md` → individual slide content with layout instructions  
+                                - `slides/layout_plan.json` → layout specifications per slide  
+                                - `slides/images.json` → image references and visual assets  
+                                - `slides/metadata.json` → presentation metadata (title, theme, author, etc.)  
+                                - `slides/sources.json` → citations and research references  
+
+                                ### HALLUCINATION GUARDRAILS (STRICT)
+                                - Only use content provided in `slides/` and included assets.  
+                                - Do NOT invent facts, quotes, numbers, or attributions.  
+                                - If any slide is incomplete, insert placeholder text: `TODO: Content missing`.  
+                                - Always preserve meaning and wording from content-prep files.  
+                                - If citations exist in `slides/sources.json`, include them in a final 'Sources' section.  
+
+                                ### CONTENT HANDLING
+                                - Preserve math equations with MathJax/KaTeX.  
+                                - Display code blocks with syntax highlighting.  
+                                - Ensure all text is formatted as intended (headings, bullets, emphasis).  
+                                - Use layout instructions from `slides/layout_plan.json` (e.g., text + image, full-bleed image, code slide).  
+
+                                ### RESPONSIVE DESIGN REQUIREMENTS
+                                - Each slide MUST be fully responsive for tablet (≥768px) and desktop (≥1280px).  
+                                - CRITICAL: No content overflow. Apply:  
+                                - `max-width: 100vw; max-height: 100vh;` on slide containers  
+                                - `font-size: clamp(14px, 2vw, 20px)` for body text  
+                                - `font-size: clamp(20px, 3vw, 32px)` for h2  
+                                - `font-size: clamp(24px, 4vw, 42px)` for h1  
+                                - `word-wrap: break-word; overflow-wrap: break-word;` for text wrapping  
+                                - `.content-container { max-width: 90%; margin: 0 auto; padding: 1rem; }`  
+                                - Images/media must scale with `object-fit: contain; max-width: 90%; max-height: 70vh; height: auto;`.  
+                                - Do not allow long content and vertical scrolling. 
+                                - Ensure high contrast between text and background for readability.  
+                                - Each slide must be fit within the viewport, with no overflow.
+
+                                ### SLIDE GENERATION REQUIREMENTS
+                                - For each `slides/content/slide_*.md`, generate a corresponding `slides/content/Slide_*.html` file
+                                - Each HTML slide should be a complete, self-contained HTML document
+                                - Include embedded CSS for responsive design within each slide
+                                - Integrate images from `slides/images.json` where specified
+                                - Apply layout specifications from `slides/layout_plan.json`
+                                - Handle missing content gracefully with placeholder text
+
+                                ### WORKFLOW
+                                1. Parse content from `slides/outline.md`, `slides/content/*.md`, and `slides/layout_plan.json`.  
+                                2. For each `slides/content/slide_*.md`, generate a corresponding HTML file `slides/content/Slide_*.html`
+                                3. Apply responsive styles and ensure accessibility within each slide.  
+                                4. Integrate images from `slides/images.json` where applicable.  
+                                5. Create a final 'Sources' slide with entries from `slides/sources.json`.  
+                                6. Validate output: no overflow, proper formatting, responsive design.  
+
+                                ### DELIVERABLE
+                                - Individual `slides/content/Slide_*.html` files, one per slide
+                                - Each slide is responsive, properly formatted, and self-contained
+                                - All slides follow consistent styling and layout principles"""
                         },   
                         "finalize": {
                                 "mode": "subagent",

@@ -1,3 +1,4 @@
+import requests
 from agent.configs import settings
 import httpx
 from typing import Literal
@@ -24,13 +25,14 @@ async def find_opencode_binary() -> str:
 
 async def call_opencode_api_query(
     session_id: str,
-    agent: Literal["research", "build"],
+    agent: Literal["research", "build", "finalize"],
     system: str,
     message: str | list[dict],
     model_provider: str,
     model_id: str, 
     opencode_host: str = settings.opencode_host,
-    opencode_port: int = settings.opencode_port
+    opencode_port: int = settings.opencode_port,
+    task_id: str = None
 ) -> str:
 
     message_data = {
@@ -48,13 +50,21 @@ async def call_opencode_api_query(
     response_text = ''
 
     async with httpx.AsyncClient() as client:
-        logger.info(f"Calling OpenCode API: url=\"http://{opencode_host}:{opencode_port}/session/{session_id}/message\", message_data={json.dumps(message_data, indent=2)}")
+        url = f"http://{opencode_host}:{opencode_port}/session/{session_id}/message"
+        logger.info(f"Calling OpenCode API: url={url}, message_data={json.dumps(message_data, indent=2)}")
         response = await client.post(
-            f"http://{opencode_host}:{opencode_port}/session/{session_id}/message",
+            url,
             headers={"Content-Type": "application/json"},
             json=message_data,
             timeout=httpx.Timeout(3600.0, connect=10.0)
         )
+
+        session_response = requests.get(url)
+        session = session_response.json()
+
+        os.makedirs(f"./opencode-session/{task_id}", exist_ok=True)
+        with open(f"./opencode-session/{task_id}/{session_id}.json", "w") as f:
+            json.dump(session, f, indent=2)
         
         if response.status_code == 200:
             response_json: dict = response.json()
@@ -147,12 +157,13 @@ class OpenCodeSDKClient:
 
     async def query(
         self, 
-        agent: Literal["research", "build"], 
+        agent: Literal["research", "build", "finalize"], 
         system: str,
         message: str | list[dict],
         model_provider: str = settings.llm_model_provider,
         model_id: str = settings.llm_model_id_code,
-        session_id: str | None = None
+        session_id: str | None = None,
+        task_id: str = None,
     ) -> str:
         assert self.process, "Not connected to OpenCode"
         return await call_opencode_api_query(
@@ -163,7 +174,8 @@ class OpenCodeSDKClient:
             model_provider, 
             model_id, 
             opencode_host='127.0.0.1', 
-            opencode_port=self.port
+            opencode_port=self.port,
+            task_id=task_id,
         )
 
     async def create_session(self, title: str) -> str:

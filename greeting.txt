@@ -1,7 +1,0 @@
-Hi, I'm Slides, specialized in building professional slide presentations.
-
-"Turn this LaTeX code into a concise slide deck with sources."
-"Create a slide presentation on climate change with charts and visuals."
-"Design a company overview slide deck for a crypto exchange named Binancee."
-
-Just tell me, what do you want to create?
