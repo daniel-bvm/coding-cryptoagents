@@ -34,7 +34,7 @@ async def execute_research_step(steps: StepV2, workdir: str, session_id: Optiona
 
             output = strip_thinking_content(output).strip()
 
-            has_slides_markdown_files = len(glob.glob(os.path.join(workdir, "**/Slides_*.md"), recursive=True)) > 0
+            has_slides_markdown_files = len(glob.glob(os.path.join(workdir, "**/Slide_*.md"), recursive=True)) > 0
 
             if output and has_slides_markdown_files:
                 break
@@ -78,7 +78,7 @@ async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[U
 
             output = strip_thinking_content(output).strip()
             
-            has_slides_html_files = len(glob.glob(os.path.join(workdir, "**/Slides_*.html"), recursive=True)) > 0
+            has_slides_html_files = len(glob.glob(os.path.join(workdir, "**/Slide_*.html"), recursive=True)) > 0
             
             if output and has_slides_html_files:
                 break

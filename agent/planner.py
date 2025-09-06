@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 
 ONE_SHOT_TEMPLATE = """
-You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps following the 4-phase approach. Each step must be one of: research (collect/organize exact content from source materials), build (build individual slides), finalize (create the main index.html with navigation and responsive design). The plan should have at most {max_steps} steps.
+You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps. Each step must be one of: research (collect/organize exact content from source materials), build (build individual slides), finalize (create the main index.html with navigation and responsive design). The plan should have at most {max_steps} steps.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
@@ -73,8 +73,8 @@ The plan should strictly follow the 3-steps process below:
 3) Final Assembly (finalize): main index.html with navigation, responsive design, and dynamic slide loading functionality
 
 Step-specific deliverables:
-- Step 1 (Content Preparation): `slides/outline.md`, `slides/content/*.md`, `slides/sources.json`
-- Step 2 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides)
+- Step 1 (Content Preparation): `slides/outline.md`, `slides/content/Slide_*.md`, `slides/sources.json`, `slides/images_sources.json`
+- Step 2 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides), `assets/styles.css`, `assets/main.js`, `docs/styleguide.html`, `reports/README.md`
 - Step 3 (Final Assembly): `index.html` (main presentation with navigation and responsive design)
 
 Use the user's tone of voice for connective prose only; keep all factual statements exact from source materials.
