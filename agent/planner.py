@@ -67,16 +67,15 @@ Strict anti-hallucination rules:
 - For LaTeX sources: preserve equations verbatim and plan to render them via MathJax/KaTeX in HTML.
 - For any content: maintain original meaning; avoid interpretations not explicitly supported by sources.
 
-Recommended 3-phase orchestration approach (aligned with sub-agent workflow):
+The plan should strictly follow the 3-steps process below:
+1) Content Preparation (research): analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions
+2) HTML Generation (build): convert prepared markdown content into individual responsive HTML slides with proper formatting, styling, and image integration
+3) Final Assembly (finalize): main index.html with navigation, responsive design, and dynamic slide loading functionality
 
-1) Content Preparation Phase (research): analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions
-2) HTML Generation Phase (build): convert prepared markdown content into individual responsive HTML slides with proper formatting, styling, and image integration
-3) Final Assembly Phase (finalize): main index.html with navigation, responsive design, and dynamic slide loading functionality
-
-Phase-specific deliverables:
-- Phase 1 (Content Preparation): `slides/outline.md`, `slides/content/*.md`, `slides/sources.json`
-- Phase 2 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides)
-- Phase 3 (Final Assembly): `index.html` (main presentation with navigation and responsive design)
+Step-specific deliverables:
+- Step 1 (Content Preparation): `slides/outline.md`, `slides/content/*.md`, `slides/sources.json`
+- Step 2 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides)
+- Step 3 (Final Assembly): `index.html` (main presentation with navigation and responsive design)
 
 Use the user's tone of voice for connective prose only; keep all factual statements exact from source materials.
 

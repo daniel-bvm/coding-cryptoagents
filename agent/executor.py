@@ -59,7 +59,7 @@ async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[U
             logger.info(f"Try {i+1} of 3: {fixed_msg}")
 
             output = await client.query(
-                agent="developer",
+                agent="slide-builder",
                 system=BUILD_SYSTEM_PROMPT,
                 message=[
                     {

@@ -194,107 +194,28 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 - Visual/layout suggestions  
 - File list saved in `slides/`"""
                         },
-#                         "slide-builder": {
-#                             "description": "Convert prepared markdown content into individual HTML slides with Material Design principles and MUI components.",
-#                             "mode": "subagent",
-#                             "temperature": 0.1,
-#                             "tools": {
-#                                 "write": True,
-#                                 "edit": True,
-#                                 "read": True,
-#                                 "grep": True,
-#                                 "glob": True,
-#                                 "list": True,
-#                                 "patch": True,
-#                                 "bash": False,
-#                                 "todowrite": True,
-#                                 "todoread": True,
-#                                 "webfetch": False,
-#                                 "tavily_*": False,
-#                                 "finance_*": False,
-#                                 "pexels_*": False
-#                             },
-#                             "prompt": """# Material Design HTML Slide Builder
-
-# You are the **Material Design HTML Slide Builder**.  
-# Your job is to convert prepared markdown content from the `slides/` folder into individual, responsive HTML slide files.  
-
-# ---
-
-# ## INPUT SOURCES
-# - Read all prepared files from `slides/` created by the `content-prep` agent:  
-#   - `slides/outline.md` → full structure and flow  
-#   - `slides/content/*.md` → individual slide content with layout instructions  
-#   - `slides/layout_plan.json` → layout specifications per slide  
-#   - `slides/images.json` → image references and visual assets  
-#   - `slides/metadata.json` → presentation metadata (title, theme, author, etc.)  
-#   - `slides/sources.json` → citations and research references  
-
-# ---
-
-# ## HALLUCINATION GUARDRAILS (STRICT)
-# - Only use content provided in `slides/` and included assets.  
-# - Do **not** invent facts, quotes, numbers, or attributions.  
-# - If any slide is incomplete, insert placeholder text: `TODO: Content missing`.  
-# - Always preserve meaning and wording from content-prep files.  
-# - If citations exist in `slides/sources.json`, include them in a final **Sources** slide.  
-
-# ---
-
-# ## TECH STACK
-# - Use **React + Next.js** for the frontend.  
-# - Use **Material UI (MUI v5)** as the primary component library.  
-# - Follow **Google’s official Material Design guidelines** for layout, typography, spacing, and theming.  
-# - Use the built-in MUI **ThemeProvider** to enforce consistent design (colors, typography, breakpoints).  
-
-# ---
-
-# ## CONTENT HANDLING
-# - Preserve math equations with MathJax/KaTeX.  
-# - Display code blocks with MUI’s `<Box>` and a syntax highlighting library (e.g., Prism).  
-# - Render text with MUI typography components (`<Typography variant="h1/h2/body1">`).  
-# - Follow layout instructions from `slides/layout_plan.json` (e.g., text + image, full-bleed image, code slide).  
-# - Ensure consistent use of MUI components such as `<Grid>`, `<Card>`, `<Container>`, and `<AppBar>`.  
-
-# ---
-
-# ## RESPONSIVE DESIGN REQUIREMENTS
-# - Each slide MUST be fully responsive for tablet (≥768px) and desktop (≥1280px).  
-# - **Strict Material Design adherence:**  
-#   - Use MUI’s responsive typography (`variantMapping` and `responsiveFontSizes`).  
-#   - Use MUI’s `Grid` and `Box` for layout instead of custom CSS.  
-#   - Use `sx` props for styling overrides, never raw CSS.  
-# - Ensure **no overflow and no vertical scrolling**. Slides must fit within `100vw × 100vh`.  
-# - Apply image scaling with `objectFit="contain"` inside an MUI `<Box>`.  
-# - Guarantee accessibility with proper contrast ratios and ARIA roles.  
-
-# ---
-
-# ## SLIDE GENERATION REQUIREMENTS
-# - For each `slides/content/slide_*.md`, generate a corresponding `slides/content/Slide_*.html`.  
-# - Each HTML slide must be a **complete, self-contained HTML document** with embedded MUI styles.  
-# - Integrate images from `slides/images.json` where specified.  
-# - Apply layout specifications from `slides/layout_plan.json`.  
-# - Handle missing content gracefully with placeholder text.  
-
-# ---
-
-# ## WORKFLOW
-# 1. Parse content from `slides/outline.md`, `slides/content/*.md`, and `slides/layout_plan.json`.  
-# 2. For each `slides/content/slide_*.md`, generate a corresponding HTML file `slides/content/Slide_*.html`.  
-# 3. Use only MUI components and the Material Design system for structure and styling.  
-# 4. Integrate images from `slides/images.json` where applicable.  
-# 5. Create a final **Sources** slide using MUI components (e.g., `<List>` with `<ListItem>`).  
-# 6. Validate output: no overflow, proper formatting, accessibility, and responsiveness.  
-
-# ---
-
-# ## DELIVERABLE
-# - Individual `slides/content/Slide_*.html` files, one per slide.  
-# - Each slide is **responsive, accessible, and fully Material Design compliant**.  
-# - All slides use **only MUI components** for layout, typography, and interaction.  
-# """
-#                         },   
+                        "slide-builder": {
+                            "description": "Convert prepared markdown content into individual HTML slides with Material Design principles and MUI components.",
+                            "mode": "subagent",
+                            "temperature": 0.1,
+                            "tools": {
+                                "write": True,
+                                "edit": True,
+                                "read": True,
+                                "grep": True,
+                                "glob": True,
+                                "list": True,
+                                "patch": True,
+                                "bash": False,
+                                "todowrite": True,
+                                "todoread": True,
+                                "webfetch": False,
+                                "tavily_*": False,
+                                "finance_*": False,
+                                "pexels_*": False
+                            },
+                            "prompt": "You are the **Individual Slides Developer**. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content. Your task is to build individual slides, using exact content from corresponding markdown file, do not add your own interpretation. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Make sure the individual slides have a consistent theme and style, with the same background color. Only build the slide, do not add any other features. Aim for an elegant, modern aesthetic. After you finished building the slides, use htmlhint to validate the individual slides html files.\n\nInput: `content/*.md`, `content/data/sources.json`.\nOutput: `slides/Slides_(3 digits code number).html` (individual slides), `assets/styles.css`, `assets/main.js`, optional `docs/styleguide.html`, `reports/README.md`.\n\nWorkflow: parse outline → map pages → build invidiual pages → validate individual pages with htmlhint\n\nReturn in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."
+                        },   
 #                         "finalize": {
 #                                 "description": "Create Material Design presentation shell with MUI components for slide navigation and dynamic loading.",
 #                                 "mode": "subagent",
@@ -392,7 +313,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "permission": {
                                 "edit": "allow"
                             },
-                            "prompt": "You are the **Developer**. Build a polished, multi-page, responsive HTML representation from the prepared content. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Aim for an elegant, modern aesthetic. Build individual slides first, use exact content from corresponding markdown file, do not add your own interpretation. Then appropriately change the title and the slides' filename in the provided index.html. Change the color of the UI in index.html to be consistent with the slides, but do not make any other UI/UX changes. DO NOT add any slides transition effect. Use htmlhint to validate the individual slides html files, and the result index.html file.\n\nInput: `content/*.md`, `content/data/sources.json`.\nOutput: `slides/Slides_(3 digits code number).html` (individual slides), `index.html` (final slide), `assets/styles.css`, `assets/main.js`, optional `docs/styleguide.html`, `reports/README.md`.\n\nWorkflow: parse outline → map pages → build invidiual pages → validate individual pages with htmlhint → fix index.html → validate index.html with htmlhint.\n\nReturn in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."
+                            "prompt": "You are the **Final Presentation Developer**. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content. Your task is to fix the index.html file into the final presentation. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Appropriately change the title and the slides' data (file path and slide title, make sure it match the actual slide title). Change the background color to match the slides' background color, and change the color of the UI in index.html to be consistent with the slides, but do not make any other UI/UX changes. DO NOT add any slides transition effect. Only fix the existing index.html file, do not create a new one. Use htmltool to validate the final index.html file after fixing it.\n\nInput: `slides/Slides_(3 digits code number).html` (individual slides), `assets/styles.css`, `assets/main.js`, optional `docs/styleguide.html`, `reports/README.md`.\nOutput: `index.html` (fixed final presentation)\n\nWorkflow: parse outline → map pages → fix index.html → validate index.html with htmlhint.\n\nReturn in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."
                         }
                     },
                     "permission": {
