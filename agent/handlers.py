@@ -45,6 +45,8 @@ import json
 logger = logging.getLogger(__name__)
 
 import os
+import shutil
+import httpx
 from agent.planner import StepV2, gen_plan_v2
 from agent.app_models import StepOutput, ClaudeCodeStepOutput
 from agent.executor import execute_steps_v2
@@ -58,6 +60,58 @@ import base64
 from mimetypes import guess_type
 import uuid
 from .lite_keybert import extract_keywords
+
+async def search_tavily(query: str) -> list[dict]:
+    """Search Tavily for information related to the query"""
+    if not settings.tavily_api_key:
+        logger.warning("Tavily API key not configured, skipping search")
+        return []
+    
+    body = {
+        "query": query,
+        "max_results": 20,
+        "include_image_descriptions": True,
+        "include_images": False,
+        "search_depth": "advanced",
+        "topic": "general"
+    }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.tavily.com/search",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {settings.tavily_api_key}"
+                },
+                json=body,
+                timeout=10.0
+            )
+            
+            if response.status_code != 200:
+                logger.warning(f"Tavily API returned status code {response.status_code}: {response.text}")
+                return []
+            
+            response_json = response.json()
+            results = response_json.get('results', [])
+            
+            # Parse and clean results
+            cleaned_results = []
+            for result in results[:3]:  # Limit to top 3 results
+                cleaned_result = {
+                    'title': result.get('title', ''),
+                    'content': result.get('content', '')[:500],  # Limit content length
+                    'url': result.get('url', ''),
+                    'published_date': result.get('published_date', '')
+                }
+                if cleaned_result['title'] and cleaned_result['content']:
+                    cleaned_results.append(cleaned_result)
+            
+            return cleaned_results
+            
+    except Exception as e:
+        logger.error(f"Error searching Tavily: {e}")
+        return []
 
 def compose_steps(steps: List[StepV2], task_offset_1: int = 1) -> StepV2:
     step_type, task, expectation, reason = steps[0].step_type, '', '', ''
@@ -367,6 +421,19 @@ async def build(
 
         #     elif has_markdown_files:
         #         composed_step.task += f"\n\nHint: Use the information from generated markdown files to create the final report."
+    
+        # In last step, copy the slides template index.html to the workspace
+        if i == len(segmented_steps) - 1:
+            template_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "presentation_template.html")
+            if os.path.exists(template_path):
+                destination_path = os.path.join(workdir, "index.html")
+                try:
+                    shutil.copy2(template_path, destination_path)
+                    logger.info(f"Copied slides template index.html to workspace: {destination_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to copy slides template index.html: {e}")
+            else:
+                logger.warning(f"Slides template index.html not found at: {template_path}")
 
         step_output: ClaudeCodeStepOutput = await execute_steps_v2(
             composed_step.step_type, 
@@ -482,7 +549,39 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
     messages = request.messages
     assert len(messages) > 0, "No messages in the request"
  
+    # Extract the latest user message for Tavily search
+    latest_user_message = ""
+    for msg in reversed(messages):
+        if msg.get("role") == "user":
+            latest_user_message = msg.get("content", "")
+            break
+    
+    # Perform Tavily search on the user's message
+    search_results = []
+    if latest_user_message and len(latest_user_message.strip()) > 10:  # Only search if message is substantial
+        try:
+            search_results = await search_tavily(latest_user_message)
+            if search_results:
+                logger.info(f"Found {len(search_results)} Tavily search results for query: {latest_user_message[:100]}")
+        except Exception as e:
+            logger.error(f"Error performing Tavily search: {e}")
+    
+    # Build system prompt with search context
     system_prompt = RECEPTIONIST_SYSTEM_PROMPT
+    if search_results:
+        search_context = "\n\n### Current Web Search Context\n"
+        search_context += "Based on your message, here's relevant current information from the web:\n\n"
+        
+        for i, result in enumerate(search_results, 1):
+            search_context += f"**Source {i}: {result['title']}**\n"
+            search_context += f"Content: {result['content']}\n"
+            if result.get('published_date'):
+                search_context += f"Published: {result['published_date']}\n"
+            search_context += f"URL: {result['url']}\n\n"
+        
+        search_context += "Use this context to provide more accurate and up-to-date information in your responses and presentation creation.\n"
+        system_prompt = system_prompt + search_context
+    
     messages: list[dict[str, Any]] = refine_chat_history(messages, system_prompt)
 
     oai_tools = RECEPTIONIST_TOOLS
@@ -546,6 +645,14 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
 
             try:
                 repo = get_task_repository()
+                
+                # Pass search results as pre_search_info if available
+                if search_results:
+                    search_info = "Web search context:\n"
+                    for result in search_results:
+                        search_info += f"- {result['title']}: {result['content'][:200]}...\n"
+                    _args["pre_search_info"] = search_info
+                
                 _result_gen: AsyncGenerator[ChatCompletionStreamResponse | str, None] = build(**_args)
                 successfull_task_ids.append(task_id)
 

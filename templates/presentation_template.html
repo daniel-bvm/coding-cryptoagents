@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Title</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: white;
+            overflow: hidden;
+        }
+
+        .presentation-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide-frame {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide-content {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .navigation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 15px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            pointer-events: auto;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(15px);
+            padding: 12px 20px;
+            border-radius: 25px;
+            z-index: 1001;
+        }
+
+        .bottom-nav.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .hover-zone {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            pointer-events: auto;
+            z-index: 999;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #60a5fa, #93c5fd, #dbeafe);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .slide-counter {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #93c5fd;
+            white-space: nowrap;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #93c5fd;
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            pointer-events: auto;
+            z-index: 1002;
+            position: relative;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #dbeafe;
+            transform: scale(1.1);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .nav-btn:disabled:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #93c5fd;
+            transform: none;
+        }
+
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-text {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #fbbf24;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #fbbf24;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .bottom-nav {
+                bottom: 10px;
+                left: 15px;
+                right: 15px;
+                gap: 10px;
+                padding: 10px 16px;
+            }
+
+            .slide-counter {
+                font-size: 11px;
+                padding: 4px 8px;
+            }
+
+            .nav-btn {
+                width: 32px;
+                height: 32px;
+            }
+
+
+            .hover-zone {
+                height: 70px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .bottom-nav {
+                bottom: 8px;
+                left: 10px;
+                right: 10px;
+                gap: 8px;
+                padding: 8px 12px;
+            }
+
+            .slide-counter {
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+
+            .nav-btn {
+                width: 28px;
+                height: 28px;
+            }
+
+
+            .hover-zone {
+                height: 60px;
+            }
+        }
+
+
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-text"></div>
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Main Presentation Container -->
+    <div class="presentation-container">
+        <div class="slide-frame" id="slideFrame">
+            <div class="slide-content" id="slideContent">
+                <!-- Dynamic slide content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Overlay -->
+    <div class="navigation-overlay">
+        <div class="hover-zone" id="hoverZone"></div>
+        
+        <div class="bottom-nav" id="bottomNav">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="slide-counter" id="slideCounter">1 / 9</div>
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn" onclick="previousSlide()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                    </svg>
+                </button>
+                <button class="nav-btn" id="nextBtn" onclick="nextSlide()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const slideFiles = [
+            "Slide 1 html file path",
+            "Slide 2 html file path",
+            ...
+        ];
+
+        // Presentation Configuration
+        const presentation = {
+            totalSlides: slideFiles.length,
+            currentSlide: 1,
+            slideFiles: slideFiles,
+        };
+
+        // DOM Elements
+        const slideContent = document.getElementById('slideContent');
+        const slideCounter = document.getElementById('slideCounter');
+        const progressFill = document.getElementById('progressFill');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const bottomNav = document.getElementById('bottomNav');
+        const hoverZone = document.getElementById('hoverZone');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        
+        // Create iframe once during initialization
+        let slideIframe = null;
+        let hasNavigated = false;
+        let fadeTimeout = null;
+        let hoverTimeout = null;
+
+        // Initialize Presentation
+        function initPresentation() {
+            // Create iframe once during initialization
+            createSlideIframe();
+            
+            // Show navigation immediately so buttons are clickable
+            showNavigation();
+            
+            setTimeout(() => {
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    // Show navigation again after loading screen disappears
+                    showNavigation();
+                }, 500);
+            }, 1500);
+
+            loadSlide(1);
+            updateNavigation();
+            setupEventListeners();
+            setupHoverListeners();
+        }
+
+        // Show navigation elements and start fade timer
+        function showNavigation() {
+            bottomNav.classList.add('visible');
+            startFadeTimer();
+        }
+
+        // Hide navigation
+        function hideNavigation() {
+            bottomNav.classList.remove('visible');
+        }
+
+        // Start timer to fade navigation
+        function startFadeTimer() {
+            // Clear existing timeout
+            if (fadeTimeout) {
+                clearTimeout(fadeTimeout);
+            }
+            
+            // Set new timeout for 2 seconds
+            fadeTimeout = setTimeout(() => {
+                hideNavigation();
+            }, 2000);
+        }
+
+        // Setup hover/touch listeners
+        function setupHoverListeners() {
+            // Mouse hover events
+            hoverZone.addEventListener('mouseenter', () => {
+                showNavigation();
+            });
+
+            bottomNav.addEventListener('mouseenter', () => {
+                showNavigation();
+            });
+
+            bottomNav.addEventListener('mouseleave', () => {
+                startFadeTimer();
+            });
+
+            // Touch events for mobile
+            hoverZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                showNavigation();
+            });
+
+            // Hide on touch outside
+            document.addEventListener('touchstart', (e) => {
+                if (!bottomNav.contains(e.target) && !hoverZone.contains(e.target)) {
+                    startFadeTimer();
+                }
+            });
+
+        }
+
+        // Create iframe element once
+        function createSlideIframe() {
+            slideIframe = document.createElement('iframe');
+            slideIframe.style.width = '100%';
+            slideIframe.style.height = '100%';
+            slideIframe.style.border = 'none';
+            slideIframe.style.background = 'transparent';
+            
+            // Add keydown event listener to iframe
+            slideIframe.addEventListener('load', () => {
+                const iframeDoc = slideIframe.contentDocument || slideIframe.contentWindow.document;
+                iframeDoc.addEventListener('keydown', handleKeydown);
+            });
+            
+            // Add iframe to content container
+            slideContent.appendChild(slideIframe);
+        }
+
+        // Load Slide Content using iframe only
+        async function loadSlide(slideNumber) {
+            if (slideNumber < 1 || slideNumber > presentation.totalSlides) return;
+            if (!slideIframe) return; // Ensure iframe exists
+
+            const slideFile = presentation.slideFiles[slideNumber - 1];
+
+            try {
+                // Set up iframe load handler before changing src
+                slideIframe.onload = function() {
+                    // Ensure iframe is visible and error div is removed
+                    slideIframe.style.display = 'block';
+                    const existingError = document.getElementById('errorSlide');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+                    
+                    // Add keydown listener to the new iframe content
+                    const iframeDoc = slideIframe.contentDocument || slideIframe.contentWindow.document;
+                    iframeDoc.addEventListener('keydown', handleKeydown);
+                    
+                };
+                
+                slideIframe.onerror = function() {
+                    showErrorSlide(slideNumber, slideFile);
+                };
+                
+                // Change iframe src to load new slide immediately
+                slideIframe.src = slideFile;
+
+            } catch (error) {
+                console.error('Error loading slide:', error);
+                showErrorSlide(slideNumber, slideFile);
+            }
+        }
+
+        // Show error slide content
+        function showErrorSlide(slideNumber, slideFile) {
+            // Temporarily hide iframe and show error message
+            slideIframe.style.display = 'none';
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.id = 'errorSlide';
+            errorDiv.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 2rem;">
+                    <div>
+                        <h2 style="font-size: 32px; margin-bottom: 1rem; color: #fbbf24;">Error Loading Slide</h2>
+                        <p style="font-size: 18px; opacity: 0.8; margin-bottom: 1rem;">Could not load slide ${slideNumber}.</p>
+                        <p style="font-size: 14px; opacity: 0.6;">File: ${slideFile}</p>
+                    </div>
+                </div>
+            `;
+            
+            // Remove any existing error div
+            const existingError = document.getElementById('errorSlide');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            slideContent.appendChild(errorDiv);
+        }
+
+        // Update Navigation Elements
+        function updateNavigation() {
+            // Update slide counter dynamically
+            slideCounter.textContent = `${presentation.currentSlide} / ${presentation.totalSlides}`;
+            
+            // Update progress bar
+            const progress = (presentation.currentSlide / presentation.totalSlides) * 100;
+            progressFill.style.width = `${progress}%`;
+            
+            // Update button states
+            prevBtn.disabled = presentation.currentSlide === 1;
+            nextBtn.disabled = presentation.currentSlide === presentation.totalSlides;
+            
+            
+            // Show navigation and start fade timer on navigation
+            if (hasNavigated) {
+                showNavigation();
+            }
+        }
+
+        // Navigation Functions
+        function previousSlide() {
+            if (presentation.currentSlide > 1) {
+                hasNavigated = true;
+                presentation.currentSlide--;
+                loadSlide(presentation.currentSlide);
+                updateNavigation();
+            }
+        }
+
+        function nextSlide() {
+            if (presentation.currentSlide < presentation.totalSlides) {
+                hasNavigated = true;
+                presentation.currentSlide++;
+                loadSlide(presentation.currentSlide);
+                updateNavigation();
+            }
+        }
+
+        // Shared keydown handler for both document and iframe
+        function handleKeydown(e) {
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    previousSlide();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    nextSlide();
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    hasNavigated = true;
+                    presentation.currentSlide = 1;
+                    loadSlide(presentation.currentSlide);
+                    updateNavigation();
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    hasNavigated = true;
+                    presentation.currentSlide = presentation.totalSlides;
+                    loadSlide(presentation.currentSlide);
+                    updateNavigation();
+                    break;
+            }
+        }
+
+        // Keyboard Navigation
+        function setupEventListeners() {
+            document.addEventListener('keydown', handleKeydown);
+
+            // Touch/Swipe Support for Mobile
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            document.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+
+            document.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+
+            function handleSwipe() {
+                const swipeThreshold = 50;
+                const diff = touchStartX - touchEndX;
+
+                if (Math.abs(diff) > swipeThreshold) {
+                    if (diff > 0) {
+                        // Swipe left - next slide
+                        nextSlide();
+                    } else {
+                        // Swipe right - previous slide
+                        previousSlide();
+                    }
+                }
+            }
+        }
+
+
+
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initPresentation);
+
+        // Error handling for network issues
+        window.addEventListener('error', (e) => {
+            console.error('Global error:', e);
+            if (e.target.tagName === 'IMG' || e.target.tagName === 'SCRIPT') {
+                // Non-critical error, continue presentation
+            }
+        });
+
+        // Performance optimization: Preload adjacent slides
+        function preloadAdjacentSlides() {
+            if (presentation.slideFiles.length === 0) return;
+            
+            const preloadIndices = [
+                presentation.currentSlide - 1,
+                presentation.currentSlide + 1
+            ].filter(index => index >= 1 && index <= presentation.totalSlides);
+
+            preloadIndices.forEach(index => {
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = presentation.slideFiles[index - 1];
+                document.head.appendChild(link);
+            });
+        }
+
+        // Call preload after initial load
+        setTimeout(preloadAdjacentSlides, 2000);
+    </script>
+</body>
+</html>

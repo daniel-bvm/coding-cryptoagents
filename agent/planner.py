@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 
 ONE_SHOT_TEMPLATE = """
-You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps following the 4-phase approach. Each step must be one of: research (collect/organize exact content from source materials), build (create files, code, assets), finalize (create the main index.html with navigation and responsive design). The plan should have at most {max_steps} steps.
+You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps following the 4-phase approach. Each step must be one of: research (collect/organize exact content from source materials), build (build individual slides), finalize (create the main index.html with navigation and responsive design). The plan should have at most {max_steps} steps.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
@@ -69,12 +69,12 @@ Strict anti-hallucination rules:
 
 Recommended 3-phase orchestration approach (aligned with sub-agent workflow):
 
-1) Content Preparation Phase (research): Delegate to content-prep agent - analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions, organize content hierarchy, fetch images, prepare all structured files for presentation
-2) HTML Generation Phase (build): Delegate to slide-builder agent - convert prepared markdown content into individual responsive HTML slides with proper formatting, styling, and image integration
-3) Final Assembly Phase (finalize): Delegate to finalize agent - create main index.html with navigation, responsive design, and dynamic slide loading functionality
+1) Content Preparation Phase (research): analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions
+2) HTML Generation Phase (build): convert prepared markdown content into individual responsive HTML slides with proper formatting, styling, and image integration
+3) Final Assembly Phase (finalize): main index.html with navigation, responsive design, and dynamic slide loading functionality
 
 Phase-specific deliverables:
-- Phase 1 (Content Preparation): `slides/outline.md`, `slides/content/*.md`, `slides/layout_plan.json`, `slides/images.json`, `slides/metadata.json`, `slides/sources.json`
+- Phase 1 (Content Preparation): `slides/outline.md`, `slides/content/*.md`, `slides/sources.json`
 - Phase 2 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides)
 - Phase 3 (Final Assembly): `index.html` (main presentation with navigation and responsive design)
 
