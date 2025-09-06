@@ -8,6 +8,7 @@ from agent.configs import settings
 from agent.opencode_sdk import OpenCodeSDKClient
 from agent.utils import strip_thinking_content
 import asyncio
+import glob
 
 logger = logging.getLogger(__name__)
 from typing import Optional, Literal
@@ -33,7 +34,9 @@ async def execute_research_step(steps: StepV2, workdir: str, session_id: Optiona
 
             output = strip_thinking_content(output).strip()
 
-            if output:
+            has_slides_markdown_files = len(glob.glob(os.path.join(workdir, "**/Slides_*.md"), recursive=True)) > 0
+
+            if output and has_slides_markdown_files:
                 break
 
             if i < 2:
@@ -49,9 +52,11 @@ async def execute_research_step(steps: StepV2, workdir: str, session_id: Optiona
     )
 
 async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None, task_id: str = None) -> ClaudeCodeStepOutput:
+    note = ""
     async with OpenCodeSDKClient(workdir) as client:
         for i, msg in enumerate([steps.task, 'Seems you faced an issue, please try again.', 'One last try']):
-            logger.info(f"Try {i+1} of 3: {msg}")
+            fixed_msg = msg + note
+            logger.info(f"Try {i+1} of 3: {fixed_msg}")
 
             output = await client.query(
                 agent="developer",
@@ -59,7 +64,7 @@ async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[U
                 message=[
                     {
                         'type': 'text',
-                        'text': msg
+                        'text': fixed_msg
                     },
                     # {
                     #     'type': 'text',
@@ -73,7 +78,9 @@ async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[U
 
             output = strip_thinking_content(output).strip()
             
-            if output:
+            has_slides_html_files = len(glob.glob(os.path.join(workdir, "**/Slides_*.html"), recursive=True)) > 0
+            
+            if output and has_slides_html_files:
                 break
 
             if i < 2:
@@ -104,8 +111,10 @@ async def execute_finalize_step(steps: StepV2, workdir: str, session_id: Optiona
             )
 
             output = strip_thinking_content(output).strip()
+
+            has_index_html_files = len(glob.glob(os.path.join(workdir, "**/index.html"), recursive=True)) > 0
             
-            if output:
+            if output and has_index_html_files:
                 break
 
             if i < 2:

@@ -31,7 +31,7 @@
         .slide-frame {
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%);
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #FFE66D 100%);
             position: relative;
             overflow: hidden;
         }
@@ -77,6 +77,142 @@
             transform: translateY(0);
         }
 
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .menu-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .menu-container {
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #FFE66D 100%);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .menu-overlay.visible .menu-container {
+            transform: scale(1);
+        }
+
+        .menu-header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .menu-header h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .menu-item {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: white;
+        }
+
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .menu-item.active {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .menu-item-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .menu-item-title {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .close-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .close-menu:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .keyboard-shortcuts {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            color: white;
+        }
+
+        .keyboard-shortcuts h3 {
+            margin-bottom: 15px;
+            font-size: 1.125rem;
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+        }
+
+        .shortcut-key {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
         .hover-zone {
             position: absolute;
             bottom: 0;
@@ -97,19 +233,19 @@
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #60a5fa, #93c5fd, #dbeafe);
+            background: linear-gradient(90deg, #FF6B6B, #4ECDC4, #FFE66D);
             border-radius: 2px;
             transition: width 0.3s ease;
             width: 0%;
         }
 
-        .slide-counter {
+.slide-counter {
             background: rgba(255, 255, 255, 0.1);
             padding: 6px 12px;
             border-radius: 15px;
             font-size: 13px;
             font-weight: 600;
-            color: #93c5fd;
+            color: #FFE66D;
             white-space: nowrap;
         }
 
@@ -121,7 +257,7 @@
         .nav-btn {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #93c5fd;
+            color: #FFE66D;
             width: 36px;
             height: 36px;
             border-radius: 18px;
@@ -137,19 +273,19 @@
 
         .nav-btn:hover {
             background: rgba(255, 255, 255, 0.2);
-            color: #dbeafe;
+            color: #FFE66D;
             transform: scale(1.1);
         }
 
-        .nav-btn:disabled {
+.nav-btn:disabled {
             opacity: 0.4;
             cursor: not-allowed;
             transform: none;
         }
-
+        
         .nav-btn:disabled:hover {
             background: rgba(255, 255, 255, 0.1);
-            color: #93c5fd;
+            color: #FFE66D;
             transform: none;
         }
 
@@ -160,7 +296,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%);
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #FFE66D 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -173,14 +309,14 @@
             font-size: 24px;
             font-weight: 700;
             margin-bottom: 20px;
-            color: #fbbf24;
+            color: #FFE66D;
         }
 
         .loading-spinner {
             width: 50px;
             height: 50px;
             border: 4px solid rgba(255, 255, 255, 0.1);
-            border-top: 4px solid #fbbf24;
+            border-top: 4px solid #FFE66D;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -235,9 +371,26 @@
                 height: 28px;
             }
 
-
             .hover-zone {
                 height: 60px;
+            }
+
+            .menu-container {
+                padding: 20px;
+                margin: 20px;
+            }
+
+            .menu-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+            }
+
+            .menu-item-number {
+                font-size: 1.25rem;
+            }
+
+            .menu-item-title {
+                font-size: 0.75rem;
             }
         }
 
@@ -268,14 +421,19 @@
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
-            <div class="slide-counter" id="slideCounter">1 / 9</div>
+            <div class="slide-counter" id="slideCounter">1 / 17</div>
             <div class="nav-buttons">
-                <button class="nav-btn" id="prevBtn" onclick="previousSlide()">
+                <button class="nav-btn" id="menuBtn" onclick="toggleMenu()" title="Menu">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                    </svg>
+                </button>
+                <button class="nav-btn" id="prevBtn" onclick="previousSlide()" title="Previous Slide">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                     </svg>
                 </button>
-                <button class="nav-btn" id="nextBtn" onclick="nextSlide()">
+                <button class="nav-btn" id="nextBtn" onclick="nextSlide()" title="Next Slide">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                     </svg>
@@ -284,10 +442,59 @@
         </div>
     </div>
 
+    <!-- Menu Overlay -->
+    <div class="menu-overlay" id="menuOverlay">
+        <div class="menu-container">
+            <button class="close-menu" onclick="toggleMenu()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </button>
+            
+            <div class="menu-header">
+                <h2>Presentation Title</h2>
+                <p>Navigate through the complete music career analysis</p>
+            </div>
+            
+            <div class="menu-grid" id="menuGrid">
+                <!-- Menu items will be populated by JavaScript -->
+            </div>
+            
+            <div class="keyboard-shortcuts">
+                <h3>Keyboard Shortcuts</h3>
+                <div class="shortcut-item">
+                    <span>Previous Slide</span>
+                    <span class="shortcut-key">←</span>
+                </div>
+                <div class="shortcut-item">
+                    <span>Next Slide</span>
+                    <span class="shortcut-key">→</span>
+                </div>
+                <div class="shortcut-item">
+                    <span>First Slide</span>
+                    <span class="shortcut-key">Home</span>
+                </div>
+                <div class="shortcut-item">
+                    <span>Last Slide</span>
+                    <span class="shortcut-key">End</span>
+                </div>
+                <div class="shortcut-item">
+                    <span>Toggle Menu</span>
+                    <span class="shortcut-key">M</span>
+                </div>
+                <div class="shortcut-item">
+                    <span>Keyboard Help</span>
+                    <span class="shortcut-key">H</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const slideFiles = [
-            "Slide 1 html file path",
-            "Slide 2 html file path",
+            { path: "Slide 1 html file path", title: "Slide 1 title" },
+            { path: "Slide 2 html file path", title: "Slide 2 title" },
+            { path: "Slide 3 html file path", title: "Slide 3 title" },
             ...
         ];
 
@@ -319,6 +526,9 @@
             // Create iframe once during initialization
             createSlideIframe();
             
+            // Populate menu grid
+            populateMenuGrid();
+            
             // Show navigation immediately so buttons are clickable
             showNavigation();
             
@@ -335,6 +545,25 @@
             updateNavigation();
             setupEventListeners();
             setupHoverListeners();
+        }
+
+        // Populate menu grid with slide items
+        function populateMenuGrid() {
+            const menuGrid = document.getElementById('menuGrid');
+            menuGrid.innerHTML = '';
+            
+            slideFiles.forEach((slide, index) => {
+                const menuItem = document.createElement('div');
+                menuItem.className = `menu-item ${index === 0 ? 'active' : ''}`;
+                menuItem.onclick = () => goToSlide(index + 1);
+                
+                menuItem.innerHTML = `
+                    <div class="menu-item-number">${index + 1}</div>
+                    <div class="menu-item-title">${slide.title}</div>
+                `;
+                
+                menuGrid.appendChild(menuItem);
+            });
         }
 
         // Show navigation elements and start fade timer
@@ -398,47 +627,66 @@
             slideIframe.style.height = '100%';
             slideIframe.style.border = 'none';
             slideIframe.style.background = 'transparent';
-            
-            // Add keydown event listener to iframe
-            slideIframe.addEventListener('load', () => {
-                const iframeDoc = slideIframe.contentDocument || slideIframe.contentWindow.document;
-                iframeDoc.addEventListener('keydown', handleKeydown);
-            });
-            
             // Add iframe to content container
             slideContent.appendChild(slideIframe);
         }
 
+        // Track current loaded slide to prevent unnecessary reloads
+        let currentLoadedSlide = null;
+        
         // Load Slide Content using iframe only
         async function loadSlide(slideNumber) {
             if (slideNumber < 1 || slideNumber > presentation.totalSlides) return;
             if (!slideIframe) return; // Ensure iframe exists
 
-            const slideFile = presentation.slideFiles[slideNumber - 1];
+            slideIframe.style.visibility = 'hidden';
+
+            const slideFile = presentation.slideFiles[slideNumber - 1].path;
+            
+            // Skip loading if this slide is already loaded
+            if (currentLoadedSlide === slideNumber) {
+                return;
+            }
 
             try {
-                // Set up iframe load handler before changing src
-                slideIframe.onload = function() {
-                    // Ensure iframe is visible and error div is removed
-                    slideIframe.style.display = 'block';
-                    const existingError = document.getElementById('errorSlide');
-                    if (existingError) {
-                        existingError.remove();
+                // Remove any existing error div
+                const existingError = document.getElementById('errorSlide');
+                if (existingError) {
+                    existingError.remove();
+                }
+                
+                // Set up iframe load handler only once per slide change
+                const handleLoad = function() {
+                    currentLoadedSlide = slideNumber;
+                    // Add keydown listener to the new iframe content (only once)
+                    try {
+                        const iframeDoc = slideIframe.contentDocument || slideIframe.contentWindow.document;
+                        if (iframeDoc && !iframeDoc.hasKeydownListener) {
+                            iframeDoc.addEventListener('keydown', handleKeydown);
+                            iframeDoc.hasKeydownListener = true;
+                        }
+                    } catch (e) {
+                        // Cross-origin or other access issues - ignore
                     }
-                    
-                    // Add keydown listener to the new iframe content
-                    const iframeDoc = slideIframe.contentDocument || slideIframe.contentWindow.document;
-                    iframeDoc.addEventListener('keydown', handleKeydown);
-                    
+                    // Remove the event listener after it fires to prevent duplicates
+                    slideIframe.removeEventListener('load', handleLoad);
                 };
                 
-                slideIframe.onerror = function() {
+                const handleError = function() {
                     showErrorSlide(slideNumber, slideFile);
+                    slideIframe.removeEventListener('error', handleError);
                 };
                 
-                // Change iframe src to load new slide immediately
-                slideIframe.src = slideFile;
+                // Add event listeners
+                slideIframe.addEventListener('load', handleLoad);
+                slideIframe.addEventListener('error', handleError);
 
+                slideIframe.addEventListener('load', function() {
+                    slideIframe.style.visibility = 'visible';
+                });
+                
+                // Change iframe src to load new slide
+                slideIframe.src = slideFile;
             } catch (error) {
                 console.error('Error loading slide:', error);
                 showErrorSlide(slideNumber, slideFile);
@@ -447,6 +695,9 @@
 
         // Show error slide content
         function showErrorSlide(slideNumber, slideFile) {
+            // Reset current loaded slide tracker
+            currentLoadedSlide = null;
+            
             // Temporarily hide iframe and show error message
             slideIframe.style.display = 'none';
             
@@ -455,7 +706,7 @@
             errorDiv.innerHTML = `
                 <div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 2rem;">
                     <div>
-                        <h2 style="font-size: 32px; margin-bottom: 1rem; color: #fbbf24;">Error Loading Slide</h2>
+                        <h2 style="font-size: 32px; margin-bottom: 1rem; color: #FFE66D;">Error Loading Slide</h2>
                         <p style="font-size: 18px; opacity: 0.8; margin-bottom: 1rem;">Could not load slide ${slideNumber}.</p>
                         <p style="font-size: 14px; opacity: 0.6;">File: ${slideFile}</p>
                     </div>
@@ -484,11 +735,25 @@
             prevBtn.disabled = presentation.currentSlide === 1;
             nextBtn.disabled = presentation.currentSlide === presentation.totalSlides;
             
+            // Update menu active state
+            updateMenuActiveState();
             
             // Show navigation and start fade timer on navigation
             if (hasNavigated) {
                 showNavigation();
             }
+        }
+
+        // Update menu active state
+        function updateMenuActiveState() {
+            const menuItems = document.querySelectorAll('.menu-item');
+            menuItems.forEach((item, index) => {
+                if (index === presentation.currentSlide - 1) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
         }
 
         // Navigation Functions
@@ -508,6 +773,40 @@
                 loadSlide(presentation.currentSlide);
                 updateNavigation();
             }
+        }
+
+        function goToSlide(slideNumber) {
+            if (slideNumber >= 1 && slideNumber <= presentation.totalSlides) {
+                hasNavigated = true;
+                presentation.currentSlide = slideNumber;
+                loadSlide(presentation.currentSlide);
+                updateNavigation();
+                toggleMenu(); // Close menu after navigation
+            }
+        }
+
+        // Toggle menu visibility
+        function toggleMenu() {
+            const menuOverlay = document.getElementById('menuOverlay');
+            menuOverlay.classList.toggle('visible');
+            
+            if (menuOverlay.classList.contains('visible')) {
+                showNavigation(); // Keep navigation visible when menu is open
+            }
+        }
+
+        // Show keyboard shortcuts help
+        function showKeyboardShortcuts() {
+            alert(`Keyboard Shortcuts:
+
+← → : Navigate slides
+Home : First slide
+End : Last slide
+M : Toggle menu
+H : Show this help
+Space : Pause/resume auto-play
+
+Touch/Swipe: Swipe left/right to navigate slides`);
         }
 
         // Shared keydown handler for both document and iframe
@@ -535,7 +834,27 @@
                     loadSlide(presentation.currentSlide);
                     updateNavigation();
                     break;
+                case 'm':
+                case 'M':
+                    e.preventDefault();
+                    toggleMenu();
+                    break;
+                case 'h':
+                case 'H':
+                    e.preventDefault();
+                    showKeyboardShortcuts();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    toggleAutoPlay();
+                    break;
             }
+        }
+
+        // Toggle auto-play functionality
+        function toggleAutoPlay() {
+            // Simple implementation - just log for now
+            console.log('Auto-play toggled (not implemented in this demo)');
         }
 
         // Keyboard Navigation
@@ -571,9 +890,6 @@
             }
         }
 
-
-
-
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', initPresentation);
 
@@ -595,15 +911,66 @@
             ].filter(index => index >= 1 && index <= presentation.totalSlides);
 
             preloadIndices.forEach(index => {
+                const slideData = presentation.slideFiles[index - 1];
                 const link = document.createElement('link');
                 link.rel = 'prefetch';
-                link.href = presentation.slideFiles[index - 1];
+                link.href = slideData.path;
                 document.head.appendChild(link);
             });
         }
 
         // Call preload after initial load
         setTimeout(preloadAdjacentSlides, 2000);
+
+        // Add touch gesture support for menu
+        let touchStartMenuX = 0;
+        let touchEndMenuX = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartMenuX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndMenuX = e.changedTouches[0].screenX;
+            handleSwipeForMenu(touchStartMenuX, touchEndMenuX);
+        });
+
+        function handleSwipeForMenu(startX, endX) {
+            const swipeThreshold = 100;
+            const diff = startX - endX;
+
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0 && !document.getElementById('menuOverlay').classList.contains('visible')) {
+                    // Swipe left - open menu
+                    toggleMenu();
+                } else if (diff < 0 && document.getElementById('menuOverlay').classList.contains('visible')) {
+                    // Swipe right - close menu
+                    toggleMenu();
+                }
+            }
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuBtn = document.getElementById('menuBtn');
+            
+            if (menuOverlay.classList.contains('visible') && 
+                !menuOverlay.contains(e.target) && 
+                !menuBtn.contains(e.target)) {
+                toggleMenu();
+            }
+        });
+
+        // Escape key to close menu
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const menuOverlay = document.getElementById('menuOverlay');
+                if (menuOverlay.classList.contains('visible')) {
+                    toggleMenu();
+                }
+            }
+        });
     </script>
 </body>
 </html>
