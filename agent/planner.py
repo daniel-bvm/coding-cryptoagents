@@ -74,7 +74,7 @@ The plan should strictly follow the 3-steps process below:
 
 Step-specific deliverables:
 - Step 1 (Content Preparation): `slides/outline.md`, `slides/content/Slide_*.md`, `slides/sources.json`, `slides/images_sources.json`
-- Step 2 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides), `assets/styles.css`, `assets/main.js`, `docs/styleguide.html`, `reports/README.md`
+- Step 2 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides), `assets/styles.css`, `docs/styleguide.html`, `reports/README.md`
 - Step 3 (Final Assembly): `index.html` (main presentation with navigation and responsive design)
 
 Use the user's tone of voice for connective prose only; keep all factual statements exact from source materials.

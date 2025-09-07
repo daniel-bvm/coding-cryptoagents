@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Annotated
 
 RECEPTIONIST_TOOLS = [
     {
@@ -61,57 +62,102 @@ from mimetypes import guess_type
 import uuid
 from .lite_keybert import extract_keywords
 
-async def search_tavily(query: str) -> list[dict]:
-    """Search Tavily for information related to the query"""
-    if not settings.tavily_api_key:
-        logger.warning("Tavily API key not configured, skipping search")
-        return []
-    
+TAVILY_BASE_URL = "https://api.tavily.com"
+TAVILY_API_KEY = settings.tavily_api_key
+ETERNALAI_MCP_PROXY_URL = settings.eternalai_mcp_proxy_url
+
+
+def parse_tavily_search_response(response: dict) -> list[dict]:
+    skip_keys = ["raw_content"]
+    results: list[dict] = response.get('results', [])
+
+    return [
+        {
+            k: v 
+            for k, v in e.items()
+            if k not in skip_keys
+        }
+        for e in results
+    ]
+
+
+async def search(query: Annotated[str, "The query to search for"]) -> list[dict]:
+    global TAVILY_BASE_URL, TAVILY_API_KEY, ETERNALAI_MCP_PROXY_URL
+
     body = {
         "query": query,
-        "max_results": 20,
+        "max_results": 10,
         "include_image_descriptions": True,
-        "include_images": False,
+        "include_images": True,
         "search_depth": "advanced",
         "topic": "general"
     }
-    
-    try:
+
+    if TAVILY_API_KEY:
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.tavily.com/search",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {settings.tavily_api_key}"
-                },
-                json=body,
-                timeout=10.0
-            )
+            try:
+                response = await client.post(
+                    f"{TAVILY_BASE_URL}/search",
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {TAVILY_API_KEY}"
+                    },
+                    json=body
+                )
+                
+                if response.status_code != 200:
+                    logger.warning(f"Tavily API returned status code {response.status_code}; {response.text}")
+                    return []
+
+                response_json: dict = response.json()
+                return parse_tavily_search_response(response_json)
             
-            if response.status_code != 200:
-                logger.warning(f"Tavily API returned status code {response.status_code}: {response.text}")
+            except Exception as e:
+                logger.error(f"Error searching web: {e}")
                 return []
-            
-            response_json = response.json()
-            results = response_json.get('results', [])
-            
-            # Parse and clean results
-            cleaned_results = []
-            for result in results[:3]:  # Limit to top 3 results
-                cleaned_result = {
-                    'title': result.get('title', ''),
-                    'content': result.get('content', '')[:500],  # Limit content length
-                    'url': result.get('url', ''),
-                    'published_date': result.get('published_date', '')
+    
+    if ETERNALAI_MCP_PROXY_URL:
+        full_body = {
+            "url": f"{TAVILY_BASE_URL}/search",
+            "headers": {
+                "Content-Type": "application/json",
+            },
+            "body": body,
+            "method": "POST"
+        }
+
+        body_str = json.dumps(full_body)
+
+        data = {
+            'messages': [
+                {
+                    'role': 'user',
+                    'content': body_str
                 }
-                if cleaned_result['title'] and cleaned_result['content']:
-                    cleaned_results.append(cleaned_result)
-            
-            return cleaned_results
-            
-    except Exception as e:
-        logger.error(f"Error searching Tavily: {e}")
-        return []
+            ]
+        }
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    ETERNALAI_MCP_PROXY_URL,
+                    json=data
+                )
+
+                if response.status_code != 200:
+                    logger.warning(f"Tavily API returned status code {response.status_code}; {response.text}")
+                    return []
+
+                response_json: dict = response.json()
+                return parse_tavily_search_response(response_json)
+
+            except Exception as e:
+                logger.error(f"Error searching web: {e}")
+                return []
+
+    logger.error("No API key or keyless provider configured")
+    return []
+
 
 def compose_steps(steps: List[StepV2], task_offset_1: int = 1) -> StepV2:
     step_type, task, expectation, reason = steps[0].step_type, '', '', ''
@@ -558,26 +604,27 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
     
     # Perform Tavily search on the user's message
     search_results = []
-    if latest_user_message and len(latest_user_message.strip()) > 10:  # Only search if message is substantial
-        try:
-            search_results = await search_tavily(latest_user_message)
-            if search_results:
-                logger.info(f"Found {len(search_results)} Tavily search results for query: {latest_user_message[:100]}")
-        except Exception as e:
-            logger.error(f"Error performing Tavily search: {e}")
+    # if latest_user_message and len(latest_user_message.strip()) > 10:  # Only search if message is substantial
+    #     try:
+    #         search_results = await search_tavily(latest_user_message)
+    #         if len(search_results) > 0:
+    #             logger.info(f"Found {len(search_results)} Tavily search results for query: {latest_user_message[:100]}")
+    #     except Exception as e:
+    #         logger.error(f"Error performing Tavily search: {e}")
     
     # Build system prompt with search context
     system_prompt = RECEPTIONIST_SYSTEM_PROMPT
-    if search_results:
-        search_context = "\n\n### Current Web Search Context\n"
-        search_context += "Based on your message, here's relevant current information from the web:\n\n"
+    search_context = ""
+    if len(search_results) > 0:
+        search_context = "\n\n### Web Search Context\n"
+        search_context += "Based on your message, here's relevant information from the web:\n\n"
         
         for i, result in enumerate(search_results, 1):
             search_context += f"**Source {i}: {result['title']}**\n"
-            search_context += f"Content: {result['content']}\n"
-            if result.get('published_date'):
-                search_context += f"Published: {result['published_date']}\n"
             search_context += f"URL: {result['url']}\n\n"
+            if result.get('published_date'):
+                search_context += f"Published Date: {result['published_date']}\n"
+            search_context += f"Content: {result['content']}\n"
         
         search_context += "Use this context to provide more accurate and up-to-date information in your responses and presentation creation.\n"
         system_prompt = system_prompt + search_context
@@ -647,11 +694,8 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
                 repo = get_task_repository()
                 
                 # Pass search results as pre_search_info if available
-                if search_results:
-                    search_info = "Web search context:\n"
-                    for result in search_results:
-                        search_info += f"- {result['title']}: {result['content'][:200]}...\n"
-                    _args["pre_search_info"] = search_info
+                if len(search_context) > 0:
+                    _args["pre_search_info"] = search_context
                 
                 _result_gen: AsyncGenerator[ChatCompletionStreamResponse | str, None] = build(**_args)
                 successfull_task_ids.append(task_id)
