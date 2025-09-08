@@ -332,7 +332,7 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
     
     body = {
         "query": query,
-        "max_results": 3,
+        "max_results": 5,
         "include_image_descriptions": True,
         "include_images": True,
         "search_depth": "advanced",

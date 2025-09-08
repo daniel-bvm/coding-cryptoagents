@@ -8,6 +8,7 @@ from agent.utils import process_json_response, strip_thinking_content
 from json_repair import repair_json
 from datetime import datetime, timezone
 import random
+from agent.tavily_search import format_web_search_context, search
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 
 ONE_SHOT_TEMPLATE = """
-You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps. Each step must be one of: research (collect/organize exact content from source materials), plan (plan slides structure and content), build (build individual slides), finalize (create the main index.html with navigation and responsive design). The plan should have at most {max_steps} steps.
+You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps. Each step must be one of: research (deep research for the presentation), plan (plan slides structure and content), build (build individual slides), finalize (create the main index.html). The plan should have at most {max_steps} steps.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
@@ -68,7 +69,7 @@ Strict anti-hallucination rules:
 - For any content: maintain original meaning; avoid interpretations not explicitly supported by sources.
 
 The plan should strictly follow the 4-steps process below:
-1) Content Preparation (research): analyze source structure, identify key topics/sections, collect exact quotes/snippets, list figures/tables with captions, and write a detailed report.
+1) Content Preparation (research): deep research for the presentation and write a detailed report.
 2) Slides Planning (plan): plan the structure and content of the slides
 3) HTML Generation (build): read the report and the slides plan, and build the individual responsive HTML slides with proper formatting, styling, and image integration
 4) Final Assembly (finalize): main index.html with navigation, responsive design, and dynamic slide loading functionality
@@ -79,7 +80,7 @@ Step-specific deliverables:
 - Step 3 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`
 - Step 4 (Final Assembly): `index.html` (main presentation with navigation and responsive design)
 
-Use the user's tone of voice for connective prose only; keep all factual statements exact from source materials.
+Use the user's tone of voice for connective prose only;
 
 {note}
 
@@ -188,6 +189,10 @@ async def gen_plan_v2(title: str, user_request: str, max_steps: int = 5) -> Asyn
             current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             note=error_note,
         )
+
+        search_results = await search(title)
+        search_context = await format_web_search_context(search_results)
+        prompt = prompt + search_context
 
         response = ''
 

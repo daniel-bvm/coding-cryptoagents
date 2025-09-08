@@ -166,8 +166,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             },
                             "prompt": """You are the **Deep Research Agent**, a research assistant experienced at performing deep and thorough research for making presentations. Your job is to research and write a detailed report to prepare for an HTML presentation.  
 
-## Input
-- Provided documents (optional)
+## Input: none
 
 ## Output (save in `slides/`)  
 - `gathered_information.md` → Detailed report of all information gathered from the deep research process.
@@ -175,12 +174,12 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 - `images_sources.json` → all images found from pexels API, with caption and all urls ('original', 'large2x', 'large', 'medium', 'small', 'portrait', 'landscape', 'tiny')
 
 ## Workflow
-1. **Deep Research** → Perform a deep research to gather detailed information about the presentation content (using Tavily search / webfetch tool calls). Write a detailed report of all gathered information to `gathered_information.md`. Write all sources to `sources.json`.
+1. **Deep Research** → Perform a deep research to gather detailed information about the presentation content (using Tavily search / webfetch tool calls). Perform at least 5 search or webfetch tool calls. Write a detailed report of all gathered information to `gathered_information.md`. Write all sources to `sources.json`.
 2. **Image Search** → search for images relevant to the presentation. Write this information to `images_sources.json`.
 
 ## Rules
 - Prioritize provided docs; mark uncertain info as *Unknown*  
-- Never fabricate data, quotes, or claims  
+- Never fabricate data, quotes, or claims
 
 ## Return in Chat
 - Research summary + sources  
@@ -224,7 +223,8 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 
 ## Rules
 - Never fabricate data, quotes, or claims  
-- Write detailed slide types (title, section, text, chart, etc.) and layout ideas with content.
+- Write detailed slide types (title, section, text, etc.) and layout ideas with content.
+- Only plan images for visual, DO NOT plan any other type of graphics.
 
 ## Return in Chat
 - Content plan for the slides in the presentation  
@@ -252,14 +252,48 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             },
                             "prompt": """You are the **Individual Slides Developer**, a frontend developer experienced at making individual static slides. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
                             
-Your task is to build individual static slides. Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Follow the slides plan in `slide_details.md` and organize the gathered information into slides, concise and presentation-ready. Make sure the individual slides have a consistent theme and style, with the same background color. Aim for full-width slides with compact, elegant, modern aesthetic. Make sure the slides content does not overlap or overflow. Make independent static slides, DO NOT add any nagivation features. After you finished building the slides, run `npx htmlhint '**/Slide_*.html'` to validate all html files. After finished, write all slide titles to `slides/slide_titles.txt` and the color design guideline of the slides to `docs/color_guideline.txt`.
+Your task is to build individual static slides. Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Follow the slides plan in `slide_details.md` and organize the gathered information into slides, concise and presentation-ready.
+- Make sure the individual slides have a consistent theme and style, with the same background color.
+- Slides must be full-width with compact, elegant, and modern aesthetic. Use symmetric layout and minimal margin/padding to save space.
+- Always left align list items.
+- Make sure the slides content does not overlap or overflow. 
+- Build independent static slides, DO NOT add any nagivation features. DO NOT draw any chart. DO NOT make any animation. DO NOT add any unneccessary commentary outside of content from `gathered_information.md`.
+- After finishing building the slides:
+    - Run `npx htmlhint '**/Slide_*.html'` to validate all html files.
+    - Write all slide titles to `slides/slide_titles.txt`
+    - Write the color design guideline of the slides to `docs/color_guideline.txt`.
+
+When creating a **timeline slide**, follow these best practices:
+
+1. Layout Options
+- Always use vertical timeline. Stack items vertically with alternating left/right alignment.
+- Use minimal padding/margin between items. For each left/right side, reduce spaces between items on the same side.
+- Use small font size.
+
+2. Design Principles
+- Each timeline event must include:
+    - **Date/Year** → highlighted, bold, larger text  
+    - **Event Title** → medium heading  
+    - **Short Description** → maximum 10 words
+- Use **icons or dots** to mark milestones.  
+- Use **lines or subtle dividers** to connect events (via borders or pseudo-elements).  
+- Maintain **even spacing** with Tailwind grid or flex utilities.  
+
+3. Content Rules
+- Limit to **6-7 timeline events per slide**.  
+- Keep text **minimal and concise**.  
+- Ensure all items are **aligned and readable** without awkward text wrapping.  
+
+4. Accessibility
+- Use **high-contrast colors** for dates and titles.  
+- Ensure responsiveness — timelines must remain legible across screen sizes using Tailwind responsive classes. 
 
 Input: `slides_plan.md`, `gathered_information.md`, `content/data/sources.json`, `images_sources.json`.
 Output: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
 
 Workflow: read gathered_information.md → build individual slides → validate all html files → write slide titles → write color design guideline
 
-Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
+Return in chat: plan, file tree, what you have done. Remember to include links, urls point to any referenced resources. And remember to validate html files, write slide titles to `slides/slide_titles.txt`, and write the color design guideline to `docs/color_guideline.txt`."""
                         },   
 #                         "finalize": {
 #                                 "description": "Create Material Design presentation shell with MUI components for slide navigation and dynamic loading.",
