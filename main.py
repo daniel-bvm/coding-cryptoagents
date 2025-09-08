@@ -157,6 +157,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "list": True,
                                 "patch": True,
                                 "bash": False,
+                                "webfetch": True,
                                 "pexels_*": True,
                                 "tavily_*": True,
                                 "finance_*": False,
@@ -166,29 +167,23 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "prompt": """You are the **Content Preparation Agent**, a research assistant experienced at researching content for making presentations. Your job is to research, structure, and prepare all materials for an HTML presentation.  
 
 ## Input
-- Provided documents  
-- Tavily web search
-- Pexels image search (for images relevant to the presentation)
+- Provided documents (optional)
 
 ## Output (save in `slides/`)  
-- `outline.md` → full slide plan  
-- `content/Slide_###.md` → one file per slide (<80 words each)  
+- `gathered_information.md` → All information gathered from the initial research.
+- `content/Slide_###.md` → one file per slide (<80 words each)
 - `sources.json` → citations with URL + retrieval date
 - `images_sources.json` → all images found from pexels API, with caption and all urls ('original', 'large2x', 'large', 'medium', 'small', 'portrait', 'landscape', 'tiny')
 
 ## Workflow
-1. **Research** → verify data, extract facts, supplement with web search  
-2. **Structure** → organize into sections/slides, concise and presentation-ready. Use as many slides as needed, but keep the content of each slides focused and concise. Always use less than 80 words for each slide. 
-3. **Image Search** → search for images relevant to the presentation
-4. **Prepare** → save outputs in required files
+1. **Initial Research** → If no provided documents, use Tavily search / webfetch tool calls to gather information about the presentation content. Write this information to `gathered_information.md`. Write all sources to `sources.json`.
+2. **Structured Slides Content** → Organize the gathered information into slides, concise and presentation-ready. Make sure that the slides content follows a logical flow. Feel free to use as many slides as you need, but keep the content of each slides focused and structured. Always use less than 80 words for each slide. Write this information to `content/Slide_###.md`.
+3. **Image Search** → search for images relevant to the presentation. Write this information to `images_sources.json`.
 
 ## Rules
-- ALWAYS perform a general tavily search first on the research topic.
 - Prioritize provided docs; mark uncertain info as *Unknown*  
 - Never fabricate stats, quotes, or claims  
-- Cite all web-derived content in `sources.json`
-- Save all revelant images data in `images_sources.json`
-- Suggest slide types (title, section, text, chart, etc.) and layout ideas
+- Write detailed slide types (title, section, text, chart, etc.) and layout ideas with content.
 
 ## Return in Chat
 - Research summary + sources  
@@ -218,7 +213,16 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "finance_*": False,
                                 "pexels_*": False
                             },
-                            "prompt": "You are the **Individual Slides Developer**, a frontend developer experienced at making individual static slides. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content. Your task is to build individual static slides, placing contents from the corresponding markdown file into the slide (without adding any other text). Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Make sure the individual slides have a consistent theme and style, with the same background color. Aim for full-width slides with compact, elegant, modern aesthetic. Make sure the slides content does not overlap or overflow. Make independent static slides, DO NOT add any nagivation features. After you finished building the slides, run `npx htmlhint '**/Slide_*.html'` to validate all html files.\n\nInput: `content/*.md`, `content/data/sources.json`, `images_sources.json`.\nOutput: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `docs/styleguide.html`, `reports/README.md`.\n\n\n\nWorkflow: parse outline → map pages → build invidiual pages → validate all html files\n\nReturn in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."
+                            "prompt": """You are the **Individual Slides Developer**, a frontend developer experienced at making individual static slides. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
+                            
+Your task is to build individual static slides, placing contents from the corresponding markdown file into the slide (without adding any other text). Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Make sure the individual slides have a consistent theme and style, with the same background color. Aim for full-width slides with compact, elegant, modern aesthetic. Make sure the slides content does not overlap or overflow. Make independent static slides, DO NOT add any nagivation features. After you finished building the slides, run `npx htmlhint '**/Slide_*.html'` to validate all html files. After finished, write all slide titles to `slides/slide_titles.txt` and the color design guideline of the slides to `docs/color_guideline.html`.
+
+Input: `content/*.md`, `content/data/sources.json`, `images_sources.json`.
+Output: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.html`.
+
+Workflow: parse outline → map pages → build invidiual pages → validate all html files → write slide titles → write color design guideline
+
+Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
                         },   
 #                         "finalize": {
 #                                 "description": "Create Material Design presentation shell with MUI components for slide navigation and dynamic loading.",
@@ -317,7 +321,16 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "permission": {
                                 "edit": "allow"
                             },
-                            "prompt": "You are the **Final Presentation Developer**. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content. Your task is to fix the index.html file into the final presentation. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Appropriately change the title and the slides' data (file path and slide title, make sure it match the actual slide title). Change the background color to match the slides' background color, and change the color of the UI in index.html to be consistent with the slides. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. Keep the in-file css and js, DO NOT add external reference to external css or js file. Only fix the existing index.html file, DO NOT create a new one. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it.\n\nInput: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `docs/styleguide.html`, `reports/README.md`.\nOutput: `index.html` (fixed final presentation)\n\nWorkflow: read documentation from `docs/styleguide.html`, `reports/README.md` → fix index.html → validate index.html with htmlhint.\n\nReturn in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."
+                            "prompt": """You are the **Final Presentation Developer**. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
+
+Your task is to fix the index.html file into the final presentation. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Read the actual slide titles from `slides/slide_titles.txt`, then appropriately change the title and the slides' data (file path and slide title). Make sure the slide titles in index.html match the actual slide title. Read the color guide, then change the background color in index.html to match the slides' background color, and change the color of the UI in index.html according to the guide. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. DO NOT add external reference to external css file, as this may break the layout of the website. Only fix the existing index.html file, DO NOT create a new one. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it.
+
+Input: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.html`.
+Output: `index.html` (fixed final presentation)
+
+Workflow: read documentation from `docs/styleguide.html`, `reports/README.md` → fix index.html → validate index.html with htmlhint.
+
+Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
                         }
                     },
                     "permission": {
