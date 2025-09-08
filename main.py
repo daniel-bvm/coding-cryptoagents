@@ -254,9 +254,10 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             
 Your task is to build individual static slides. Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Follow the slides plan in `slide_details.md` and organize the gathered information into slides, concise and presentation-ready.
 - Make sure the individual slides have a consistent theme and style, with the same background color.
-- Slides must be full-width with compact, elegant, and modern aesthetic. Use symmetric layout and minimal margin/padding to save space.
+- Slides must be full-width with compact, elegant, and modern aesthetic. Use minimal margin/padding to save space. Use symmetric layout for card views.
 - Always left align list items.
-- Make sure the slides content does not overlap or overflow. 
+- Make sure the slides content does not overlap or overflow.
+- Keep images proportional and scaled down so they do not overwhelm text. Use appropriate image source for the size (for example, use original source for background images, use small source for small images).
 - Build independent static slides, DO NOT add any nagivation features. DO NOT draw any chart. DO NOT make any animation. DO NOT add any unneccessary commentary outside of content from `gathered_information.md`.
 - After finishing building the slides:
     - Run `npx htmlhint '**/Slide_*.html'` to validate all html files.
