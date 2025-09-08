@@ -24,6 +24,40 @@ async def execute_research_step(steps: StepV2, workdir: str, session_id: Optiona
             logger.info(f"Try {i+1} of 3: {msg}")
 
             output = await client.query(
+                agent="deep-research",
+                system=PLANNING_SYSTEM_PROMPT,
+                message=msg,
+                session_id=session_id,
+                model_id=settings.llm_model_id,
+                task_id=task_id,
+            )
+
+            output = strip_thinking_content(output).strip()
+
+            has_gathered_information_files = len(glob.glob(os.path.join(workdir, "**/gathered_information.md"), recursive=True)) > 0
+
+            if output and has_gathered_information_files:
+                break
+
+            if i < 2:
+                await asyncio.sleep(2 ** (i + 2)) # wait for 4, 8, 16 seconds, wait until service available back
+
+    if not output:
+        raise Exception(f"Research step {steps.id} failed to generate any output")
+
+    return ClaudeCodeStepOutput(
+        step_id=steps.id,
+        full=output,
+        session_id=session_id,
+    )
+
+async def execute_plan_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None, task_id: str = None) -> ClaudeCodeStepOutput:
+
+    async with OpenCodeSDKClient(workdir) as client:
+        for i, msg in enumerate([steps.task, 'Seems you faced an issue, please try again.', 'One last try']):
+            logger.info(f"Try {i+1} of 3: {msg}")
+
+            output = await client.query(
                 agent="content-prep",
                 system=PLANNING_SYSTEM_PROMPT,
                 message=msg,
@@ -34,9 +68,9 @@ async def execute_research_step(steps: StepV2, workdir: str, session_id: Optiona
 
             output = strip_thinking_content(output).strip()
 
-            has_slides_markdown_files = len(glob.glob(os.path.join(workdir, "**/Slide_*.md"), recursive=True)) > 0
+            has_slides_plan_files = len(glob.glob(os.path.join(workdir, "**/slides_plan.md"), recursive=True)) > 0
 
-            if output and has_slides_markdown_files:
+            if output and has_slides_plan_files:
                 break
 
             if i < 2:
@@ -131,7 +165,7 @@ async def execute_finalize_step(steps: StepV2, workdir: str, session_id: Optiona
 
 
 async def execute_steps_v2(
-    steps_type: Literal["research", "build", "finalize"], 
+    steps_type: Literal["research", "plan", "build", "finalize"], 
     steps: StepV2, 
     workdir: str,
     session_id: Union[int, str],
@@ -139,6 +173,9 @@ async def execute_steps_v2(
 ) -> ClaudeCodeStepOutput:
     if steps_type == "research":
         return await execute_research_step(steps, workdir, session_id, task_id)
+
+    if steps_type == "plan":
+        return await execute_plan_step(steps, workdir, session_id, task_id)
 
     if steps_type == "build":
         return await execute_build_step(steps, workdir, session_id, task_id)

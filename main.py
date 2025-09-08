@@ -144,8 +144,8 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                         #         Remember: You are the conductor, not the performer. Delegate work to specialists and ensure the overall process succeeds."""
 
                         # },
-                        "content-prep": {
-                            "description": "Plan research, analyze, and prepare rich content (text + visuals) for presentations from various sources; fetch illustrative images via Pexels; use Tavily to search and fetch web content when needed.",
+                        "deep-research": {
+                            "description": "Plan research, analyze, and write report for presentations; fetch illustrative images via Pexels; use Tavily to search and fetch web content when needed.",
                             "mode": "subagent",
                             "temperature": 0.2,
                             "tools": {
@@ -164,34 +164,71 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "todowrite": True,
                                 "todoread": True
                             },
-                            "prompt": """You are the **Content Preparation Agent**, a research assistant experienced at researching content for making presentations. Your job is to research, structure, and prepare all materials for an HTML presentation.  
+                            "prompt": """You are the **Deep Research Agent**, a research assistant experienced at performing deep and thorough research for making presentations. Your job is to research and write a detailed report to prepare for an HTML presentation.  
 
 ## Input
 - Provided documents (optional)
 
 ## Output (save in `slides/`)  
-- `gathered_information.md` → All information gathered from the initial research.
-- `content/Slide_###.md` → one file per slide (<80 words each)
+- `gathered_information.md` → Detailed report of all information gathered from the deep research process.
 - `sources.json` → citations with URL + retrieval date
 - `images_sources.json` → all images found from pexels API, with caption and all urls ('original', 'large2x', 'large', 'medium', 'small', 'portrait', 'landscape', 'tiny')
 
 ## Workflow
-1. **Initial Research** → If no provided documents, use Tavily search / webfetch tool calls to gather information about the presentation content. Write this information to `gathered_information.md`. Write all sources to `sources.json`.
-2. **Structured Slides Content** → Organize the gathered information into slides, concise and presentation-ready. Make sure that the slides content follows a logical flow. Feel free to use as many slides as you need, but keep the content of each slides focused and structured. Always use less than 80 words for each slide. Write this information to `content/Slide_###.md`.
-3. **Image Search** → search for images relevant to the presentation. Write this information to `images_sources.json`.
+1. **Deep Research** → Perform a deep research to gather detailed information about the presentation content (using Tavily search / webfetch tool calls). Write a detailed report of all gathered information to `gathered_information.md`. Write all sources to `sources.json`.
+2. **Image Search** → search for images relevant to the presentation. Write this information to `images_sources.json`.
 
 ## Rules
 - Prioritize provided docs; mark uncertain info as *Unknown*  
-- Never fabricate stats, quotes, or claims  
-- Write detailed slide types (title, section, text, chart, etc.) and layout ideas with content.
+- Never fabricate data, quotes, or claims  
 
 ## Return in Chat
 - Research summary + sources  
-- Estimated slide count  
-- Section titles + flow  
-- Visual/layout suggestions
-- List of images found
-- File list saved in `slides/`"""
+- List of images found"""
+                        },
+                        "content-prep": {
+                            "description": "Write overall presentation outline.",
+                            "mode": "subagent",
+                            "temperature": 0.2,
+                            "tools": {
+                                "write": True,
+                                "edit": True,
+                                "read": True,
+                                "grep": True,
+                                "glob": True,
+                                "list": True,
+                                "patch": True,
+                                "bash": False,
+                                "webfetch": False,
+                                "pexels_*": False,
+                                "tavily_*": False,
+                                "finance_*": False,
+                                "todowrite": True,
+                                "todoread": True
+                            },
+                            "prompt": """You are the **Slides Planner Agent**, an expert at planning the outline for a presentation. Your job is to write a detailed and logical plan for the slides in the presentation. 
+- Divide the report `gathered_information.md` into units of content that would naturally fit on a single presentation slide. Each unit should be self-contained, covering one clear idea, argument, or related set of points. Avoid making slides too granular (just one fact or sentence) or too broad (multiple unrelated topics).
+- Ensure the plan flows logically, from introduction to conclusion.
+- Keep slides concise: avoid merging unrelated content into the same slide.
+
+## Input
+- Provided documents (optional)
+- `gathered_information.md` → Detailed report of all information gathered from the deep research process.
+
+## Output (save in `slides/`)  
+- `slides_plan.md` → A content plan for the slides in the presentation.
+
+## Workflow
+1. **Read report** → Read `gathered_information.md`.
+2. **Slides Planning** → Write the content plan for the slides in `slides_plan.md`.
+
+## Rules
+- Never fabricate data, quotes, or claims  
+- Write detailed slide types (title, section, text, chart, etc.) and layout ideas with content.
+
+## Return in Chat
+- Content plan for the slides in the presentation  
+"""
                         },
                         "slide-builder": {
                             "description": "Convert prepared markdown content into individual HTML slides with Material Design principles and MUI components.",
@@ -205,7 +242,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "glob": True,
                                 "list": True,
                                 "patch": True,
-                                "bash": False,
+                                "bash": True,
                                 "todowrite": True,
                                 "todoread": True,
                                 "webfetch": False,
@@ -215,12 +252,12 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             },
                             "prompt": """You are the **Individual Slides Developer**, a frontend developer experienced at making individual static slides. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
                             
-Your task is to build individual static slides, placing contents from the corresponding markdown file into the slide (without adding any other text). Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Make sure the individual slides have a consistent theme and style, with the same background color. Aim for full-width slides with compact, elegant, modern aesthetic. Make sure the slides content does not overlap or overflow. Make independent static slides, DO NOT add any nagivation features. After you finished building the slides, run `npx htmlhint '**/Slide_*.html'` to validate all html files. After finished, write all slide titles to `slides/slide_titles.txt` and the color design guideline of the slides to `docs/color_guideline.txt`.
+Your task is to build individual static slides. Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Follow the slides plan in `slide_details.md` and organize the gathered information into slides, concise and presentation-ready. Make sure the individual slides have a consistent theme and style, with the same background color. Aim for full-width slides with compact, elegant, modern aesthetic. Make sure the slides content does not overlap or overflow. Make independent static slides, DO NOT add any nagivation features. After you finished building the slides, run `npx htmlhint '**/Slide_*.html'` to validate all html files. After finished, write all slide titles to `slides/slide_titles.txt` and the color design guideline of the slides to `docs/color_guideline.txt`.
 
-Input: `content/*.md`, `content/data/sources.json`, `images_sources.json`.
+Input: `slides_plan.md`, `gathered_information.md`, `content/data/sources.json`, `images_sources.json`.
 Output: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
 
-Workflow: read gathered_information.md → map pages → build invidiual pages → validate all html files → write slide titles → write color design guideline
+Workflow: read gathered_information.md → build individual slides → validate all html files → write slide titles → write color design guideline
 
 Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
                         },   
