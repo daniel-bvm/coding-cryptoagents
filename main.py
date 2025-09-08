@@ -215,12 +215,12 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             },
                             "prompt": """You are the **Individual Slides Developer**, a frontend developer experienced at making individual static slides. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
                             
-Your task is to build individual static slides, placing contents from the corresponding markdown file into the slide (without adding any other text). Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Make sure the individual slides have a consistent theme and style, with the same background color. Aim for full-width slides with compact, elegant, modern aesthetic. Make sure the slides content does not overlap or overflow. Make independent static slides, DO NOT add any nagivation features. After you finished building the slides, run `npx htmlhint '**/Slide_*.html'` to validate all html files. After finished, write all slide titles to `slides/slide_titles.txt` and the color design guideline of the slides to `docs/color_guideline.html`.
+Your task is to build individual static slides, placing contents from the corresponding markdown file into the slide (without adding any other text). Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Make sure the individual slides have a consistent theme and style, with the same background color. Aim for full-width slides with compact, elegant, modern aesthetic. Make sure the slides content does not overlap or overflow. Make independent static slides, DO NOT add any nagivation features. After you finished building the slides, run `npx htmlhint '**/Slide_*.html'` to validate all html files. After finished, write all slide titles to `slides/slide_titles.txt` and the color design guideline of the slides to `docs/color_guideline.txt`.
 
 Input: `content/*.md`, `content/data/sources.json`, `images_sources.json`.
-Output: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.html`.
+Output: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
 
-Workflow: parse outline → map pages → build invidiual pages → validate all html files → write slide titles → write color design guideline
+Workflow: read gathered_information.md → map pages → build invidiual pages → validate all html files → write slide titles → write color design guideline
 
 Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
                         },   
@@ -316,7 +316,7 @@ Return in chat: plan, file tree, what you have done. You should use unsplash too
                                 "tavily_fetch": True,
                                 "todowrite": True,
                                 "todoread": True,
-                                "unsplash*": True
+                                # "unsplash*": True
                             },
                             "permission": {
                                 "edit": "allow"
@@ -325,10 +325,10 @@ Return in chat: plan, file tree, what you have done. You should use unsplash too
 
 Your task is to fix the index.html file into the final presentation. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Read the actual slide titles from `slides/slide_titles.txt`, then appropriately change the title and the slides' data (file path and slide title). Make sure the slide titles in index.html match the actual slide title. Read the color guide, then change the background color in index.html to match the slides' background color, and change the color of the UI in index.html according to the guide. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. DO NOT add external reference to external css file, as this may break the layout of the website. Only fix the existing index.html file, DO NOT create a new one. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it.
 
-Input: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.html`.
+Input: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
 Output: `index.html` (fixed final presentation)
 
-Workflow: read documentation from `docs/styleguide.html`, `reports/README.md` → fix index.html → validate index.html with htmlhint.
+Workflow: read documentation from `docs/color_guideline.txt`, `reports/README.md` → fix index.html → validate index.html with htmlhint.
 
 Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
                         }

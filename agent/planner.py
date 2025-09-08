@@ -73,8 +73,8 @@ The plan should strictly follow the 3-steps process below:
 3) Final Assembly (finalize): main index.html with navigation, responsive design, and dynamic slide loading functionality
 
 Step-specific deliverables:
-- Step 1 (Content Preparation): `slides/outline.md`, `slides/content/Slide_*.md`, `slides/sources.json`, `slides/images_sources.json`
-- Step 2 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.html`
+- Step 1 (Content Preparation): `slides/gathered_information.md`, `slides/content/Slide_*.md`, `slides/sources.json`, `slides/images_sources.json`
+- Step 2 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`
 - Step 3 (Final Assembly): `index.html` (main presentation with navigation and responsive design)
 
 Use the user's tone of voice for connective prose only; keep all factual statements exact from source materials.
