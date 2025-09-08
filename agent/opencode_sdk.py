@@ -4,6 +4,8 @@ import httpx
 from typing import Literal
 import logging
 import json
+from agent.anthropic_proxy import get_models_fn
+import sys
 
 logger = logging.getLogger(__name__) 
 
@@ -196,3 +198,158 @@ class OpenCodeSDKClient:
     
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self.disconnect()
+
+
+wrapped_base_url = f"http://localhost:{settings.port}/v1"
+config_path = os.path.expanduser("~/.config/opencode/opencode.json")
+opencode_dir = os.path.expanduser("~/.config/opencode")
+CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+
+os.makedirs(opencode_dir, exist_ok=True)
+
+AGENT_CONFIGS = {
+    "build": {
+        "mode": "primary",
+        "tools": {
+            "bash": True,
+            "edit": True,
+            "write": True,
+            "read": True,
+            "grep": True,
+            "glob": True,
+            "list": True,
+            "patch": True,
+            "todowrite": True,
+            "todoread": True,
+            "tavily*": True,
+            "pexels*": True
+        },
+        "prompt": "Your task is to build the project or a blog post based on the plan. Generally, you have to build an index.html file that responds the user. Strictly follow the plan step-by-step; do not take any extra steps. Do not ask again for confirmation, just do it your way. Your first step should be reviewing all markdown files (*.md or financial/*.md or general/*.md) to get the necessary content. Image sources for mockup purposes should be used from Unsplash. Ask the developer for junk tasks if needed. Do research, content grep for any missing information, and avoid writing code with placeholders only. About financial data, ask the fin-analyst for data gathering, avoid doing it yourself. Make sure the output is clean and ready to be published. To build a well-structured output, use HTML5, styled with Tailwind CSS and handle interactions with js if needed. Your final response should be short, concise, and talk about what you have done (no code explanation in detail is required) and an index.html file to present your findings.   Remember to include links, urls point to any referenced resources."
+    },
+    "content-prep": {
+        "description": "Plan research, analyze, and prepare rich content (text + visuals) for a HTML report; fetch mockup images via Unsplash; use Tavily to search and fetch web content or get original images.",
+        "mode": "subagent",
+        "temperature": 0.2,
+        "tools": {
+            "write": True,
+            "edit": True,
+            "read": True,
+            "grep": True,
+            "glob": True,
+            "list": True,
+            "patch": True,
+            "bash": False,
+            "pexels*": True,
+            "tavily*": True,
+            "todowrite": True,
+            "todoread": True
+        },
+        "prompt": "You are the **Content Preparation** agent. Input is a user prompt describing a topic or goal. Output is a complete content package ready for a Developer to turn into a stunning HTML representation.\n\nObjectives:\n1) **Research Plan**: Draft a lean plan with key questions, subtopics, datasets, stakeholders, and metrics. Include a short search strategy.\n2) **Analysis & Synthesis**: Produce a structured outline and detailed sections with facts, bullets, callouts, and tables. Keep claims sourced.\n3) **Image Plan & Assets**: Use `unsplash_search_photos` to fetch images. Save under `assets/images/` and record metadata in `content/images.json`.\n4) **Web Search**: Use Tavily (`tavily_tavily_search`, `tavily_tavily_extract`, `tavily_tavily_crawl`, `tavily_tavily_map`) to fetch articles, docs, recent data. Summarize and cite.\n5) **Deliverables for Developer**: `content/brief.md`, `content/outline.md`, `content/sections/*.md`, `content/references.json`, `content/images.json`, optional `content/data/*.json`.\n\nWorkflow:\n1) Read prompt → write brief & outline.\n2) Draft sections.\n3) Call Unsplash + Tavily as needed.\n4) Summarize outputs + next steps.\n\nReturn in chat: (a) plan, (b) file list, (c) risks, (d) next steps. Remember to include links, urls point to any referenced resources."
+    },
+    "developer": {
+        "description": "Turn prepared content into a visually stunning, responsive, accessible, stunning HTML representation, page by page and section by section.",
+        "mode": "subagent",
+        "temperature": 0.2,
+        "tools": {
+            "write": True,
+            "edit": True,
+            "read": True,
+            "grep": True,
+            "glob": True,
+            "list": True,
+            "patch": True,
+            "bash": True,
+            "tavily_fetch": True,
+            "todowrite": True,
+            "todoread": True,
+            "pexels*": True
+        },
+        "permission": {
+            "edit": "allow"
+        },
+        "prompt": "You are the **Developer**. Build a polished, multi-page, responsive HTML representation from the prepared content. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Aim for an elegant, modern aesthetic.\n\nInput: `content/*.md`, `content/images.json`, `content/data/*.json`.\nOutput: `*.html`, `assets/styles.css`, `assets/main.js`, optional `docs/styleguide.html`, `reports/README.md`.\n\nWorkflow: parse outline → map pages → build pages → apply styles → add scripts → validate accessibility/responsiveness.\n\nReturn in chat: plan, file tree, what you have done. You should use pexels tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."
+    }
+}
+
+async def update_config_task(repeat_interval=0): # non-positive --> no repeat
+    isearch_path = os.path.join(CURRENT_DIRECTORY, "mcps", "tavily_search", "main.py")
+    financial_datasets_path = os.path.join(CURRENT_DIRECTORY, "mcps", "financial_datasets", "main.py")
+    pexels_path = os.path.join(CURRENT_DIRECTORY, "mcps", "pexels", "main.py")
+
+    while True:
+        try:
+            models = await get_models_fn()
+            mcp_env = {}
+
+            if "ETERNALAI_MCP_PROXY_URL" in os.environ:
+                mcp_env["ETERNALAI_MCP_PROXY_URL"] = os.environ["ETERNALAI_MCP_PROXY_URL"]
+
+            if settings.tavily_api_key:
+                mcp_env["TAVILY_API_KEY"] = settings.tavily_api_key
+
+            if settings.financial_datasets_api_key:
+                mcp_env["FINANCIAL_DATASETS_API_KEY"] = settings.financial_datasets_api_key
+
+            if settings.pexels_api_key:
+                mcp_env["PEXELS_API_KEY"] = settings.pexels_api_key
+
+            if settings.twitter_api_key:
+                mcp_env["TWITTER_API_KEY"] = settings.twitter_api_key
+
+            mcp_config = {
+                "tavily": {
+                    "type": "local",
+                    "command": [sys.executable, isearch_path],
+                    "enabled": True,
+                    "environment": mcp_env
+                },
+                "finance": {
+                    "type": "local",
+                    "command": [sys.executable, financial_datasets_path],
+                    "enabled": True,
+                    "environment": mcp_env
+                },
+                "pexels": {
+                    "type": "local",
+                    "command": [sys.executable, pexels_path],
+                    "enabled": True,
+                    "environment": mcp_env
+                }
+            }
+
+            config = {
+                "$schema": "https://opencode.ai/config.json",
+                    "provider": {
+                        settings.llm_model_provider: {
+                            "npm": "@ai-sdk/openai-compatible",
+                            "name": "LocalAI",
+                            "options": {
+                                "baseURL": wrapped_base_url
+                            },
+                            "models": {
+                                e['id']: {
+                                    "name": e['name']
+                                }
+                                for e in models
+                            }
+                        }
+                    },
+                    "agent": AGENT_CONFIGS,
+                    "permission": {
+                        "*": "allow"
+                    },
+                    "mcp": mcp_config,
+                    "autoupdate": False
+                }
+
+            with open(config_path, "w") as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+
+        except Exception as e:
+            logger.error(f"Error updating config: {e}")
+
+        if repeat_interval <= 0:
+            logger.info("Config updated, stopping config update task")
+            break
+
+        await asyncio.sleep(repeat_interval)

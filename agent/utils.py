@@ -531,3 +531,40 @@ def process_json_response(content: str):
     content = remove_code_blocks(content)
     content = repair_json(content)
     return content
+
+
+def strip_marker(content: str, marker: str, outter_only: bool = False, replace: str = "") -> str:
+    # Remove self-closing tags like <marker ... />
+    self_closing_pat = re.compile(f"<{marker}\\b[^>]*/>", re.IGNORECASE)
+    content = self_closing_pat.sub(replace, content)
+
+    if not outter_only:
+        # Remove full element including its content
+        pat = re.compile(f"<{marker}\\b[^>]*>.*?</{marker}>", re.DOTALL | re.IGNORECASE)
+        content = pat.sub(replace, content)
+    else:
+        # Remove tag only, keep inner text
+        pat = re.compile(f"<{marker}\\b[^>]*>(.*?)</{marker}>", re.DOTALL | re.IGNORECASE)
+        content = pat.sub(lambda m: m.group(1).strip() or replace, content)
+
+    return content
+
+def strip_markers(content: str, markers: tuple[str, bool, str]) -> str:
+    for tup in markers:
+        if not len(tup):
+            continue
+        
+        marker, outter_only, replace = "html", False, ""
+
+        if len(tup) == 1:
+            marker, outter_only, replace = tup[0], False, ""
+
+        if len(tup) == 2:
+            marker, outter_only, replace = tup[0], tup[1], ""
+
+        if len(tup) == 3:
+            marker, outter_only, replace = tup
+
+        content = strip_marker(content, marker, outter_only, replace)
+
+    return content
