@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 
 ONE_SHOT_TEMPLATE = """
-You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps. Each step must be one of: research (deep research for the presentation), plan (plan slides structure and content), build (build individual slides), finalize (create the main index.html). The plan should have at most {max_steps} steps.
+You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps. Each step must be one of: research (deep research for the presentation), plan (plan slides structure and content), build (create the presentation index.html). The plan should have 3 steps.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
@@ -68,17 +68,15 @@ Strict anti-hallucination rules:
 - For LaTeX sources: preserve equations verbatim and plan to render them via MathJax/KaTeX in HTML.
 - For any content: maintain original meaning; avoid interpretations not explicitly supported by sources.
 
-The plan should strictly follow the 4-steps process below:
+The plan should strictly follow the 3-steps process below:
 1) Content Preparation (research): deep research for the presentation and write a detailed report.
 2) Slides Planning (plan): plan the structure and content of the slides
-3) HTML Generation (build): read the report and the slides plan, and build the individual responsive HTML slides with proper formatting, styling, and image integration
-4) Final Assembly (finalize): main index.html with navigation, responsive design, and dynamic slide loading functionality
+3) HTML Generation (build): read the report and the slides plan, build the presentation index.html
 
 Step-specific deliverables:
 - Step 1 (Deep Research): `slides/gathered_information.md` (report), `slides/sources.json`, `slides/images_sources.json`
 - Step 2 (Slides Planning): `slides/slides_plan.md`
-- Step 3 (HTML Generation): `slides/content/Slide_*.html` files (individual responsive HTML slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`
-- Step 4 (Final Assembly): `index.html` (main presentation with navigation and responsive design)
+- Step 3 (HTML Generation): `index.html` (main presentation)
 
 Use the user's tone of voice for connective prose only;
 
@@ -90,7 +88,7 @@ The user wants:
 Generate the complete plan as a JSON array of steps. Each step should have: "reason", "task", "expectation", "step_type".
 
 Respond in JSON format: [
-  {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "research/plan/build/finalize" }},
+  {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "research/plan/build" }},
   ...
 ]
 
@@ -184,7 +182,6 @@ async def gen_plan_v2(title: str, user_request: str, max_steps: int = 5) -> Asyn
     while retry < MAX_RETRY:        
         prompt = ONE_SHOT_TEMPLATE.format(
             user_request=user_request,
-            max_steps=max_steps,
             title=title,
             current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             note=error_note,
@@ -215,8 +212,10 @@ async def gen_plan_v2(title: str, user_request: str, max_steps: int = 5) -> Asyn
 
             if step_list[0].step_type != 'research':
                 error_note += "The first step must be a research step\n"
-            if step_list[-1].step_type != 'finalize':
-                error_note += "The last step must be a finalize step\n"
+            if step_list[-1].step_type != 'build':
+                error_note += "The last step must be a build step\n"
+
+            step_list[-1].task = f"Follow the slides plan in `slides_plan.md`, and based only on the content of `gathered_information.md`, `images_sources.json` and `sources.json`, create the final presentation in `index.html`. Aim for an elegant and modern aesthetic. Use Tailwind CSS. Add a simple slide navigation system using left and right arrow key."
 
             if error_note:
                 raise Exception(error_note)

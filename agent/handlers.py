@@ -373,17 +373,17 @@ async def build(
         #         composed_step.task += f"\n\nHint: Use the information from generated markdown files to create the final report."
     
         # In last step, copy the slides template index.html to the workspace
-        if i == len(segmented_steps) - 1:
-            template_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "presentation_template.html")
-            if os.path.exists(template_path):
-                destination_path = os.path.join(workdir, "index.html")
-                try:
-                    shutil.copy2(template_path, destination_path)
-                    logger.info(f"Copied slides template index.html to workspace: {destination_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to copy slides template index.html: {e}")
-            else:
-                logger.warning(f"Slides template index.html not found at: {template_path}")
+        # if i == len(segmented_steps) - 1:
+        #     template_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "presentation_template.html")
+        #     if os.path.exists(template_path):
+        #         destination_path = os.path.join(workdir, "index.html")
+        #         try:
+        #             shutil.copy2(template_path, destination_path)
+        #             logger.info(f"Copied slides template index.html to workspace: {destination_path}")
+        #         except Exception as e:
+        #             logger.warning(f"Failed to copy slides template index.html: {e}")
+        #     else:
+        #         logger.warning(f"Slides template index.html not found at: {template_path}")
 
         step_output: ClaudeCodeStepOutput = await execute_steps_v2(
             composed_step.step_type, 

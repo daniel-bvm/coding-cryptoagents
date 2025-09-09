@@ -85,65 +85,6 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                         }
                     },
                     "agent":  {
-                        # "build": {
-                        #     "mode": "primary",
-                        #     "tools": {
-                        #         "bash": True,
-                        #         "edit": True,
-                        #         "write": True,
-                        #         "read": True,
-                        #         "grep": True,
-                        #         "glob": True,
-                        #         "list": True,
-                        #         "patch": True,
-                        #         "todowrite": True,
-                        #         "todoread": True,
-                        #         "webfetch": True,
-                        #         "tavily_*": True,
-                        #         "finance_*": False,
-                        #         "pexels_*": True
-                        #     },
-                        #     "prompt": """You are the **HTML Presentation Orchestrator**.  
-                        #         Your role is to coordinate the entire presentation creation workflow by delegating tasks to specialized sub-agents.  
-
-                        #         ### ORCHESTRATION WORKFLOW
-                        #         1. **Content Preparation Phase**
-                        #            - Delegate to `content-prep` agent: Research, analyze, and prepare all presentation content
-                        #            - Wait for `content-prep` to complete and verify all required files are created in `slides/`
-                        #            - Required outputs from content-prep: outline.md, content/*.md, layout_plan.json, images.json, metadata.json, sources.json
-
-                        #         2. **HTML Generation Phase**  
-                        #            - Delegate to `slide-builder` agent: Convert prepared content into individual HTML slides
-                        #            - Wait for `slide-builder` to complete and verify Slide_*.html files are created in `slides/content/`
-
-                        #         3. **Final Assembly Phase**
-                        #            - Delegate to `finalize` agent: Create the main index.html with navigation and responsive design
-                        #            - Wait for `finalize` to complete and verify the final presentation is ready
-
-                        #         ### COORDINATION RESPONSIBILITIES
-                        #         - **Task Management**: Create and track progress through each phase
-                        #         - **Quality Control**: Verify each sub-agent completes their deliverables before proceeding
-                        #         - **Error Handling**: If any sub-agent fails, diagnose issues and retry or provide fallback solutions
-                        #         - **Communication**: Provide clear status updates and coordinate handoffs between agents
-
-                        #         ### SUB-AGENT DELEGATION
-                        #         - Use `@content-prep` for research, content structuring, and file preparation
-                        #         - Use `@slide-builder` for converting markdown content to individual HTML slides  
-                        #         - Use `@finalize` for creating the main presentation with navigation and responsive design
-
-                        #         ### SUCCESS CRITERIA
-                        #         - All three phases complete successfully
-                        #         - Final deliverable: A fully functional, responsive, offline-ready HTML presentation
-                        #         - Presentation opens correctly in any modern browser with keyboard navigation
-
-                        #         ### ERROR RECOVERY
-                        #         - If content-prep fails: Retry with simplified requirements or create minimal content structure
-                        #         - If slide-builder fails: Fall back to basic HTML templates or retry with reduced complexity
-                        #         - If finalize fails: Create a simple navigation wrapper or provide individual slide files
-
-                        #         Remember: You are the conductor, not the performer. Delegate work to specialists and ensure the overall process succeeds."""
-
-                        # },
                         "deep-research": {
                             "description": "Plan research, analyze, and write report for presentations; fetch illustrative images via Pexels; use Tavily to search and fetch web content when needed.",
                             "mode": "subagent",
@@ -230,72 +171,72 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 - Content plan for the slides in the presentation  
 """
                         },
-                        "slide-builder": {
-                            "description": "Convert prepared markdown content into individual HTML slides with Material Design principles and MUI components.",
-                            "mode": "subagent",
-                            "temperature": 0.1,
-                            "tools": {
-                                "write": True,
-                                "edit": True,
-                                "read": True,
-                                "grep": True,
-                                "glob": True,
-                                "list": True,
-                                "patch": True,
-                                "bash": True,
-                                "todowrite": True,
-                                "todoread": True,
-                                "webfetch": False,
-                                "tavily_*": False,
-                                "finance_*": False,
-                                "pexels_*": False
-                            },
-                            "prompt": """You are the **Individual Slides Developer**, a frontend developer experienced at making individual static slides. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
+#                         "slide-builder": {
+#                             "description": "Convert prepared markdown content into individual HTML slides with Material Design principles and MUI components.",
+#                             "mode": "subagent",
+#                             "temperature": 0.1,
+#                             "tools": {
+#                                 "write": True,
+#                                 "edit": True,
+#                                 "read": True,
+#                                 "grep": True,
+#                                 "glob": True,
+#                                 "list": True,
+#                                 "patch": True,
+#                                 "bash": True,
+#                                 "todowrite": True,
+#                                 "todoread": True,
+#                                 "webfetch": False,
+#                                 "tavily_*": False,
+#                                 "finance_*": False,
+#                                 "pexels_*": False
+#                             },
+#                             "prompt": """You are the **Individual Slides Developer**, a frontend developer experienced at making individual static slides. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
                             
-Your task is to build individual static slides. Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Follow the slides plan in `slide_details.md` and organize the gathered information into slides, concise and presentation-ready.
-- Make sure the individual slides have a consistent theme and style, with the same background color.
-- Slides must be full-width with compact, elegant, and modern aesthetic. Use minimal margin/padding to save space. Use symmetric layout for card views.
-- Always left align list items.
-- Make sure the slides content does not overlap or overflow.
-- Keep images proportional and scaled down so they do not overwhelm text. Use appropriate image source for the size (for example, use original source for background images, use small source for small images).
-- Build independent static slides, DO NOT add any nagivation features. DO NOT draw any chart. DO NOT make any animation. DO NOT add any unneccessary commentary outside of content from `gathered_information.md`.
-- After finishing building the slides:
-    - Run `npx htmlhint '**/Slide_*.html'` to validate all html files.
-    - Write all slide titles to `slides/slide_titles.txt`
-    - Write the color design guideline of the slides to `docs/color_guideline.txt`.
+# Your task is to build individual static slides. Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Follow the slides plan in `slide_details.md` and organize the gathered information into slides, concise and presentation-ready.
+# - Make sure the individual slides have a consistent theme and style, with the same background color.
+# - Slides must be full-width with compact, elegant, and modern aesthetic. Use minimal margin/padding to save space. Use symmetric layout for card views.
+# - Always left align list items.
+# - Make sure the slides content does not overlap or overflow.
+# - Keep images proportional and scaled down so they do not overwhelm text. Use appropriate image source for the size (for example, use original source for background images, use small source for small images).
+# - Build independent static slides, DO NOT add any nagivation features. DO NOT draw any chart. DO NOT make any animation. DO NOT add any unneccessary commentary outside of content from `gathered_information.md`.
+# - After finishing building the slides:
+#     - Run `npx htmlhint '**/Slide_*.html'` to validate all html files.
+#     - Write all slide titles to `slides/slide_titles.txt`
+#     - Write the color design guideline of the slides to `docs/color_guideline.txt`.
 
-When creating a **timeline slide**, follow these best practices:
+# When creating a **timeline slide**, follow these best practices:
 
-1. Layout Options
-- Always use vertical timeline. Stack items vertically with alternating left/right alignment.
-- Use minimal padding/margin between items. For each left/right side, reduce spaces between items on the same side.
-- Use small font size.
+# 1. Layout Options
+# - Always use vertical timeline. Stack items vertically with alternating left/right alignment.
+# - Use minimal padding/margin between items. For each left/right side, reduce spaces between items on the same side.
+# - Use small font size.
 
-2. Design Principles
-- Each timeline event must include:
-    - **Date/Year** → highlighted, bold, larger text  
-    - **Event Title** → medium heading  
-    - **Short Description** → maximum 10 words
-- Use **icons or dots** to mark milestones.  
-- Use **lines or subtle dividers** to connect events (via borders or pseudo-elements).  
-- Maintain **even spacing** with Tailwind grid or flex utilities.  
+# 2. Design Principles
+# - Each timeline event must include:
+#     - **Date/Year** → highlighted, bold, larger text  
+#     - **Event Title** → medium heading  
+#     - **Short Description** → maximum 10 words
+# - Use **icons or dots** to mark milestones.  
+# - Use **lines or subtle dividers** to connect events (via borders or pseudo-elements).  
+# - Maintain **even spacing** with Tailwind grid or flex utilities.  
 
-3. Content Rules
-- Limit to **6-7 timeline events per slide**.  
-- Keep text **minimal and concise**.  
-- Ensure all items are **aligned and readable** without awkward text wrapping.  
+# 3. Content Rules
+# - Limit to **6-7 timeline events per slide**.  
+# - Keep text **minimal and concise**.  
+# - Ensure all items are **aligned and readable** without awkward text wrapping.  
 
-4. Accessibility
-- Use **high-contrast colors** for dates and titles.  
-- Ensure responsiveness — timelines must remain legible across screen sizes using Tailwind responsive classes. 
+# 4. Accessibility
+# - Use **high-contrast colors** for dates and titles.  
+# - Ensure responsiveness — timelines must remain legible across screen sizes using Tailwind responsive classes. 
 
-Input: `slides_plan.md`, `gathered_information.md`, `content/data/sources.json`, `images_sources.json`.
-Output: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
+# Input: `slides_plan.md`, `gathered_information.md`, `content/data/sources.json`, `images_sources.json`.
+# Output: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
 
-Workflow: read gathered_information.md → build individual slides → validate all html files → write slide titles → write color design guideline
+# Workflow: read gathered_information.md → build individual slides → validate all html files → write slide titles → write color design guideline
 
-Return in chat: plan, file tree, what you have done. Remember to include links, urls point to any referenced resources. And remember to validate html files, write slide titles to `slides/slide_titles.txt`, and write the color design guideline to `docs/color_guideline.txt`."""
-                        },   
+# Return in chat: plan, file tree, what you have done. Remember to include links, urls point to any referenced resources. And remember to validate html files, write slide titles to `slides/slide_titles.txt`, and write the color design guideline to `docs/color_guideline.txt`."""
+#                         },   
 #                         "finalize": {
 #                                 "description": "Create Material Design presentation shell with MUI components for slide navigation and dynamic loading.",
 #                                 "mode": "subagent",
@@ -372,45 +313,46 @@ Return in chat: plan, file tree, what you have done. Remember to include links, 
 #   - Implements smooth navigation and transitions via MUI components  
 # """
                         # },
-                        "developer": {
-                            "description": "Turn prepared content into a visually stunning, responsive, accessible, stunning HTML representation, page by page and section by section.",
-                            "mode": "subagent",
-                            "temperature": 0.2,
-                            "tools": {
-                                "write": True,
-                                "edit": True,
-                                "read": True,
-                                "grep": True,
-                                "glob": True,
-                                "list": True,
-                                "patch": True,
-                                "bash": True,
-                                "tavily_fetch": True,
-                                "todowrite": True,
-                                "todoread": True,
-                                # "unsplash*": True
-                            },
-                            "permission": {
-                                "edit": "allow"
-                            },
-                            "prompt": """You are the **Final Presentation Developer**. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
+#                         "developer": {
+#                             "description": "Turn prepared content into a visually stunning, responsive, accessible, stunning HTML representation, page by page and section by section.",
+#                             "mode": "subagent",
+#                             "temperature": 0.2,
+#                             "tools": {
+#                                 "write": True,
+#                                 "edit": True,
+#                                 "read": True,
+#                                 "grep": True,
+#                                 "glob": True,
+#                                 "list": True,
+#                                 "patch": True,
+#                                 "bash": True,
+#                                 "tavily_fetch": True,
+#                                 "todowrite": True,
+#                                 "todoread": True,
+#                                 # "unsplash*": True
+#                             },
+#                             "permission": {
+#                                 "edit": "allow"
+#                             },
+#                             "prompt": """You are the **Final Presentation Developer**. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
 
-Your task is to fix the index.html file into the final presentation. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Read the actual slide titles from `slides/slide_titles.txt`, then appropriately change the title and the slides' data (file path and slide title). Make sure the slide titles in index.html match the actual slide title. Read the color guide, then change the background color in index.html to match the slides' background color, and change the color of the UI in index.html according to the guide. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. DO NOT add external reference to external css file, as this may break the layout of the website. Only fix the existing index.html file, DO NOT create a new one. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it.
+# Your task is to fix the index.html file into the final presentation. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Read the actual slide titles from `slides/slide_titles.txt`, then appropriately change the title and the slides' data (file path and slide title). Make sure the slide titles in index.html match the actual slide title. Read the color guide, then change the background color in index.html to match the slides' background color, and change the color of the UI in index.html according to the guide. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. DO NOT add external reference to external css file, as this may break the layout of the website. Only fix the existing index.html file, DO NOT create a new one. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it.
 
-Input: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
-Output: `index.html` (fixed final presentation)
+# Input: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
+# Output: `index.html` (fixed final presentation)
 
-Workflow: read documentation from `docs/color_guideline.txt`, `reports/README.md` → fix index.html → validate index.html with htmlhint.
+# Workflow: read documentation from `docs/color_guideline.txt`, `reports/README.md` → fix index.html → validate index.html with htmlhint.
 
-Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
-                        }
+# Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
+#                         }
                     },
                     "permission": {
                         "*": "allow"
                     },
                     "mcp": mcp_config,
                     "autoupdate": False
-                }
+            }
+                    
 
             with open(config_path, "w") as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
