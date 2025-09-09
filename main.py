@@ -188,7 +188,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                         "content-prep": {
                             "description": "Write overall presentation outline.",
                             "mode": "subagent",
-                            "temperature": 0.2,
+                            "temperature": 0.1,
                             "tools": {
                                 "write": True,
                                 "edit": True,
@@ -206,32 +206,35 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "todoread": True
                             },
                             "prompt": """You are the **Slides Planner Agent**, an expert at planning the outline for a presentation. Your job is to write a detailed and logical plan for the slides in the presentation. 
-- Divide the report `gathered_information.md` into units of content that would naturally fit on a single presentation slide. Each unit should be self-contained, covering one clear idea, argument, or related set of points. Avoid making slides too granular (just one fact or sentence) or too broad (multiple unrelated topics).
+- Divide the report `gathered_information.md` into units of content with appropriate images from `images_sources.json` that would well-fitted on a single presentation slide. Each unit should be self-contained, covering one clear idea, argument, or related set of points. Avoid making slides too granular (just one fact or sentence) or too broad (multiple unrelated topics).
+- Resize the text and images to fit the slides layout if needed.
 - Ensure the plan flows logically, from introduction to conclusion.
 - Keep slides concise: avoid merging unrelated content into the same slide.
 
 ## Input
 - Provided documents (optional)
 - `gathered_information.md` → Detailed report of all information gathered from the deep research process.
+- `images_sources.json`, `sources.json` → All images and sources found from the deep research process.
 
 ## Output (save in `slides/`)  
-- `slides_plan.md` → A content plan for the slides in the presentation.
+- `slides_plan.md` → A content and visual plan for the slides in the presentation with images found from the deep research process.
 
 ## Workflow
-1. **Read report** → Read `gathered_information.md`.
-2. **Slides Planning** → Write the content plan for the slides in `slides_plan.md`.
+1. **Read report** → Read `gathered_information.md`, `images_sources.json`, `sources.json`
+2. **Slides Planning** → Write the content and visual plan for the slides in `slides_plan.md`.
 
 ## Rules
-- Never fabricate data, quotes, or claims  
+- Never fabricate data, quotes, or claims.  
 - Write detailed slide types (title, section, text, etc.) and layout ideas with content.
-- Only plan images for visual, DO NOT plan any other type of graphics.
+- Only plan images for visual with proper size with the slides layout. DO NOT plan any other type of graphics.
+- DO NOT make any animation plan for the slides.
 
 ## Return in Chat
-- Content plan for the slides in the presentation  
+- Content and visual plan for the slides in the presentation  
 """
                         },
-                        "slide-builder": {
-                            "description": "Convert prepared markdown content into individual HTML slides with Material Design principles and MUI components.",
+                        "developer": {
+                            "description": "Turn prepared content into a visually stunning, responsive, accessible, stunning HTML representation, page by page and section by section.",
                             "mode": "subagent",
                             "temperature": 0.1,
                             "tools": {
@@ -250,19 +253,14 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "finance_*": False,
                                 "pexels_*": False
                             },
-                            "prompt": """You are the **Individual Slides Developer**, a frontend developer experienced at making individual static slides. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
+                            "prompt": """You are the **HTML Slides Developer**, a frontend developer experienced at making turn the plan into static slides. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
                             
-Your task is to build individual static slides. Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Follow the slides plan in `slide_details.md` and organize the gathered information into slides, concise and presentation-ready.
+Your task is to build static slides. Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Follow the slides plan in `slides_plan.md` strictly and organize the gathered information into slides, concise and presentation-ready.
 - Make sure the individual slides have a consistent theme and style, with the same background color.
-- Slides must be full-width with compact, elegant, and modern aesthetic. Use minimal margin/padding to save space. Use symmetric layout for card views.
-- Always left align list items.
+- Slides must be full-width with compact, elegant, and modern aesthetic, well-fitted. 
 - Make sure the slides content does not overlap or overflow.
-- Keep images proportional and scaled down so they do not overwhelm text. Use appropriate image source for the size (for example, use original source for background images, use small source for small images).
-- Build independent static slides, DO NOT add any nagivation features. DO NOT draw any chart. DO NOT make any animation. DO NOT add any unneccessary commentary outside of content from `gathered_information.md`.
-- After finishing building the slides:
-    - Run `npx htmlhint '**/Slide_*.html'` to validate all html files.
-    - Write all slide titles to `slides/slide_titles.txt`
-    - Write the color design guideline of the slides to `docs/color_guideline.txt`.
+- Resize the text and images to fit the slides layout if needed for viewport-fitted purpose.
+- Build multiple static slides, with nagivation features. DO NOT draw any chart. DO NOT make any animation.
 
 When creating a **timeline slide**, follow these best practices:
 
@@ -278,11 +276,12 @@ When creating a **timeline slide**, follow these best practices:
     - **Short Description** → maximum 10 words
 - Use **icons or dots** to mark milestones.  
 - Use **lines or subtle dividers** to connect events (via borders or pseudo-elements).  
-- Maintain **even spacing** with Tailwind grid or flex utilities.  
+- Maintain **even spacing** with Tailwind grid or flex utilities.
+- Use symmetric layout for card views.
 
 3. Content Rules
-- Limit to **6-7 timeline events per slide**.  
 - Keep text **minimal and concise**.  
+- Use all the content from `slide_plan.md` to build the slides, do not add any other text.
 - Ensure all items are **aligned and readable** without awkward text wrapping.  
 
 4. Accessibility
@@ -290,11 +289,13 @@ When creating a **timeline slide**, follow these best practices:
 - Ensure responsiveness — timelines must remain legible across screen sizes using Tailwind responsive classes. 
 
 Input: `slides_plan.md`, `gathered_information.md`, `content/data/sources.json`, `images_sources.json`.
-Output: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
+Output: `index.html` (slides), `assets/styles.css`
 
-Workflow: read gathered_information.md → build individual slides → validate all html files → write slide titles → write color design guideline
+After create the index.html. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. DO NOT add external reference to external css file, as this may break the layout of the website. Only fix the existing index.html file, DO NOT create a new one. 
 
-Return in chat: plan, file tree, what you have done. Remember to include links, urls point to any referenced resources. And remember to validate html files, write slide titles to `slides/slide_titles.txt`, and write the color design guideline to `docs/color_guideline.txt`."""
+Workflow: read `slides_plan.md` and `gathered_information.md` → build slides → Create index.html files with exactly data in those files → validate index.html file with htmlhint → done
+
+Return in chat: plan, file tree, what you have done."""
                         },   
 #                         "finalize": {
 #                                 "description": "Create Material Design presentation shell with MUI components for slide navigation and dynamic loading.",
@@ -372,38 +373,38 @@ Return in chat: plan, file tree, what you have done. Remember to include links, 
 #   - Implements smooth navigation and transitions via MUI components  
 # """
                         # },
-                        "developer": {
-                            "description": "Turn prepared content into a visually stunning, responsive, accessible, stunning HTML representation, page by page and section by section.",
-                            "mode": "subagent",
-                            "temperature": 0.2,
-                            "tools": {
-                                "write": True,
-                                "edit": True,
-                                "read": True,
-                                "grep": True,
-                                "glob": True,
-                                "list": True,
-                                "patch": True,
-                                "bash": True,
-                                "tavily_fetch": True,
-                                "todowrite": True,
-                                "todoread": True,
-                                # "unsplash*": True
-                            },
-                            "permission": {
-                                "edit": "allow"
-                            },
-                            "prompt": """You are the **Final Presentation Developer**. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
+#                         "developer": {
+#                             "description": "Turn prepared content into a visually stunning, responsive, accessible, stunning HTML representation, page by page and section by section.",
+#                             "mode": "subagent",
+#                             "temperature": 0.2,
+#                             "tools": {
+#                                 "write": True,
+#                                 "edit": True,
+#                                 "read": True,
+#                                 "grep": True,
+#                                 "glob": True,
+#                                 "list": True,
+#                                 "patch": True,
+#                                 "bash": True,
+#                                 "tavily_fetch": True,
+#                                 "todowrite": True,
+#                                 "todoread": True,
+#                                 # "unsplash*": True
+#                             },
+#                             "permission": {
+#                                 "edit": "allow"
+#                             },
+#                             "prompt": """You are the **Final Presentation Developer**. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
 
-Your task is to fix the index.html file into the final presentation. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Read the actual slide titles from `slides/slide_titles.txt`, then appropriately change the title and the slides' data (file path and slide title). Make sure the slide titles in index.html match the actual slide title. Read the color guide, then change the background color in index.html to match the slides' background color, and change the color of the UI in index.html according to the guide. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. DO NOT add external reference to external css file, as this may break the layout of the website. Only fix the existing index.html file, DO NOT create a new one. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it.
+# Your task is to fix the index.html file into the final presentation. Use **HTML5, Tailwind CSS, and JavaScript** (no extra frameworks or build tools). Read the actual slide titles from `slides/slide_titles.txt`, then appropriately change the title and the slides' data (file path and slide title). Make sure the slide titles in index.html match the actual slide title. Read the color guide, then change the background color in index.html to match the slides' background color, and change the color of the UI in index.html according to the guide. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. DO NOT add external reference to external css file, as this may break the layout of the website. Only fix the existing index.html file, DO NOT create a new one. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it.
 
-Input: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
-Output: `index.html` (fixed final presentation)
+# Input: `slides/Slide_(3 digits code number).html` (individual slides), `assets/styles.css`, `slides/slide_titles.txt`, `docs/color_guideline.txt`.
+# Output: `index.html` (fixed final presentation)
 
-Workflow: read documentation from `docs/color_guideline.txt`, `reports/README.md` → fix index.html → validate index.html with htmlhint.
+# Workflow: read documentation from `docs/color_guideline.txt`, `reports/README.md` → fix index.html → validate index.html with htmlhint.
 
-Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
-                        }
+# Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
+#                         }
                     },
                     "permission": {
                         "*": "allow"
