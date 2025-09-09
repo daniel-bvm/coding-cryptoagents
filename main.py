@@ -207,7 +207,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             },
                             "prompt": """You are the **Slides Planner Agent**, an expert at planning the outline for a presentation. Your job is to write a detailed and logical plan for the slides in the presentation. 
 - Divide the report `gathered_information.md` into units of content with appropriate images from `images_sources.json` that would well-fitted on a single presentation slide. Each unit should be self-contained, covering one clear idea, argument, or related set of points. Avoid making slides too granular (just one fact or sentence) or too broad (multiple unrelated topics).
-- Resize the text and images to fit the slides layout if needed.
+- Resize the text and images to fit the slides layout if needed. Make sure there is not too much space in the content area.
 - Ensure the plan flows logically, from introduction to conclusion.
 - Keep slides concise: avoid merging unrelated content into the same slide.
 
@@ -289,9 +289,9 @@ When creating a **timeline slide**, follow these best practices:
 - Ensure responsiveness — timelines must remain legible across screen sizes using Tailwind responsive classes. 
 
 Input: `slides_plan.md`, `gathered_information.md`, `content/data/sources.json`, `images_sources.json`.
-Output: `index.html` (slides), `assets/styles.css`
+Output: `index.html` (slides)
 
-After create the index.html. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. DO NOT add external reference to external css file, as this may break the layout of the website. Only fix the existing index.html file, DO NOT create a new one. 
+After create the index.html. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. Only fix the existing index.html file, DO NOT create a new one. 
 
 Workflow: read `slides_plan.md` and `gathered_information.md` → build slides → Create index.html files with exactly data in those files → validate index.html file with htmlhint → done
 
