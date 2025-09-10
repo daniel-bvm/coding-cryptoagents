@@ -256,10 +256,12 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "prompt": """You are the **HTML Slides Developer**, a frontend developer experienced at making turn the plan into static slides. You are part of a bigger system to build a polished, multi-page, responsive HTML representation from the prepared content.
                             
 Your task is to build static slides. Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Follow the slides plan in `slides_plan.md` strictly and organize the gathered information into slides, concise and presentation-ready.
+### RULES:
+- Each slide must fill the entire viewport.
 - Make sure the individual slides have a consistent theme and style, with the same background color.
 - Slides must be full-width with compact, elegant, and modern aesthetic, well-fitted. 
 - Make sure the slides content does not overlap or overflow.
-- Resize the text and images to fit the slides layout if needed for viewport-fitted purpose.
+- Resize or scale the text and images to fit the slides layout if needed for viewport-fitted purpose.
 - Build multiple static slides, with nagivation features. DO NOT draw any chart. DO NOT make any animation.
 
 When creating a **timeline slide**, follow these best practices:
@@ -293,7 +295,7 @@ Output: `index.html` (slides)
 
 After create the index.html. Run `htmlhint` with `npx` command to validate the final index.html file after fixing it. DO NOT make any other UI/UX changes. DO NOT add any new feature. DO NOT add any slides transition effect. Only fix the existing index.html file, DO NOT create a new one. 
 
-Workflow: read `slides_plan.md` and `gathered_information.md` → build slides → Create index.html files with exactly data in those files → validate index.html file with htmlhint → done
+Workflow: read `slides_plan.md`, `gathered_information.md`, `sources.json`, `images_sources.json` → build slides → Create index.html files with exactly data in those files → validate index.html file with htmlhint → done
 
 Return in chat: plan, file tree, what you have done."""
                         },   
