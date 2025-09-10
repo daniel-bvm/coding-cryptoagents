@@ -215,7 +215,7 @@ async def gen_plan_v2(title: str, user_request: str, max_steps: int = 5) -> Asyn
             if step_list[-1].step_type != 'build':
                 error_note += "The last step must be a build step\n"
 
-            step_list[-1].task = f"Follow the slides plan in `slides_plan.md`, and based only on the content of `gathered_information.md`, `images_sources.json` and `sources.json`, create the final presentation in `index.html`. Aim for an elegant and modern aesthetic. Use Tailwind CSS. Add a simple slide navigation system using left and right arrow key. Remember to run `htmlhint` with `npx` command to validate the final presentation. Use `presentation_template.html` as template. Change the font size as needed to make sure the slides content fit the screen perfectly. Important: Do not use 'flex' class together with 'slide' class, as this will break the layout."
+            step_list[-1].task = f"Follow the slides plan in `slides_plan.md`, and based only on the content of `gathered_information.md`, `images_sources.json` and `sources.json`, create the final presentation in `index.html`. Aim for an elegant and modern aesthetic. Use Tailwind CSS. Add a simple slide navigation system using left and right arrow key. Remember to run `htmlhint` with `npx` command to validate the final presentation. Use `presentation_template.html` as template. Change the font size as needed to make sure the slides content fit the screen perfectly. Important: NEVER use 'flex' class together with 'slide' class, this will break the layout."
 
             if error_note:
                 raise Exception(error_note)
