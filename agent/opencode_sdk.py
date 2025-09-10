@@ -25,7 +25,7 @@ async def find_opencode_binary() -> str:
 
 async def call_opencode_api_query(
     session_id: str,
-    agent: Literal["research", "plan", "build"],
+    agent: Literal["research", "plan", "build", "revise"],
     system: str,
     message: str | list[dict],
     model_provider: str,
@@ -157,7 +157,7 @@ class OpenCodeSDKClient:
 
     async def query(
         self, 
-        agent: Literal["research", "plan", "build"], 
+        agent: Literal["research", "plan", "build", "revise"], 
         system: str,
         message: str | list[dict],
         model_provider: str = settings.llm_model_provider,

@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 
 ONE_SHOT_TEMPLATE = """
-You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps. Each step must be one of: research (deep research for the presentation), plan (plan slides structure and content), build (create the presentation index.html). The plan should have 3 steps.
+You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps. Each step must be one of: research (deep research for the presentation), plan (plan slides structure and content), build (create the presentation index.html), revise (fix bug in the presentation). The plan should have 4 steps.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
@@ -68,15 +68,17 @@ Strict anti-hallucination rules:
 - For LaTeX sources: preserve equations verbatim and plan to render them via MathJax/KaTeX in HTML.
 - For any content: maintain original meaning; avoid interpretations not explicitly supported by sources.
 
-The plan should strictly follow the 3-steps process below:
+The plan should strictly follow the 4-steps process below:
 1) Content Preparation (research): deep research for the presentation and write a detailed report.
 2) Slides Planning (plan): plan the structure and content of the slides
 3) HTML Generation (build): read the report and the slides plan, build the presentation index.html
+4) Reviser (revise): fix bug in the presentation index.html
 
 Step-specific deliverables:
 - Step 1 (Deep Research): `slides/gathered_information.md` (report), `slides/sources.json`, `slides/images_sources.json`
 - Step 2 (Slides Planning): `slides/slides_plan.md`
 - Step 3 (HTML Generation): `index.html` (main presentation)
+- Step 4 (Reviser): `index.html` after bug fixing
 
 Use the user's tone of voice for connective prose only;
 
@@ -210,15 +212,17 @@ async def gen_plan_v2(title: str, user_request: str, max_steps: int = 5) -> Asyn
             step_data: dict = json.loads(repair_json(response_text))
             step_list = StepV2List.validate_python(step_data)
 
-            if step_list[0].step_type != 'research':
-                error_note += "The first step must be a research step\n"
-            if step_list[-1].step_type != 'build':
-                error_note += "The last step must be a build step\n"
-
-            step_list[-1].task = f"Follow the slides plan in `slides_plan.md`, and based only on the content of `gathered_information.md`, `images_sources.json` and `sources.json`, create the final presentation in `index.html`. Aim for an elegant and modern aesthetic. Use Tailwind CSS. Add a simple slide navigation system using left and right arrow key. Remember to run `htmlhint` with `npx` command to validate the final presentation. Use `presentation_template.html` as template. Change the font size as needed to make sure the slides content fit the screen perfectly. Important: NEVER use 'flex' class together with 'slide' class, this will break the layout."
+            # if step_list[0].step_type != 'research':
+            #     error_note += "The first step must be a research step\n"
+            # if step_list[-1].step_type != 'build':
+            #     error_note += "The last step must be a build step\n"
 
             if error_note:
                 raise Exception(error_note)
+
+            for step in step_list:
+                if step.step_type == 'build':
+                    step.task = f"Follow the slides plan in `slides_plan.md`, and based only on the content of `gathered_information.md`, `images_sources.json` and `sources.json`, create the final presentation in `index.html`. Use `presentation_template.html` as template. Use Tailwind CSS. Aim for elegant and modern aesthetic. Use appropriate text color to ensure readability. Each slide must fill the entire viewport. Make static slides, DO NOT use any animation. Remember to run `htmlhint` with `npx` command to validate the final presentation."
 
             for step in step_list:
                 logger.info(f"Added {step.step_type} step: {step.task} (Reason: {step.reason}; Expectation: {step.expectation})")

@@ -110,13 +110,13 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 ## Input: none
 
 ## Output (save in `slides/`)  
-- `gathered_information.md` → Detailed report of all information gathered from the deep research process.
-- `sources.json` → citations with URL + retrieval date
-- `images_sources.json` → all images found from pexels API, with caption and all urls ('original', 'large2x', 'large', 'medium', 'small', 'portrait', 'landscape', 'tiny')
+- `gathered_information.md`: Detailed report of all information gathered from the deep research process.
+- `sources.json`: citations with URL + retrieval date
+- `images_sources.json`: all images found from pexels API, with caption and all urls ('original', 'large2x', 'large', 'medium', 'small', 'portrait', 'landscape', 'tiny')
 
 ## Workflow
-1. **Deep Research** → Perform a deep research to gather detailed information about the presentation content (using Tavily search / webfetch tool calls). Perform at least 5 search or webfetch tool calls. Write a detailed report of all gathered information to `gathered_information.md`. Write all sources to `sources.json`.
-2. **Image Search** → search for images relevant to the presentation. Write this information to `images_sources.json`.
+1. **Deep Research**: Perform a deep research to gather detailed information about the presentation content (using Tavily search / webfetch tool calls). Perform at least 5 search or webfetch tool calls. Write a detailed report of all gathered information to `gathered_information.md`. Write all sources to `sources.json`.
+2. **Image Search**: search for images relevant to the presentation. Write this information to `images_sources.json`.
 
 ## Rules
 - Prioritize provided docs; mark uncertain info as *Unknown*  
@@ -154,15 +154,15 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 
 ## Input
 - Provided documents (optional)
-- `gathered_information.md` → Detailed report of all information gathered from the deep research process.
-- `images_sources.json`, `sources.json` → All images and sources found from the deep research process.
+- `gathered_information.md`: Detailed report of all information gathered from the deep research process.
+- `images_sources.json`, `sources.json`: All images and sources found from the deep research process.
 
 ## Output (save in `slides/`)  
-- `slides_plan.md` → A content and visual plan for the slides in the presentation with images found from the deep research process.
+- `slides_plan.md`: A content and visual plan for the slides in the presentation with images found from the deep research process.
 
 ## Workflow
-1. **Read report** → Read `gathered_information.md`, `images_sources.json`, `sources.json`
-2. **Slides Planning** → Write the content and visual plan for the slides in `slides_plan.md`.
+1. **Read report**: Read `gathered_information.md`, `images_sources.json`, `sources.json`
+2. **Slides Planning**: Write the content and visual plan for the slides in `slides_plan.md`.
 
 ## Rules
 - Never fabricate data, quotes, or claims.  
@@ -348,6 +348,46 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 
 # Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
 #                         }
+                        "reviser": {
+                            "description": "Fix bug in the presentation index.html.",
+                            "mode": "subagent",
+                            "temperature": 0.2,
+                            "tools": {
+                                "write": True,
+                                "edit": True,
+                                "read": True,
+                                "grep": True,
+                                "glob": True,
+                                "list": True,
+                                "patch": True,
+                                "bash": False,
+                                "webfetch": False,
+                                "pexels_*": False,
+                                "tavily_*": False,
+                                "finance_*": False,
+                                "todowrite": True,
+                                "todoread": True
+                            },
+                            "prompt": """You are the **Slides Reviser Agent**, an expert at fixing layout issues in the presentation. Your job is to:
+1) Remove the 'flex' class in all <div> elements that also have the 'slide' class (as this will break the layout)
+2) Check and report any other layout issues in the index.html file (except the aforementioned one). Only report the issues, DO NOT attempt to fix them.
+
+## Input
+- `index.html`: The presentation index.html file.
+
+## Output (save in `slides/`)  
+- `index.html`: The presentation index.html file after fixing the layout issues.
+- `layout_issues.md`: A report of all layout issues that you noticed.
+
+## Workflow
+1. **Read index.html**: Read `index.html`.
+2. Remove the 'flex' class in all <div> elements that have the 'slide' class.
+3. Check and report any other layout issues in the index.html file.
+
+## Return in Chat
+- All layout issues that you noticed
+"""
+                        },
                     },
                     "permission": {
                         "*": "allow"
