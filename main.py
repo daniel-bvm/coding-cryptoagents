@@ -88,7 +88,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                         "deep-research": {
                             "description": "Plan research, analyze, and write report for presentations; fetch illustrative images via Pexels; use Tavily to search and fetch web content when needed.",
                             "mode": "subagent",
-                            "temperature": 0.2,
+                            "temperature": 0.6,
                             "tools": {
                                 "write": True,
                                 "edit": True,
@@ -129,7 +129,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                         "content-prep": {
                             "description": "Write overall presentation outline.",
                             "mode": "subagent",
-                            "temperature": 0.2,
+                            "temperature": 0.6,
                             "tools": {
                                 "write": True,
                                 "edit": True,
@@ -177,7 +177,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 #                         "slide-builder": {
 #                             "description": "Convert prepared markdown content into individual HTML slides with Material Design principles and MUI components.",
 #                             "mode": "subagent",
-#                             "temperature": 0.1,
+#                             "temperature": 0.6,
 #                             "tools": {
 #                                 "write": True,
 #                                 "edit": True,
@@ -319,7 +319,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 #                         "developer": {
 #                             "description": "Turn prepared content into a visually stunning, responsive, accessible, stunning HTML representation, page by page and section by section.",
 #                             "mode": "subagent",
-#                             "temperature": 0.2,
+#                             "temperature": 0.6,
 #                             "tools": {
 #                                 "write": True,
 #                                 "edit": True,
@@ -349,9 +349,9 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 # Return in chat: plan, file tree, what you have done. You should use unsplash tools to search for images for any purposes from demo, placeholders, etc. Remember to include links, urls point to any referenced resources."""
 #                         }
                         "reviser": {
-                            "description": "Fix bug in the presentation index.html.",
+                            "description": "Fix layout issues in the presentation index.html.",
                             "mode": "subagent",
-                            "temperature": 0.2,
+                            "temperature": 0.6,
                             "tools": {
                                 "write": True,
                                 "edit": True,
@@ -370,13 +370,17 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             },
                             "prompt": """You are the **Slides Reviser Agent**, an expert at fixing layout issues in the presentation. Your job is to:
 1) Remove the 'flex' class in all <div> elements that also have the 'slide' class (as this will break the layout)
-2) Check and report any other layout issues in the index.html file (except the aforementioned one). Only report the issues, DO NOT attempt to fix them.
+2) Check and report any other layout issues in the index.html file.
+
+## Rules
+- Only report the issues, DO NOT attempt to fix them.
+- DO NOT add any other navigation method.
 
 ## Input
 - `index.html`: The presentation index.html file.
 
 ## Output (save in `slides/`)  
-- `index.html`: The presentation index.html file after fixing the layout issues.
+- `index.html`: The presentation index.html file.
 - `layout_issues.md`: A report of all layout issues that you noticed.
 
 ## Workflow
