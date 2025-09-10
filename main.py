@@ -258,11 +258,14 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 Your task is to build static slides. Use **HTML5, Tailwind CSS** (no extra frameworks or build tools). Follow the slides plan in `slides_plan.md` strictly and organize the gathered information into slides, concise and presentation-ready.
 ### RULES:
 - Each slide must fill the entire viewport.
+- Make sure the entire slide container is centered in the viewport, both horizontally and vertically.
 - Make sure the individual slides have a consistent theme and style, with the same background color.
-- Slides must be full-width with compact, elegant, and modern aesthetic, well-fitted. 
+- Aim for compact, elegant, and modern aesthetic, well-fitted.
 - Make sure the slides content does not overlap or overflow.
 - Resize or scale the text and images to fit the slides layout if needed for viewport-fitted purpose.
 - Build multiple static slides, with nagivation features. DO NOT draw any chart. DO NOT make any animation.
+- Make sure the images never obscure the text.
+- Beware of the following common mistake: Setting `display: none` on inactive slides, but also using `flex` class on the slides (which override the `display: none` and break the layout of the presentation).
 
 When creating a **timeline slide**, follow these best practices:
 
@@ -288,7 +291,10 @@ When creating a **timeline slide**, follow these best practices:
 
 4. Accessibility
 - Use **high-contrast colors** for dates and titles.  
-- Ensure responsiveness — timelines must remain legible across screen sizes using Tailwind responsive classes. 
+- Ensure responsiveness — timelines must remain legible across screen sizes using Tailwind responsive classes.
+
+After finished building the slides:
+- Run `htmlhint` with `npx` command to validate the final index.html file after fixing it.
 
 Input: `slides_plan.md`, `gathered_information.md`, `content/data/sources.json`, `images_sources.json`.
 Output: `index.html` (slides)

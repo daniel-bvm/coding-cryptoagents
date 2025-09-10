@@ -73,11 +73,10 @@ The plan should strictly follow the 3-steps process below:
 2) Slides Planning (plan): plan the structure and content of the slides
 3) HTML Generation (finalize): read the report and the slides plan, and build the main index.html with navigation and dynamic slide loading functionality, responsive HTML slides with proper formatting, styling, and image integration
 
-
 Step-specific deliverables:
 - Step 1 (Deep Research): `slides/gathered_information.md` (report), `slides/sources.json`, `slides/images_sources.json`
 - Step 2 (Slides Planning): `slides/slides_plan.md`
-- Step 3 (HTML Generation): `index.html` files (HTML slides), `assets/styles.css`
+- Step 3 (HTML Generation): `index.html` files (HTML slides)
 
 Use the user's tone of voice for connective prose only;
 
