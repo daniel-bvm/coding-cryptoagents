@@ -291,7 +291,10 @@ When creating a **timeline slide**, follow these best practices:
 
 4. Accessibility
 - Use **high-contrast colors** for dates and titles.  
-- Ensure responsiveness — timelines must remain legible across screen sizes using Tailwind responsive classes. 
+- Ensure responsiveness — timelines must remain legible across screen sizes using Tailwind responsive classes.
+
+After finished building the slides:
+- Run `htmlhint` with `npx` command to validate the final index.html file after fixing it.
 
 Input: `slides_plan.md`, `gathered_information.md`, `content/data/sources.json`, `images_sources.json`.
 Output: `index.html` (slides)
