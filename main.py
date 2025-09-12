@@ -209,6 +209,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 - Divide the report `gathered_information.md` into units of content with appropriate images from `images_sources.json` that would well-fitted on a single presentation slide. Each unit should be self-contained, covering one clear idea, argument, or related set of points. Avoid making slides too granular (just one fact or sentence) or too broad (multiple unrelated topics).
 - Ensure the plan flows logically, from introduction to conclusion.
 - Keep slides concise: avoid merging unrelated content into the same slide.
+- Each slide must contain 5-7 lines or 40 words at most.
 
 ## Input
 - Provided documents (optional)
@@ -264,17 +265,40 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 - Cards/containers must be **equal width within a slide**.  
 - Favor **minimal, elegant, modern aesthetics**.  
 - Ensure **high contrast colors** between text and background for readability.
-- Images must **never obscure text**. If they reduce clarity → remove them.  
-- Text must be concise: **max 5–7 lines or 40 words per slide**.  
+- Images must **never obscure text**. If they reduce clarity → remove them.   
 - Wrap all text in a **card/container** for structure.  
 
 ---
 
-### 📑 CONTENT RULES
-- Follow `slides_plan.md` strictly for structure.  
-- Use `gathered_information.md`, `sources.json`, and `images_sources.json` for content and visuals.  
-- You may omit images if they compromise clarity.  
-- DO NOT invent new text or features.  
+### 🎨 COLOR & READABILITY RULES
+- Always use **high-contrast text and background combinations**.  
+- Text colors are **not limited to white or black**.  
+  - On **dark or gradient backgrounds**, use **light/bright text** (white, yellow, lime, cyan, pink, orange).  
+  - On **light backgrounds**, use **dark/strong text** (black, navy, indigo, emerald, purple).  
+- Never allow text color to be too close to the card/container background color.  
+- Use Tailwind’s utility classes to enforce readability:  
+  - Examples: `text-white`, `text-black`, `text-yellow-200`, `text-cyan-100`, `text-emerald-900`, `text-indigo-900`.  
+- For headings, prefer **bold and vivid colors** (e.g., `text-yellow-300` on dark bg, or `text-indigo-800` on light bg) to make slides more stunning and noticeable.  
+- Body text must remain **clear and simple**, no fancy color blends.  
+- **Never** let text and background colors be similar — enforce high contrast.
+- No scrolling content allowed in the slides.
+---
+
+### 🖼 IMAGE RULES
+- If an image is specified but it causes layout imbalance, readability issues, or looks awkward → **resize the image** or **scale up the image**, to be fitted with the slide layout. If can not be fitted, remove the image.
+- Images must always be **aligned according to the slide plan** (e.g., full-width banner, side-by-side with text, or background).  
+- Never place images floating in corners or positions not defined in the plan.  
+- Images must **not reduce clarity or symmetry**.   
+
+### 🎨 LAYOUT RULES
+- All slide content must be **centered both vertically and horizontally**.  
+- Do not leave excessive blank space. Resize or adjust spacing to achieve a balanced look.  
+- Backgrounds must use **gradient or bold colors**, never plain white unless required by `slides_plan.md`.  
+
+### 📑 CONTENT PRIORITY
+1. Text from `slides_plan.md` (always first).  
+2. Layout instructions in `slides_plan.md` (strictly followed).  
+3. Images → optional, only if they fit naturally and don’t break layout.  
 
 ---
 
