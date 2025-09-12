@@ -282,23 +282,47 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 - Body text must remain **clear and simple**, no fancy color blends.  
 - **Never** let text and background colors be similar — enforce high contrast.
 - No scrolling content allowed in the slides.
+- **Never** let text and background colors be similar — enforce high contrast.
+- Always wrap text in a card with both `bg-*` and `text-*` classes explicitly set.
+- Use only the following **safe color pairs**:
+
+  #### ✅ Light text on dark background
+  - `bg-slate-900 text-white`
+  - `bg-indigo-900 text-yellow-200`
+  - `bg-emerald-800 text-cyan-100`
+  - `bg-gradient-to-r from-purple-900 to-indigo-900 text-yellow-200`
+
+  #### ✅ Dark text on light background
+  - `bg-white text-gray-900`
+  - `bg-yellow-100 text-indigo-900`
+  - `bg-cyan-100 text-emerald-900`
+  - `bg-gradient-to-r from-yellow-100 to-orange-200 text-gray-900`
+
+- If agent cannot decide → **default to `bg-slate-900 text-white`**.
+- Headings: bold + accent color (e.g., `text-yellow-300`, `text-pink-400`) but **never close to card background**.
+- Body text: `text-gray-100` (on dark bg) or `text-gray-900` (on light bg).
+
 ---
 
 ### 🖼 IMAGE RULES
-- If an image is specified but it causes layout imbalance, readability issues, or looks awkward → **resize the image** or **scale up the image**, to be fitted with the slide layout. If can not be fitted, remove the image.
+- If an image is specified but it causes layout imbalance, readability issues, or looks awkward → **resize the image** to be fitted with the slide layout, if not, **remove the image**.
 - Images must always be **aligned according to the slide plan** (e.g., full-width banner, side-by-side with text, or background).  
 - Never place images floating in corners or positions not defined in the plan.  
 - Images must **not reduce clarity or symmetry**.   
+- Never make the image too big that cover all the slide or 1-image-slide.
 
 ### 🎨 LAYOUT RULES
 - All slide content must be **centered both vertically and horizontally**.  
 - Do not leave excessive blank space. Resize or adjust spacing to achieve a balanced look.  
 - Backgrounds must use **gradient or bold colors**, never plain white unless required by `slides_plan.md`.  
+- Every card must include padding (`p-6 md:p-8`) and rounded corners (`rounded-2xl shadow-lg`).
+- Card background (`bg-*`) and text (`text-*`) must always follow the safe color pairs defined above.
+
 
 ### 📑 CONTENT PRIORITY
 1. Text from `slides_plan.md` (always first).  
 2. Layout instructions in `slides_plan.md` (strictly followed).  
-3. Images → optional, only if they fit naturally and don’t break layout.  
+3. Images → optional, only if they fit naturally and don’t break layout. 
 
 ---
 
@@ -336,7 +360,7 @@ When creating timeline slides:
 
 **Return in chat:** file tree, plan, and summary of changes.  
 
-DO NOT add transitions, animations, or extra UI/UX features.  
+DO NOT add transitions, animations, or extra UI/UX features. All content must be static. 
 DO NOT create a new file; only output the **final, validated `index.html`**.
 """
                         },   
