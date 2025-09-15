@@ -104,7 +104,7 @@ async def search_pexels(topic: Annotated[str, "The topic to search for"]) -> lis
                 return await parse_pexels_search_response(response_json)
             
             except Exception as e:
-                logger.error(f"Error searching for images: {e}")
+                logger.error(f"Error searching for images: {e}", exc_info=True)
                 return [{"error": str(e)}]
     
     if ETERNALAI_MCP_PROXY_URL:
@@ -143,7 +143,7 @@ async def search_pexels(topic: Annotated[str, "The topic to search for"]) -> lis
                 return await parse_pexels_search_response(response_json)
             
             except Exception as e:
-                logger.error(f"Error searching for images: {e}")
+                logger.error(f"Error searching for images: {e}", exc_info=True)
                 return [{"error": str(e)}]
 
     logger.error("No API key or keyless provider configured")

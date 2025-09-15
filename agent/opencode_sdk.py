@@ -25,7 +25,7 @@ async def find_opencode_binary() -> str:
 
 async def call_opencode_api_query(
     session_id: str,
-    agent: Literal["research", "plan", "build", "finalize"],
+    agent: Literal["research", "plan", "build", "feedback"],
     system: str,
     message: str | list[dict],
     model_provider: str,
@@ -115,7 +115,7 @@ async def wait_until_port_is_ready_to_connect(port: int, timeout: float = 60) ->
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
-                resp = await client.get(f"http://localhost:{port}/app", timeout=httpx.Timeout(1, connect=1))
+                resp = await client.get(f"http://localhost:{port}/app", timeout=httpx.Timeout(5, connect=5))
                 assert resp.status_code == 200, f"Failed to connect to OpenCode: {resp.status_code} {resp.text}"
                 return True
             except Exception as e:
@@ -157,7 +157,7 @@ class OpenCodeSDKClient:
 
     async def query(
         self, 
-        agent: Literal["research", "plan", "build", "finalize"], 
+        agent: Literal["research", "plan", "build", "feedback"], 
         system: str,
         message: str | list[dict],
         model_provider: str = settings.llm_model_provider,
