@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse, JSONResponse
+
+from agent.slide_maker import make_slides
 from .oai_models import (
     ChatCompletionRequest, 
     ChatCompletionStreamResponse,
@@ -70,3 +72,12 @@ def get_processing_url() -> dict:
         "url": f"http://localhost:12345/",
         "status": "ready"
     }
+
+
+@router.post("/test")
+async def test():
+    await make_slides(
+        presentation_title="Internet History Overview",
+        user_request="A 5-page presentation covering the key milestones and developments in internet history, from early concepts to modern-day internet. Each page should focus on a different era or major development in internet evolution.",
+        workdir="./opencode-workspace/f0d238e9bbc5473da3d06023b74a29c6",
+    )

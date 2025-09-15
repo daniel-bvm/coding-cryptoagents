@@ -227,6 +227,9 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 - Never fabricate data, quotes, or claims.  
 - Write detailed slide types (title, section, text, etc.) and layout ideas with content.
 - Only plan images for visual with proper size with the slides layout. DO NOT plan any other type of graphics.
+- When including images, always use one of the following layouts: 
++ Background image layout: the image is the background of the slide.
++ Two columns layout: content in the left column, image in the right column. 
 - DO NOT make any animation plan for the slides.
 
 ## Return in Chat
@@ -266,6 +269,7 @@ Your task is to build static stunning slides. Use **HTML5, Tailwind CSS** (no ex
 - Resize or scale the text and images to fit the slides layout if needed for viewport-fitted purpose.
 - Build multiple static slides, with nagivation features. DO NOT draw any chart. DO NOT make any animation.
 - Never let images obscure text.
+- Ensure that text in each card has contrast color with the card background.
 
 When creating a **timeline slide**, follow these best practices:
 
@@ -425,7 +429,7 @@ Return in chat: plan, file tree, what you have done."""
                 json.dump(config, f, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            logger.error(f"Error updating config: {e}")
+            logger.error(f"Error updating config: {e}", exc_info=True)
 
         if repeat_interval <= 0:
             logger.info("Config updated, stopping config update task")

@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 
 ONE_SHOT_TEMPLATE = """
-You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps. Each step must be one of: research (deep research for the presentation), plan (plan slides structure and content), finalize (create the main index.html). The plan should have at most {max_steps} steps.
+You are a planning assistant for generating professional HTML presentations from various content sources. Generate a complete plan as a list of steps. Each step must be one of: research (deep research for the presentation), plan (plan slides structure and content), build (create the main index.html). The plan should have at most {max_steps} steps.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
@@ -88,7 +88,7 @@ The user wants:
 Generate the complete plan as a JSON array of steps. Each step should have: "reason", "task", "expectation", "step_type".
 
 Respond in JSON format: [
-  {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "research/plan/build/finalize" }},
+  {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "research/plan/build" }},
   ...
 ]
 
@@ -169,6 +169,7 @@ MAX_RETRY = 5
 #         except Exception as e:
 #             logger.error(f"[2] Failed to parse response: {e}")
 
+
 async def gen_plan_v2(title: str, user_request: str, max_steps: int = 5) -> AsyncGenerator[StepV2, None]:
     logger.info(f"Generating plan for user request: {user_request} (Title: {title})")
 
@@ -213,8 +214,8 @@ async def gen_plan_v2(title: str, user_request: str, max_steps: int = 5) -> Asyn
 
             if step_list[0].step_type != 'research':
                 error_note += "The first step must be a research step\n"
-            if step_list[-1].step_type != 'finalize':
-                error_note += "The last step must be a finalize step\n"
+            if step_list[-1].step_type != 'build':
+                error_note += "The last step must be a build step\n"
 
             if error_note:
                 raise Exception(error_note)

@@ -6,6 +6,7 @@ import logging
 from typing import Optional, Union
 from agent.configs import settings
 from agent.opencode_sdk import OpenCodeSDKClient
+from agent.slide_maker import make_slides
 from agent.utils import strip_thinking_content
 import asyncio
 import glob
@@ -85,43 +86,55 @@ async def execute_plan_step(steps: StepV2, workdir: str, session_id: Optional[Un
         session_id=session_id,
     )
 
-async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None, task_id: str = None) -> ClaudeCodeStepOutput:
-    note = ""
-    async with OpenCodeSDKClient(workdir) as client:
-        for i, msg in enumerate([steps.task, 'Seems you faced an issue, please try again.', 'One last try']):
-            fixed_msg = msg + note
-            logger.info(f"Try {i+1} of 3: {fixed_msg}")
+async def execute_build_step(
+    presentation_title: str,
+    steps: StepV2,
+    workdir: str,
+    session_id: Optional[Union[int, str]] = None,
+    task_id: str = None,
+) -> ClaudeCodeStepOutput:
+    # note = ""
+    # async with OpenCodeSDKClient(workdir) as client:
+    #     for i, msg in enumerate([steps.task, 'Seems you faced an issue, please try again.', 'One last try']):
+    #         fixed_msg = msg + note
+    #         logger.info(f"Try {i+1} of 3: {fixed_msg}")
 
-            output = await client.query(
-                agent="slide-builder",
-                system=BUILD_SYSTEM_PROMPT,
-                message=[
-                    {
-                        'type': 'text',
-                        'text': fixed_msg
-                    },
-                    # {
-                    #     'type': 'text',
-                    #     'text': '<system-reminder>\nCRITICAL: Build mode ACTIVE. All of your code, resources should be written into files. Make sure all folders created before using them.</system-reminder>'
-                    # }
-                ],
-                session_id=session_id,
-                model_id=settings.llm_model_id_code,
-                task_id=task_id,
-            )
+    #         output = await client.query(
+    #             agent="slide-builder",
+    #             system=BUILD_SYSTEM_PROMPT,
+    #             message=[
+    #                 {
+    #                     'type': 'text',
+    #                     'text': fixed_msg
+    #                 },
+    #                 # {
+    #                 #     'type': 'text',
+    #                 #     'text': '<system-reminder>\nCRITICAL: Build mode ACTIVE. All of your code, resources should be written into files. Make sure all folders created before using them.</system-reminder>'
+    #                 # }
+    #             ],
+    #             session_id=session_id,
+    #             model_id=settings.llm_model_id_code,
+    #             task_id=task_id,
+    #         )
 
-            output = strip_thinking_content(output).strip()
+    #         output = strip_thinking_content(output).strip()
             
-            has_slides_html_files = len(glob.glob(os.path.join(workdir, "**/Slide_*.html"), recursive=True)) > 0
+    #         has_slides_html_files = len(glob.glob(os.path.join(workdir, "**/Slide_*.html"), recursive=True)) > 0
             
-            if output and has_slides_html_files:
-                break
+    #         if output and has_slides_html_files:
+    #             break
 
-            if i < 2:
-                await asyncio.sleep(2 ** (i + 2)) # wait for 4, 8, 16 seconds, wait until service available back
+    #         if i < 2:
+    #             await asyncio.sleep(2 ** (i + 2)) # wait for 4, 8, 16 seconds, wait until service available back
 
-    if not output:
-        raise Exception(f"Build step {steps.id} failed to generate any output")
+    # if not output:
+    #     raise Exception(f"Build step {steps.id} failed to generate any output")
+
+    output = await make_slides(
+        presentation_title,
+        steps.task,
+        workdir
+    )
 
     return ClaudeCodeStepOutput(
         step_id=steps.id,
@@ -165,6 +178,7 @@ async def execute_finalize_step(steps: StepV2, workdir: str, session_id: Optiona
 
 
 async def execute_steps_v2(
+    presentation_title: str,
     steps_type: Literal["research", "plan", "build", "finalize"], 
     steps: StepV2, 
     workdir: str,
@@ -178,7 +192,7 @@ async def execute_steps_v2(
         return await execute_plan_step(steps, workdir, session_id, task_id)
 
     if steps_type == "build":
-        return await execute_build_step(steps, workdir, session_id, task_id)
+        return await execute_build_step(presentation_title, steps, workdir, session_id, task_id)
     
     if steps_type == "finalize":
         return await execute_finalize_step(steps, workdir, session_id, task_id)

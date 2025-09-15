@@ -386,6 +386,7 @@ async def build(
         #         logger.warning(f"Slides template index.html not found at: {template_path}")
 
         step_output: ClaudeCodeStepOutput = await execute_steps_v2(
+            title,            
             composed_step.step_type, 
             composed_step, 
             workdir,

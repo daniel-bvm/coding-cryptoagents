@@ -1,9 +1,13 @@
+from pydantic import BaseModel
+
+from agent.utils import process_json_response
 from .oai_models import ChatCompletionResponse, ChatCompletionStreamResponse, ToolCall, random_uuid, ErrorResponse
 import httpx
 import json
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional, Type, TypeVar
 import logging
 from json_repair import repair_json
+from .configs import settings
 
 def repair_json_no_except(json_str: str) -> str:
     try:
@@ -183,3 +187,26 @@ async def create_streaming_response(
 
                 logger.error(f"Failed to stream response: {e}\n{curl_command}")
                 raise e
+
+
+async def call_llm_with_streaming(
+    **payload,
+):
+    completion_builder = ChatCompletionResponseBuilder()
+
+    streaming_iter = create_streaming_response(
+        settings.llm_base_url,
+        headers={"Authorization": f"Bearer {settings.llm_api_key}"},
+        **payload
+    )
+
+    async for chunk in streaming_iter:
+        if isinstance(chunk, ErrorResponse):
+            raise Exception(chunk.message)
+
+        async for chunk in streaming_iter:
+            completion_builder.add_chunk(chunk)
+
+    completion = await completion_builder.build()
+
+    return completion.choices[0].message.content
