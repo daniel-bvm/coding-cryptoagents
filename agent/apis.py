@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, Response
 from .oai_models import (
     ChatCompletionRequest, 
     ChatCompletionStreamResponse,
@@ -81,7 +81,13 @@ def get_processing_url() -> dict:
 @router.post("/share")
 async def slide_maker(request: ShareRequest):
     try:
-        await share(request.task_id)
-        return JSONResponse(ErrorResponse(message="Success", type="success", code=200).model_dump())
+        result = await share(request.task_id)
+        return {
+            "data": {
+                "url": f"https://staging.eternalai.org/artifact/{result['id']}"
+            },
+            "type": "success",
+            "code": 200
+        }
     except Exception as e:
         return JSONResponse(ErrorResponse(message=str(e), type="error", code=500).model_dump())

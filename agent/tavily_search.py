@@ -49,7 +49,7 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
                 response = await client.post(
                     f"{TAVILY_BASE_URL}/search",
                     headers={
-                        "Content-Type": "application/json",
+                        "Accept-Encoding": "identity",
                         "Authorization": f"Bearer {TAVILY_API_KEY}"
                     },
                     json=body
@@ -63,7 +63,7 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
                 return parse_tavily_search_response(response_json)
             
             except Exception as e:
-                logger.error(f"Error searching web: {e}")
+                logger.error(f"Error searching web: {e}", exc_info=True)
                 return []
     
     if ETERNALAI_MCP_PROXY_URL:
@@ -102,7 +102,7 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
                 return parse_tavily_search_response(response_json)
 
             except Exception as e:
-                logger.error(f"Error searching web: {e}")
+                logger.error(f"Error searching web: {e}", exc_info=True)
                 return []
 
     logger.error("No API key or keyless provider configured")

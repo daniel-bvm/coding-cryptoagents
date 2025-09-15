@@ -648,7 +648,7 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
             logger.error(f"Error saving chat history for task {task_id}")
 
 
-async def share(task_id: str):
+async def share(task_id: str) -> dict:
     repo = get_task_repository()
     task = repo.get_task(task_id)
     if not task:
@@ -671,9 +671,11 @@ async def share(task_id: str):
 
     user_prompt = f"Create a presentation about {task.title}. {task.expectation}"
 
-    await upload_to_vibe(
+    result = await upload_to_vibe(
         user_prompt=user_prompt,
         html=index_html
     )
 
-    return task
+    return {
+        "id": result['result']['id'],
+    }

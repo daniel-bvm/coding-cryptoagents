@@ -4,6 +4,7 @@ This keeps the admin key secure on the server side.
 """
 
 import logging
+import json
 import httpx
 from fastapi import APIRouter, HTTPException, File, UploadFile, Form
 from fastapi.responses import JSONResponse
@@ -38,7 +39,7 @@ async def init_multipart_upload(request: MultipartInitRequest):
         if not request.filename or not request.folder_name:
             raise HTTPException(status_code=400, detail="Filename and folder name are required")
             
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
                 f"{ETERNALAI_BASE_URL}/multipart/init",
                 params={"admin_key": settings.eternalai_admin_key},
@@ -202,9 +203,27 @@ async def upload_single_file(
 async def upload_to_vibe(
     user_prompt: str,
     html: str
-):
-    # TODO: Call API
-    pass
+) -> dict:
+    payload = {
+        "agent_id": 15703,
+        "prompt": user_prompt,
+        "sensitive_type": "none",
+        "content": html
+    }
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{settings.agent_backend_base_url.rstrip('/')}/feed/internal/feed/create-from-imagine",
+                headers={"api-key": settings.agent_backend_api_key},
+                json=payload
+            )
+            response.raise_for_status()
+
+            logger.info(f"Successfully uploaded to vibe: {json.dumps(response.json(), indent=2)}")
+            return response.json()
+    except Exception as e:
+        logger.error(f"Error uploading to vibe: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error uploading to vibe")
 
 
 @router.get("/health")
