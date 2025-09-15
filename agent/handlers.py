@@ -1,5 +1,7 @@
 from datetime import datetime
 from typing import Annotated
+from fastapi import HTTPException
+from agent.upload_api import upload_to_vibe
 
 RECEPTIONIST_TOOLS = [
     {
@@ -644,3 +646,34 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
     for task_id in successfull_task_ids:
         if not save_chat_history(task_id, compact_messages):
             logger.error(f"Error saving chat history for task {task_id}")
+
+
+async def share(task_id: str):
+    repo = get_task_repository()
+    task = repo.get_task(task_id)
+    if not task:
+        raise Exception("Task not found")
+
+    if task.status == "failed":
+        raise Exception("Task has failed")
+    if task.status != "completed":
+        raise Exception("Task is not completed")
+    if not task.output_directory:
+        raise Exception("Task has no output directory")
+    
+    output_directory = task.output_directory
+    index_html_files = glob.glob(os.path.join(output_directory, "**/index.html"), recursive=True)
+    if len(index_html_files) == 0:
+        raise Exception("Task has failed to create index.html file")
+    index_html_file = index_html_files[0]
+    with open(index_html_file, "r") as f:
+        index_html = f.read()
+
+    user_prompt = f"Create a presentation about {task.title}. {task.expectation}"
+
+    await upload_to_vibe(
+        user_prompt=user_prompt,
+        html=index_html
+    )
+
+    return task

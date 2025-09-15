@@ -9,14 +9,20 @@ from .oai_models import (
 from typing import AsyncGenerator
 import logging
 import time
-from agent.handlers import handle_request
+from agent.handlers import handle_request, share
 from agent.upload_api import router as upload_router
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Include upload endpoints
 router.include_router(upload_router)
+
+
+class ShareRequest(BaseModel):
+    task_id: str
+
 
 @router.post("/prompt")
 async def prompt(request: ChatCompletionRequest):
@@ -70,3 +76,12 @@ def get_processing_url() -> dict:
         "url": f"http://localhost:12345/",
         "status": "ready"
     }
+
+
+@router.post("/share")
+async def slide_maker(request: ShareRequest):
+    try:
+        await share(request.task_id)
+        return JSONResponse(ErrorResponse(message="Success", type="success", code=200).model_dump())
+    except Exception as e:
+        return JSONResponse(ErrorResponse(message=str(e), type="error", code=500).model_dump())

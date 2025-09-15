@@ -198,6 +198,15 @@ async def upload_single_file(
         logger.error(f"Error uploading single file: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+
+async def upload_to_vibe(
+    user_prompt: str,
+    html: str
+):
+    # TODO: Call API
+    pass
+
+
 @router.get("/health")
 async def health_check():
     """Health check endpoint for upload service"""
