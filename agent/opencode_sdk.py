@@ -115,7 +115,7 @@ async def wait_until_port_is_ready_to_connect(port: int, timeout: float = 60) ->
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
-                resp = await client.get(f"http://localhost:{port}/app", timeout=httpx.Timeout(1, connect=1))
+                resp = await client.get(f"http://localhost:{port}/app", timeout=httpx.Timeout(5, connect=5))
                 assert resp.status_code == 200, f"Failed to connect to OpenCode: {resp.status_code} {resp.text}"
                 return True
             except Exception as e:
