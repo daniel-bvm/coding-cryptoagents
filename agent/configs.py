@@ -22,6 +22,10 @@ class Settings(BaseSettings):
         alias="OPENCODE_DIRECTORY", 
         default="./opencode-workspace" if not os.path.exists("/storage") else "/storage/opencode-workspace"
     )
+    opencode_session_directory: str = Field(
+        alias="OPENCODE_SESSION_DIRECTORY", 
+        default="./opencode-session" if not os.path.exists("/storage") else "/storage/opencode-session"
+    )
     
     tavily_api_key: str = Field(alias="TAVILY_API_KEY", default="")
     financial_datasets_api_key: str = Field(alias="FINANCIAL_DATASETS_API_KEY", default="")

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Annotated
 from fastapi import HTTPException
-from agent.upload_api import upload_to_vibe
+from agent.upload_api import upload_to_feed
 
 RECEPTIONIST_TOOLS = [
     {
@@ -38,7 +38,7 @@ The current timestamp is {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}.
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
-from agent.utils import refine_chat_history, refine_assistant_message, save_chat_history
+from agent.utils import refine_chat_history, refine_assistant_message, save_chat_history, truncate_string
 from agent.configs import settings
 from agent.oai_streaming import create_streaming_response, ChatCompletionResponseBuilder
 from typing import AsyncGenerator, Any, List
@@ -51,7 +51,7 @@ import os
 import shutil
 import httpx
 from agent.planner import StepV2, gen_plan_v2
-from agent.app_models import StepOutput, ClaudeCodeStepOutput
+from agent.app_models import AdditionalParams, StepOutput, ClaudeCodeStepOutput
 from agent.executor import execute_steps_v2
 from agent.opencode_sdk import OpenCodeSDKClient
 from agent.oai_models import ChatCompletionStreamResponse
@@ -497,9 +497,14 @@ async def build(
 
     yield recap
 
-async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatCompletionStreamResponse | ChatCompletionResponse, None]:
+async def handle_request(
+    request: ChatCompletionRequest,
+    additional_params: AdditionalParams
+) -> AsyncGenerator[ChatCompletionStreamResponse | ChatCompletionResponse, None]:
     messages = request.messages
     assert len(messages) > 0, "No messages in the request"
+
+    source = additional_params.source or "unknown"
  
     # Extract the latest user message for Tavily search
     latest_user_message = ""
@@ -647,6 +652,13 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
         if not save_chat_history(task_id, compact_messages):
             logger.error(f"Error saving chat history for task {task_id}")
 
+    if source == "feed":
+        try:
+            result = await share(successfull_task_ids[-1])
+            logger.info(f"Successfully shared task {successfull_task_ids[-1]} to feed, url: {result['url']}")
+        except Exception as e:
+            logger.error(f"Error sharing task {successfull_task_ids[-1]} to feed: {e}", exc_info=True)
+
 
 async def share(task_id: str) -> dict:
     repo = get_task_repository()
@@ -671,11 +683,14 @@ async def share(task_id: str) -> dict:
 
     user_prompt = f"Create a presentation about {task.title}. {task.expectation}"
 
-    result = await upload_to_vibe(
+    logger.info(f"Sharing task {task_id} (user prompt: '{truncate_string(user_prompt)}') to feed")
+
+    result = await upload_to_feed(
         user_prompt=user_prompt,
         html=index_html
     )
 
     return {
         "id": result['result']['id'],
+        "url": result['url']
     }

@@ -1,12 +1,14 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse, JSONResponse, Response
+
+from agent.app_models import AdditionalParams, ShareRequest
 from .oai_models import (
     ChatCompletionRequest, 
     ChatCompletionStreamResponse,
     random_uuid,
     ErrorResponse
 )
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
 import logging
 import time
 from agent.handlers import handle_request, share
@@ -20,17 +22,19 @@ router = APIRouter()
 router.include_router(upload_router)
 
 
-class ShareRequest(BaseModel):
-    task_id: str
-
-
 @router.post("/prompt")
-async def prompt(request: ChatCompletionRequest):
+async def prompt(
+    request: ChatCompletionRequest,
+    original_request: Request
+):
     enqueued = time.time()
     ttft, tps, n_tokens = float("inf"), None, 0
     req_id = request.request_id or f"req-{random_uuid()}"
 
-    generator = handle_request(request)
+    orig_data: dict[str, Any] = await original_request.json()
+    additional_params = AdditionalParams.model_validate(orig_data)
+
+    generator = handle_request(request, additional_params)
 
     if request.stream:
         async def to_bytes(gen: AsyncGenerator) -> AsyncGenerator[bytes, None]:
@@ -69,6 +73,7 @@ async def prompt(request: ChatCompletionRequest):
 
         except Exception as e:
             return JSONResponse(ErrorResponse(message="Unknown error", type="unknown_error", code=500).model_dump())
+
 
 @router.get("/processing-url")
 def get_processing_url() -> dict:

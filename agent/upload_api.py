@@ -200,7 +200,7 @@ async def upload_single_file(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def upload_to_vibe(
+async def upload_to_feed(
     user_prompt: str,
     html: str
 ) -> dict:
@@ -219,8 +219,10 @@ async def upload_to_vibe(
             )
             response.raise_for_status()
 
-            logger.info(f"Successfully uploaded to vibe: {json.dumps(response.json(), indent=2)}")
-            return response.json()
+            response = response.json()
+            response["url"] = f"https://staging.eternalai.org/artifact/{response['result']['id']}"
+
+            return response
     except Exception as e:
         logger.error(f"Error uploading to vibe: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error uploading to vibe")
