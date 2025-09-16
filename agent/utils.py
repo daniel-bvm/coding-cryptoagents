@@ -531,3 +531,9 @@ def process_json_response(content: str):
     content = remove_code_blocks(content)
     content = repair_json(content)
     return content
+
+
+def truncate_string(content: str, max_length: int = 128) -> str:
+    if len(content) > max_length:
+        return content[:max_length] + "..."
+    return content

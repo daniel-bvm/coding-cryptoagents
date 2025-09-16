@@ -62,8 +62,8 @@ async def call_opencode_api_query(
         session_response = requests.get(url)
         session = session_response.json()
 
-        os.makedirs(f"./opencode-session/{task_id}", exist_ok=True)
-        with open(f"./opencode-session/{task_id}/{session_id}.json", "w") as f:
+        os.makedirs(f"{settings.opencode_session_directory}/{task_id}", exist_ok=True)
+        with open(f"{settings.opencode_session_directory}/{task_id}/{session_id}.json", "w") as f:
             json.dump(session, f, indent=2)
         
         if response.status_code == 200:
