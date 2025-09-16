@@ -13,7 +13,7 @@ PLANNING_SYSTEM_PROMPT = """Your task is to collect information that needed to r
 
 BUILD_SYSTEM_PROMPT = """Your task is to build the project, a static site or a blog post based on the plan. Strictly, follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Code and assets must be written into files. Your final output should be short, talk about what you have done (no code explanation in detail is required)."""
 
-async def execute_research_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None) -> ClaudeCodeStepOutput:
+async def execute_research_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None, task_id: str = None) -> ClaudeCodeStepOutput:
 
     async with OpenCodeSDKClient(workdir) as client:
         for i, msg in enumerate([steps.task, 'Seems you faced an issue, please try again.', 'One last try']):
@@ -25,6 +25,7 @@ async def execute_research_step(steps: StepV2, workdir: str, session_id: Optiona
                 message=msg,
                 session_id=session_id,
                 model_id=settings.llm_model_id,
+                task_id=task_id,
             )
 
             output = strip_thinking_content(output).strip()
@@ -44,7 +45,7 @@ async def execute_research_step(steps: StepV2, workdir: str, session_id: Optiona
         session_id=session_id
     )
 
-async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None) -> ClaudeCodeStepOutput:
+async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None, task_id: str = None) -> ClaudeCodeStepOutput:
     async with OpenCodeSDKClient(workdir) as client:
         for i, msg in enumerate([steps.task, 'Seems you faced an issue, please try again.', 'One last try']):
             logger.info(f"Try {i+1} of 3: {msg}")
@@ -64,6 +65,7 @@ async def execute_build_step(steps: StepV2, workdir: str, session_id: Optional[U
                 ],
                 session_id=session_id,
                 model_id=settings.llm_model_id_code,
+                task_id=task_id,
             )
 
             output = strip_thinking_content(output).strip()
@@ -87,12 +89,13 @@ async def execute_steps_v2(
     steps_type: Literal["research", "build"], 
     steps: StepV2, 
     workdir: str,
-    session_id: Union[int, str]
+    session_id: Union[int, str],
+    task_id: str,
 ) -> ClaudeCodeStepOutput:
     if steps_type == "research":
-        return await execute_research_step(steps, workdir, session_id)
+        return await execute_research_step(steps, workdir, session_id, task_id)
 
     if steps_type == "build":
-        return await execute_build_step(steps, workdir, session_id)
+        return await execute_build_step(steps, workdir, session_id, task_id)
 
     raise ValueError(f"Invalid steps type: {steps_type}")

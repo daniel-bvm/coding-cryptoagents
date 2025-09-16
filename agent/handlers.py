@@ -1,3 +1,6 @@
+import agent.__middleware
+from agent.upload_api import upload_to_feed # do not remove this
+
 RECEPTIONIST_TOOLS = [
     {
         "type": "function",
@@ -35,7 +38,7 @@ In other cases, you are free to guess what they want and call the explain tool. 
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
-from agent.utils import refine_chat_history, refine_assistant_message, save_chat_history
+from agent.utils import refine_chat_history, refine_assistant_message, save_chat_history, truncate_string
 from agent.configs import settings
 from agent.oai_streaming import create_streaming_response, ChatCompletionResponseBuilder
 from typing import AsyncGenerator, Any, List
@@ -46,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 import os
 from agent.planner import StepV2, gen_plan
-from agent.app_models import StepOutput, ClaudeCodeStepOutput
+from agent.app_models import AdditionalParams, StepOutput, ClaudeCodeStepOutput
 from agent.executor import execute_steps_v2
 from agent.opencode_sdk import OpenCodeSDKClient
 from agent.oai_models import ChatCompletionStreamResponse
@@ -401,7 +404,8 @@ async def build(
         yield "Planner is quite tired now, he's sleeping. The task can not be completed at this moment, please come back later."
         return
 
-
+    workdir = os.path.abspath(os.path.join(settings.opencode_directory, task_id))
+    os.makedirs(workdir, exist_ok=True)
     
     # Publish plan completion event
     try:
@@ -444,15 +448,13 @@ async def build(
     segmented_steps: List[List[StepV2]] = segment_steps_by_type(steps)
     steps_output: list[StepOutput] = []
     
-    async with OpenCodeSDKClient(workdir) as client:
-        session_id = await client.create_session(title)
-
-    logger.info(f"Task {task_id}; Building... (Session ID: {session_id})")
-
     yield wrap_chunk(random_uuid(), f"<action>Building...</action>\n")
 
     for i in range(len(steps_output), len(segmented_steps)):
-        logger.info(f"Task {task_id} ({expectation[:128]}); Progress: {len(steps_output)}/{len(segmented_steps)}")
+        async with OpenCodeSDKClient(workdir) as client:
+            session_id = await client.create_session(title)
+
+        logger.info(f"Task {task_id} ({expectation[:128]}); Progress: {len(steps_output)}/{len(segmented_steps)}; Session ID: {session_id}")
         
         ssteps = segmented_steps[i]
 
@@ -531,7 +533,8 @@ async def build(
             composed_step.step_type, 
             composed_step, 
             workdir,
-            session_id
+            session_id,
+            task_id,
         )
 
         logger.info(f"Task {task_id} ({expectation[:128]}...); Step output: {step_output.full}")
@@ -636,9 +639,13 @@ async def build(
 
     yield recap
 
-async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatCompletionStreamResponse | ChatCompletionResponse, None]:
+async def handle_request(
+    request: ChatCompletionRequest,
+    additional_params: AdditionalParams
+) -> AsyncGenerator[ChatCompletionStreamResponse | ChatCompletionResponse, None]:
     messages = request.messages
     assert len(messages) > 0, "No messages in the request"
+    source = additional_params.source or "unknown"
  
     system_prompt = RECEPTIONIST_SYSTEM_PROMPT
     messages: list[dict[str, Any]] = refine_chat_history(messages, system_prompt)
@@ -754,3 +761,46 @@ async def handle_request(request: ChatCompletionRequest) -> AsyncGenerator[ChatC
     for task_id in successfull_task_ids:
         if not save_chat_history(task_id, compact_messages):
             logger.error(f"Error saving chat history for task {task_id}")
+
+    if source == "feed":
+        try:
+            result = await share(successfull_task_ids[-1])
+            logger.info(f"Successfully shared task {successfull_task_ids[-1]} to feed, url: {result['url']}")
+        except Exception as e:
+            logger.error(f"Error sharing task {successfull_task_ids[-1]} to feed: {e}", exc_info=True)
+
+
+async def share(task_id: str) -> dict:
+    repo = get_task_repository()
+    task = repo.get_task(task_id)
+    if not task:
+        raise Exception("Task not found")
+
+    if task.status == "failed":
+        raise Exception("Task has failed")
+    if task.status != "completed":
+        raise Exception("Task is not completed")
+    if not task.output_directory:
+        raise Exception("Task has no output directory")
+    
+    output_directory = task.output_directory
+    index_html_files = glob.glob(os.path.join(output_directory, "**/index.html"), recursive=True)
+    if len(index_html_files) == 0:
+        raise Exception("Task has failed to create index.html file")
+    index_html_file = index_html_files[0]
+    with open(index_html_file, "r") as f:
+        index_html = f.read()
+
+    user_prompt = f"Create a presentation about {task.title}. {task.expectation}"
+
+    logger.info(f"Sharing task {task_id} (user prompt: '{truncate_string(user_prompt)}') to feed")
+
+    result = await upload_to_feed(
+        user_prompt=user_prompt,
+        html=index_html
+    )
+
+    return {
+        "id": result['result']['id'],
+        "url": result['url']
+    }

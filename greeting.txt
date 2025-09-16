@@ -1,9 +1,0 @@
-Hi, I’m the ELI5 Agent.
-I specialize in researching complex topics and breaking them down into simple, visual explanations for easy understanding.
-
-For example, you could ask me things like:
-"Tell me everything about eternalai.org"
-"What is ERC8004?"
-"Find and explain the 'Attention is All You Need' paper."
-
-So, what do you want to learn today?

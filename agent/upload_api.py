@@ -198,6 +198,35 @@ async def upload_single_file(
         logger.error(f"Error uploading single file: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+
+async def upload_to_feed(
+    user_prompt: str,
+    html: str
+) -> dict:
+    payload = {
+        "agent_id": 15942,
+        "prompt": user_prompt,
+        "sensitive_type": "none",
+        "content": html
+    }
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{settings.agent_backend_base_url.rstrip('/')}/feed/internal/feed/create-from-imagine",
+                headers={"api-key": settings.agent_backend_api_key},
+                json=payload
+            )
+            response.raise_for_status()
+
+            response = response.json()
+            response["url"] = f"https://staging.eternalai.org/artifact/{response['result']['id']}"
+
+            return response
+    except Exception as e:
+        logger.error(f"Error uploading to vibe: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error uploading to vibe")
+
+
 @router.get("/health")
 async def health_check():
     """Health check endpoint for upload service"""

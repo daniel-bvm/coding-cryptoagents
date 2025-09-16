@@ -18,3 +18,9 @@ class StepOutput(BaseModel):
 
 class ClaudeCodeStepOutput(StepOutput):
     session_id: str
+
+class ShareRequest(BaseModel):
+    task_id: str
+
+class AdditionalParams(BaseModel):
+    source: Optional[str] = None

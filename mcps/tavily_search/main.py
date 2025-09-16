@@ -226,7 +226,8 @@ async def search_twitter_news(
             try:
                 response = await client.post(
                     ETERNALAI_MCP_PROXY_URL,
-                    json=data
+                    json=data,
+                    timeout=60.0
                 )
 
                 if response.status_code != 200:
@@ -237,7 +238,7 @@ async def search_twitter_news(
                 return parse_twitter_search_response(response_json["result"], reduce_duplication=no_duplication)
 
             except Exception as e:
-                logger.error(f"Error searching twitter: {e}")
+                logger.error(f"Error searching twitter: {e}", exc_info=True)
                 return []
 
     logger.error("No API key or keyless provider configured")
@@ -264,7 +265,8 @@ async def fetch(url: Annotated[str, "The URL to fetch content from"]) -> str:
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {TAVILY_API_KEY}"
                     },
-                    json=body
+                    json=body,
+                    timeout=60.0
                 )
                 
                 if response.status_code != 200:
@@ -275,7 +277,7 @@ async def fetch(url: Annotated[str, "The URL to fetch content from"]) -> str:
                 return parse_tavily_fetch_response(response_json)
             
             except Exception as e:
-                logger.error(f"Error searching web: {e}")
+                logger.error(f"Error searching web: {e}", exc_info=True)
                 return [{"error": str(e)}]
     
     if ETERNALAI_MCP_PROXY_URL:
@@ -303,7 +305,8 @@ async def fetch(url: Annotated[str, "The URL to fetch content from"]) -> str:
             try:
                 response = await client.post(
                     ETERNALAI_MCP_PROXY_URL,
-                    json=data
+                    json=data,
+                    timeout=60.0
                 )
 
                 if response.status_code != 200:
@@ -314,7 +317,7 @@ async def fetch(url: Annotated[str, "The URL to fetch content from"]) -> str:
                 return parse_tavily_fetch_response(response_json)
                 
             except Exception as e:
-                logger.error(f"Error searching web: {e}")
+                logger.error(f"Error searching web: {e}", exc_info=True)
                 return [{"error": str(e)}]
 
     logger.error("No API key or keyless provider configured")
@@ -332,7 +335,7 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
     
     body = {
         "query": query,
-        "max_results": 3,
+        "max_results": 5,
         "include_image_descriptions": True,
         "include_images": True,
         "search_depth": "advanced",
@@ -350,7 +353,8 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {TAVILY_API_KEY}"
                     },
-                    json=body
+                    json=body,
+                    timeout=60.0
                 )
                 
                 if response.status_code != 200:
@@ -361,7 +365,7 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
                 return parse_tavily_search_response(response_json) + twitter_news
             
             except Exception as e:
-                logger.error(f"Error searching web: {e}")
+                logger.error(f"Error searching web: {e}", exc_info=True)
                 return [replace(twitter_news, {"error": str(e)})]
     
     if ETERNALAI_MCP_PROXY_URL:
@@ -389,7 +393,8 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
             try:
                 response = await client.post(
                     ETERNALAI_MCP_PROXY_URL,
-                    json=data
+                    json=data,
+                    timeout=60.0
                 )
 
                 if response.status_code != 200:
@@ -400,7 +405,7 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
                 return parse_tavily_search_response(response_json) + twitter_news
 
             except Exception as e:
-                logger.error(f"Error searching web: {e}")
+                logger.error(f"Error searching web: {e}", exc_info=True)
                 return [replace(twitter_news, {"error": str(e)})]
 
     logger.error("No API key or keyless provider configured")

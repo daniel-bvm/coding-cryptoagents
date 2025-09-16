@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     llm_model_id_code: str = Field(alias="LLM_MODEL_ID_CODE", default="gpt-4o-mini")
     llm_model_provider: str = Field(alias="LLM_MODEL_PROVIDER", default="local-ai")
 
+    eternalai_mcp_proxy_url: str = Field(alias="ETERNALAI_MCP_PROXY_URL", default="http://localhost:33030/84532-proxy/prompt")
+    debug_mode: bool = Field(alias="DEBUG_MODE", default=False)
+    proxy_scope: str = Field(alias="PROXY_SCOPE", default="*")
+
     # app state
     app_env: str = Field(alias="APP_ENV", default="development")
 
@@ -22,12 +26,22 @@ class Settings(BaseSettings):
         alias="OPENCODE_DIRECTORY", 
         default="./opencode-workspace" if not os.path.exists("/storage") else "/storage/opencode-workspace"
     )
+    opencode_session_directory: str = Field(
+        alias="OPENCODE_SESSION_DIRECTORY", 
+        default="./opencode-session" if not os.path.exists("/storage") else "/storage/opencode-session"
+    )
     
     tavily_api_key: str = Field(alias="TAVILY_API_KEY", default="")
     financial_datasets_api_key: str = Field(alias="FINANCIAL_DATASETS_API_KEY", default="")
     pexels_api_key: str = Field(alias="PEXELS_API_KEY", default="")
     twitter_api_key: str = Field(alias="TWITTER_API_KEY", default="")
     eternalai_admin_key: str = Field(alias="ETERNALAI_ADMIN_KEY", default="eai2024")
+    eternalai_mcp_proxy_url: str = Field(alias="ETERNALAI_MCP_PROXY_URL", default="")
+
+    agent_backend_base_url: str = Field(alias="AGENT_BACKEND_BASE_URL", default="https://agent.api.eternalai.org/api/")
+    agent_backend_api_key: str = Field(alias="AGENT_BACKEND_API_KEY", default="super-secret")
+
+    agent_id: int = Field(alias="AGENT_ID", default=123)
 
     class Config:
         env_file = ".env"

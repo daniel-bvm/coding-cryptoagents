@@ -5,9 +5,9 @@ from danieltn11/opencode:1.0.8
 
 env LLM_MODEL_ID=zai-org/GLM-4.5-Air-FP8
 env LLM_MODEL_ID_CODE=zai-org/GLM-4.5-Air-FP8
-
-env LLM_BASE_URL=http://localhost:65534/v1
 env LLM_API_KEY=supersecret
+
+env PROXY_SCOPE="*api.tavily.com*,*api.search.brave.com*,*api.exa.ai*,*imagine-backend.bvm.network*"
 
 workdir /workspace
 copy main.py main.py
