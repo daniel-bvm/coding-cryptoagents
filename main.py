@@ -399,6 +399,7 @@ DO NOT create a new file; only output the **final, validated `index.html`**.
                             - Any slide too long that make slide scrollable?
                             - Any slide with too short content but image so large that make slide scrollable?
                             - Is cards not centered?
+                            - Are the items listed clear enough?
 
                             2. **Typography & Size**  
                             - Font size consistent across slides?  

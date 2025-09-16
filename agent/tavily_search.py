@@ -52,7 +52,8 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
                         "Accept-Encoding": "identity",
                         "Authorization": f"Bearer {TAVILY_API_KEY}"
                     },
-                    json=body
+                    json=body,
+                    timeout=60.0
                 )
                 
                 if response.status_code != 200:
@@ -91,7 +92,8 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
             try:
                 response = await client.post(
                     ETERNALAI_MCP_PROXY_URL,
-                    json=data
+                    json=data,
+                    timeout=60.0
                 )
 
                 if response.status_code != 200:
