@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     eternalai_admin_key: str = Field(alias="ETERNALAI_ADMIN_KEY", default="eai2024")
     eternalai_mcp_proxy_url: str = Field(alias="ETERNALAI_MCP_PROXY_URL", default="")
 
+    agent_backend_base_url: str = Field(alias="AGENT_BACKEND_BASE_URL", default="https://agent.api.eternalai.org/api/")
+    agent_backend_api_key: str = Field(alias="AGENT_BACKEND_API_KEY", default="super-secret")
+
+    agent_id: int = Field(alias="AGENT_ID", default=123)
+
     class Config:
         env_file = ".env"
         case_sensitive = False

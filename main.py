@@ -571,7 +571,7 @@ DO NOT create a new file; only output the **final, validated `index.html`**.
                 json.dump(config, f, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            logger.error(f"Error updating config: {e}")
+            logger.error(f"Error updating config: {e}", exc_info=True)
 
         if repeat_interval <= 0:
             logger.info("Config updated, stopping config update task")

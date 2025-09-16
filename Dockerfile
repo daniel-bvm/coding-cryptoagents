@@ -5,8 +5,10 @@ from danieltn11/opencode:1.0.7
 
 env LLM_MODEL_ID=zai-org/GLM-4.5-Air-FP8
 env LLM_MODEL_ID_CODE=zai-org/GLM-4.5-Air-FP8
-
 env LLM_API_KEY=supersecret
+
+env AGENT_BACKEND_BASE_URL=https://agent.api.eternalai.org/api/
+env AGENT_ID=15703
 
 workdir /workspace
 copy main.py main.py

@@ -49,7 +49,7 @@ async def search(query: Annotated[str, "The query to search for"]) -> list[dict]
                 response = await client.post(
                     f"{TAVILY_BASE_URL}/search",
                     headers={
-                        "Content-Type": "application/json",
+                        "Accept-Encoding": "identity",
                         "Authorization": f"Bearer {TAVILY_API_KEY}"
                     },
                     json=body

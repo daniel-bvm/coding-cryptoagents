@@ -1730,6 +1730,7 @@ async def get_models_fn() -> list[dict[str, str]]:
         response = await client.get(
             f"{settings.llm_base_url.rstrip('/')}/models", 
             headers={
+                "Content-Type": "application/json",
                 "Authorization": f"Bearer {settings.llm_api_key}"
             }
         )
