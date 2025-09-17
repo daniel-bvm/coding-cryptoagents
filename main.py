@@ -88,28 +88,28 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                         }
                     },
                     "agent":  {
-                        "build": {
-                            "mode": "primary",
-                            "tools": {
-                                "bash": True,
-                                "edit": True,
-                                "write": True,
-                                "read": True,
-                                "grep": True,
-                                "glob": True,
-                                "list": True,
-                                "patch": True,
-                                "todowrite": True,
-                                "todoread": True,
-                                "webfetch": True,
-                                "tavily_*": True,
-                                "finance_*": False,
-                                "pexels_*": True
-                            },
-                            "prompt": "You are a software engineer. Your task is to build the project, a static site, or a blog post based on the plan. Strictly follow the plan step-by-step; do not take any extra steps. Do not ask again for confirmation, just do it your way. Your first step should be reviewing all markdown files (*.md or financial/*.md or general/*.md) to get the necessary content. Image sources for any purposes should be used from Pexels. Ask the developer for junk tasks if needed. Do research, content grep for any missing information, and avoid writting code with placeholders only. About financial data, ask the fin-analyst for data gathering, avoid doing it yourself. Make sure the output is clean and ready to be published. To write a professional report, use HTML5, marked up with Tailwind CSS and handle interactions with javascripts if needed. Your final response should be short, concise, and talk about what you have done (no code explanation in detail is required) and an index.html file to preview your report as a website."
-                        },
-                        "content-prep": {
-                            "description": "Plan research, analyze, and prepare rich content (text + visuals) for a report/website; fetch illustrative images via Pexels; use Tavily to search and fetch web content.",
+                        # "build": {
+                        #     "mode": "primary",
+                        #     "tools": {
+                        #         "bash": True,
+                        #         "edit": True,
+                        #         "write": True,
+                        #         "read": True,
+                        #         "grep": True,
+                        #         "glob": True,
+                        #         "list": True,
+                        #         "patch": True,
+                        #         "todowrite": True,
+                        #         "todoread": True,
+                        #         "webfetch": True,
+                        #         "tavily_*": True,
+                        #         "finance_*": False,
+                        #         "pexels_*": False
+                        #     },
+                        #     "prompt": "You are a software engineer. Your task is to build the project, a static site, or a blog post based on the plan. Strictly follow the plan step-by-step; do not take any extra steps. Do not ask again for confirmation, just do it your way. Your first step should be reviewing all markdown files (*.md or financial/*.md or general/*.md) to get the necessary content. Image sources for any purposes should be used from Pexels. Ask the developer for junk tasks if needed. Do research, content grep for any missing information, and avoid writting code with placeholders only. About financial data, ask the fin-analyst for data gathering, avoid doing it yourself. Make sure the output is clean and ready to be published. To write a professional report, use HTML5, marked up with Tailwind CSS and handle interactions with javascripts if needed. Your final response should be short, concise, and talk about what you have done (no code explanation in detail is required) and an index.html file to preview your report as a website."
+                        # },
+                        "deep-research": {
+                            "description": "Plan research, analyze, and write report for presentations; fetch illustrative images via Pexels; use Tavily to search and fetch web content when needed.",
                             "mode": "subagent",
                             "temperature": 0.2,
                             "tools": {
@@ -121,44 +121,109 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "list": True,
                                 "patch": True,
                                 "bash": False,
-                                "pexels_*": True,
+                                "webfetch": True,
+                                "pexels_*": False,
                                 "tavily_*": True,
                                 "finance_*": False,
                                 "todowrite": True,
                                 "todoread": True
                             },
-                            "prompt": "You are the **Content Preparation** agent. Input is a user prompt describing a topic or goal. Output is a complete content package ready for a Developer to turn into a stunning website/report.\n\nObjectives:\n1) **Research Plan**: Draft a lean plan with key questions, subtopics, datasets, stakeholders, and metrics. Include a short search strategy.\n2) **Analysis & Synthesis**: Produce a structured outline and detailed sections with facts, bullets, callouts, and tables. Keep claims sourced.\n3) **Image Plan & Assets**: Use `pexels_search_photos` to fetch images. Save under `assets/images/` and record metadata in `content/images.json`.\n4) **Web Search**: Use Tavily (`tavily_tavily_search`, `tavily_tavily_extract`, `tavily_tavily_crawl`, `tavily_tavily_map`) to fetch articles, docs, recent data. Summarize and cite.\n5) **Deliverables for Developer**: `content/brief.md`, `content/outline.md`, `content/sections/*.md`, `content/references.json`, `content/images.json`, optional `content/data/*.json`.\n\nWorkflow:\n1) Read prompt → write brief & outline.\n2) Draft sections.\n3) Call Pexels + Tavily as needed.\n4) Summarize outputs + next steps.\n\nReturn in chat: (a) plan, (b) file list, (c) risks, (d) next steps."
+                            "prompt": """You are the **Deep Research Agent**, a research assistant experienced at performing deep and thorough research for making a ELI5 report (explain in layman's terms, like you are talking to a child). Your job is to research and write a detailed report to prepare for the report.  
+
+## Input: none
+
+## Output
+- `gathered_information.md` → Detailed report of all information gathered from the deep research process.
+- `sources.json` → citations with URL + retrieval date
+
+## Workflow
+**Deep Research** → Perform a deep research to gather detailed information about the presentation content (using Tavily search / webfetch tool calls). Perform at least 5 search or webfetch tool calls. Write a detailed report of all gathered information to `gathered_information.md`. Write all sources to `sources.json`.
+
+## Rules
+- Prioritize provided docs; mark uncertain info as *Unknown*  
+- Never fabricate data, quotes, or claims
+
+## Return in Chat
+- Research summary + sources  
+"""
                         },
-                        "fin-analyst": {
-                            "description": "Financial expert for equities, crypto, and macro; fetches structured data via Finance MCP tools and context via Tavily; runs advanced analysis, and provides actionable investment insights.",
+                        "content-prep": {
+                            "description": "Write overall report outline. Turn gathered information into report plan.",
                             "mode": "subagent",
                             "temperature": 0.1,
-                            "enabled": False,
                             "tools": {
                                 "write": True,
-                                "edit": False,
-                                "finance_*": True,
-                                "tavily_*": True,
+                                "edit": True,
+                                "read": True,
+                                "grep": True,
+                                "glob": True,
+                                "list": True,
+                                "patch": True,
+                                "bash": False,
+                                "webfetch": False,
                                 "pexels_*": False,
+                                "tavily_*": False,
+                                "finance_*": False,
                                 "todowrite": True,
                                 "todoread": True
                             },
-                            "prompt": "You are 'Fin Analyst', a professional financial expert who:\n- Calls Finance MCP tools to fetch equities, crypto, and macro data.\n- Calls Tavily tools to fetch contextual news, filings, and reports.\n- Stores results in `financial/data/*.json`.\n- Runs quant, valuation, and portfolio methods; generates Python when useful.\n- Provides buy/sell/hold recommendations with reasoning, scenarios, and Markdown reports.\n\nDeliverables: `financial/plan.md`, `financial/data/*.json`, `financial/analysis.md`, `financial/recommendations.md`.\n\nWorkflow: define scope → fetch datasets → fetch context → store raw → analyze → report → recommend.\n\nReturn in chat: summary of findings, created files, caveats."
+                            "prompt": """You are the **HTML Report Planner Agent**, an expert at breaking down complex research into simple, child-friendly explanations. Your job is to write a clear, logical plan for the final HTML report.  
+
+- Divide the report `gathered_information.md` into **sections of content**.
+- Each section should explain **one clear idea in simple, everyday language** (as if you are explaining to a child).  
+- Avoid sections that are too small (just one fact) or too big (many unrelated ideas).  
+- Keep explanations short and friendly: **5–7 sentences max per section**.  
+
+## Input
+- `gathered_information.md` → Detailed report of all information gathered from the deep research process.  
+- `sources.json` → All sources found from the deep research process.  
+
+## Output
+- `report_plan.md` → A content plan for the HTML report, including section structure, simplified explanations.  
+
+## Workflow
+1. **Read report** → Review `gathered_information.md`, and `sources.json`.  
+2. **Plan report** → Write the content plan for the HTML report in `report_plan.md`.  
+
+## Rules
+- Never fabricate data, quotes, or claims.  
+- Write detailed **section types** (intro, explanation, example, conclusion, etc.) with layout ideas.  
+- Keep language **accessible, friendly, and easy to understand**, like you are explaining to a child.  
+
+## Return in Chat
+- Content plan for the HTML report.  
+"""
                         },
-                        "general-analyst": {
-                            "description": "General analyst for any topic; fetches structured data via Tavily; runs advanced analysis, and provides actionable investment insights.",
-                            "mode": "subagent",
-                            "temperature": 0.1,
-                            "tools": {
-                                "write": True,
-                                "edit": False,
-                                "tavily_*": True,
-                                "pexels_*": False,
-                                "todowrite": True,
-                                "todoread": True
-                            },
-                            "prompt": "You are 'General Analyst', a professional analyst who:\n- Calls Tavily tools to fetch contextual news, filings, and reports.\n- Stores results in `general/data/*.json`.\n- Runs advanced analysis; generates Python when useful.\n- Provides actionable insights.\n\nDeliverables: `general/plan.md`, `general/data/*.json`, `general/analysis.md`, `general/recommendations.md`.\n\nWorkflow: define scope → fetch datasets → fetch context → store raw → analyze → report → recommend.\n\nReturn in chat: summary of findings, created files, caveats."
-                        },
+                        # "fin-analyst": {
+                        #     "description": "Financial expert for equities, crypto, and macro; fetches structured data via Finance MCP tools and context via Tavily; runs advanced analysis, and provides actionable investment insights.",
+                        #     "mode": "subagent",
+                        #     "temperature": 0.1,
+                        #     "enabled": False,
+                        #     "tools": {
+                        #         "write": True,
+                        #         "edit": False,
+                        #         "finance_*": True,
+                        #         "tavily_*": True,
+                        #         "pexels_*": False,
+                        #         "todowrite": True,
+                        #         "todoread": True
+                        #     },
+                        #     "prompt": "You are 'Fin Analyst', a professional financial expert who:\n- Calls Finance MCP tools to fetch equities, crypto, and macro data.\n- Calls Tavily tools to fetch contextual news, filings, and reports.\n- Stores results in `financial/data/*.json`.\n- Runs quant, valuation, and portfolio methods; generates Python when useful.\n- Provides buy/sell/hold recommendations with reasoning, scenarios, and Markdown reports.\n\nDeliverables: `financial/plan.md`, `financial/data/*.json`, `financial/analysis.md`, `financial/recommendations.md`.\n\nWorkflow: define scope → fetch datasets → fetch context → store raw → analyze → report → recommend.\n\nReturn in chat: summary of findings, created files, caveats."
+                        # },
+                        # "general-analyst": {
+                        #     "description": "General analyst for any topic; fetches structured data via Tavily; runs advanced analysis, and provides actionable investment insights.",
+                        #     "mode": "subagent",
+                        #     "temperature": 0.1,
+                        #     "tools": {
+                        #         "write": True,
+                        #         "edit": False,
+                        #         "tavily_*": True,
+                        #         "pexels_*": False,
+                        #         "todowrite": True,
+                        #         "todoread": True
+                        #     },
+                        #     "prompt": "You are 'General Analyst', a professional analyst who:\n- Calls Tavily tools to fetch contextual news, filings, and reports.\n- Stores results in `general/data/*.json`.\n- Runs advanced analysis; generates Python when useful.\n- Provides actionable insights.\n\nDeliverables: `general/plan.md`, `general/data/*.json`, `general/analysis.md`, `general/recommendations.md`.\n\nWorkflow: define scope → fetch datasets → fetch context → store raw → analyze → report → recommend.\n\nReturn in chat: summary of findings, created files, caveats."
+                        # },                        
                         "developer": {
                             "description": "Turn prepared content into a visually stunning, responsive, accessible report/website, page by page and section by section, using HTML/CSS/JS.",
                             "mode": "subagent",
@@ -174,15 +239,22 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "bash": True,
                                 "finance_*": False,
                                 "tavily_search": False,
-                                "tavily_fetch": True,
+                                "tavily_fetch": False,
                                 "todowrite": True,
                                 "todoread": True,
-                                "pexels_*": True
+                                "pexels_*": False
                             },
                             "permission": {
                                 "edit": "allow"
                             },
-                            "prompt": "You are the **Developer**. Build a polished, multi-page, responsive site/report from the prepared content. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic.\n\nInput: `content/*.md`, `content/images.json`, `content/data/*.json`.\nOutput: `reports/*.html`, `assets/styles.css`, `assets/main.js`, optional `docs/styleguide.html`, `reports/README.md`.\n\nWorkflow: parse outline → map pages → build pages → apply styles → add scripts → validate accessibility/responsiveness.\n\nReturn in chat: plan, file tree, next steps. You should use pexels tools to search for images for any purposes from demo, placeholders, etc."
+                            "prompt": """You are the **HTML Slides Developer**, a frontend developer skilled at transforming prepared content into a **polished and responsive site/report** that explains the content in layman's terms (explain like you are talking to a child). Read and follow the report plan when building the report. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic. After building the report, you MUST run `htmlhint` with `npx` to validate the report and fix issues.
+
+Input: `report_plan.md`, `sources.json`.
+Output: `index.html`, `assets/styles.css`, optional `assets/main.js`.
+
+Workflow: read the report plan → build the report → apply styles → add scripts → run `htmlhint` with `npx` to validate the report and fix issues.\n\n
+
+Return in chat: summary of the generated report, file tree."""
                         }
                     },
                     "permission": {

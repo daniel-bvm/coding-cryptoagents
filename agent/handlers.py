@@ -1,4 +1,5 @@
 import agent.__middleware
+from agent.research import QueryInput, detect_urls
 from agent.upload_api import upload_to_feed # do not remove this
 
 RECEPTIONIST_TOOLS = [
@@ -6,7 +7,7 @@ RECEPTIONIST_TOOLS = [
         "type": "function",
         "function": {
             "name": "explain",
-            "description": "Start planning, researching, and create a HTML report that explains for what the user is looking for.",
+            "description": "Start planning, researching, and create a HTML report that explains in layman's terms (explain like you are talking to a child) for what the user is looking for.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -30,11 +31,13 @@ RECEPTIONIST_TOOLS = [
 ]
 
 RECEPTIONIST_SYSTEM_PROMPT = """
+You are a part of a system that create HTML reports to explain concepts, answer questions, or summarize information in layman's terms (explain like you are talking to a child).
+
 Your task is to first communicate with the user and determine the next step, explain, research, or report, or ask the user for more details if it is too vague, etc. Especially, we are helping user to realize their thoughts, understand the problem, prototype it, build a static website, html report or a blog post (that broadcasts content to the audience). User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
 - Their core idea is too unclear.
 - Greeting.
 
-In other cases, you are free to guess what they want and call the explain tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can resolve any problems, explain, write, and prototype anything. Any request, send it to us via the explain function, and the user gets what they want. 
+In other cases, you are free to guess what they want and call the explain tool. But, for terms and keywords, keep it raw in the description and title so we can build the answer more efficiently. When the user asking to explain something, we just need to focus on carefully research about it and make the report professional, concise, and visual stunning. We can resolve any problems, explain, write, and prototype anything. Any request, send it to us via the explain function, and the user gets what they want.
 """
 
 from agent.oai_models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
@@ -48,7 +51,7 @@ import json
 logger = logging.getLogger(__name__)
 
 import os
-from agent.planner import StepV2, gen_plan
+from agent.planner import StepV2, gen_plan_v2
 from agent.app_models import AdditionalParams, StepOutput, ClaudeCodeStepOutput
 from agent.executor import execute_steps_v2
 from agent.opencode_sdk import OpenCodeSDKClient
@@ -67,96 +70,6 @@ import re
 from pydantic import BaseModel
 from .concurrency import sync2async
 import asyncio
-
-class QueryInput(BaseModel):
-    topic: str
-    urls: list[str]
-    
-URL_REGEX = re.compile(r'https?://[^\s]+')
-
-def is_valid_topic(topic: str, urls: list[str]) -> bool:
-    topic_cp = deepcopy(topic) 
-
-    for url in urls:
-        topic_cp = topic_cp.replace(url, '')
- 
-    for p in punctuation:
-        topic_cp = topic_cp.replace(p, '')
-
-    return len(topic_cp.strip()) > 0
-
-def detect_urls(topic_or_url: str) -> QueryInput:
-    urls = URL_REGEX.findall(topic_or_url)
-
-    if not urls:
-        return QueryInput(topic=topic_or_url if is_valid_topic(topic_or_url, []) else '', urls=[])
-
-    return QueryInput(topic=topic_or_url if is_valid_topic(topic_or_url, urls) else '', urls=urls)
-
-from copy import deepcopy
-from string import punctuation
-
-async def run_deepsearch(topic: str) -> StructuredReport | None:
-    if not topic:
-        return None
-
-    async_deepsearch = sync2async(deepsearch)
-    output: StructuredReport = await async_deepsearch(topic)
-    
-    if not output:
-        return None
-
-    return output
-
-async def scrape(
-    urls: list[str],
-    save_dir: str, 
-    preview_tokens_limit: int = 4096,
-    max_preview_tokens: int = 1024
-) -> list[dict[str, Any]]:
-    os.makedirs(save_dir, exist_ok=True)
-
-    if not urls:
-        return []
-
-    from mcps.tavily_search.main import fetch
-    call_fn = fetch.fn
-    
-    urls = list(set(urls))
-
-    preview_chars_limit = preview_tokens_limit * 4
-    max_preview_chars = max_preview_tokens * 4
-    char_limits = min(preview_chars_limit // len(urls), max_preview_chars)
-
-    results: list[dict[str, Any]] = []
-
-    for url in urls:
-        try:
-            response = await call_fn(url)
-            for item in response:
-                if 'raw_content' not in item:
-                    continue
-
-                raw_content: str = item['raw_content']
-                raw_content_preview: str = raw_content[:char_limits]
-                random_file_name: str = f'{os.urandom(4).hex()}.md'
-                file_path: str = os.path.join(save_dir, random_file_name)
-                
-                with open(file_path, 'w') as f:
-                    f.write(raw_content_preview)
-
-                results.append({
-                    'url': url,
-                    'full_content_path': file_path,
-                    'preview_content': raw_content_preview,
-                    'raw_content': raw_content
-                })
-
-        except Exception as e:
-            logger.error(f"Error scraping {url}: {e}")
-            continue
-
-    return results
 
 def compose_steps(steps: List[StepV2], task_offset_1: int = 1) -> StepV2:
     step_type, task, expectation, reason = steps[0].step_type, '', '', ''
@@ -245,43 +158,6 @@ def construct_file_response(file_paths: list[str]) -> str:
 
     return f"<files>{files_xml}</files>"
 
-def gather_info(scrape_results: list[dict[str, Any]], deepsearch_results: StructuredReport | None, save_dir: str) -> str:
-    if not scrape_results and not deepsearch_results:
-        return ""
-
-    scratchpad = ""
-    scratchpad_full = ""
-
-    for i, result in enumerate(scrape_results):
-        scratchpad += f"{1 + i} Scraped from {result['url']} (Raw content stored in {result['full_content_path']}):\n"
-        scratchpad += f"Preview: {result['preview_content']}\n\n"
-
-        scratchpad_full += f"{1 + i} Scraped from {result['url']}:\n"
-        scratchpad_full += f"{result['raw_content']}\n\n"
-
-    if deepsearch_results:
-        scratchpad += f"Deep search results:\n"
-        scratchpad += f"Title: {deepsearch_results.title}\n"
-        scratchpad += f"Keypoints: {deepsearch_results.keypoints}\n"
-        scratchpad += f"Short Answer: {deepsearch_results.direct_answer}\n"
-        scratchpad += f"Content: {deepsearch_results.report}\n"
-        scratchpad += f"References: {deepsearch_results.references}\n"
-        
-        scratchpad_full += f"Deep search results:\n"
-        scratchpad_full += f"Title: {deepsearch_results.title}\n"
-        scratchpad_full += f"Keypoints: {deepsearch_results.keypoints}\n"
-        scratchpad_full += f"Short Answer: {deepsearch_results.direct_answer}\n"
-        scratchpad_full += f"Content: {deepsearch_results.report}\n"
-        scratchpad_full += f"References: {deepsearch_results.references}\n"
-        
-    full_path = os.path.join(save_dir, 'research.md')
-    scratchpad += f"Full version of the research content is stored in {full_path}"
-
-    with open(full_path, "w", encoding='utf-8') as f:
-        f.write(scratchpad_full)
-
-    return scratchpad
-
 async def build(
     task_id: str, 
     title: str,
@@ -297,24 +173,27 @@ async def build(
     workdir = os.path.abspath(os.path.join(settings.opencode_directory, task_id))
     os.makedirs(workdir, exist_ok=True)
     
-    docs_workdir = os.path.join(workdir, "docs")
-    os.makedirs(docs_workdir, exist_ok=True)
+    # docs_workdir = os.path.join(workdir, "docs")
+    # os.makedirs(docs_workdir, exist_ok=True)
 
-    scrape_results, deepsearch_results = await asyncio.gather(
-        scrape(input_query.urls, docs_workdir),
-        run_deepsearch(input_query.topic)
-    )
+    # scrape_results, deepsearch_results = await asyncio.gather(
+    #     scrape(input_query.urls, docs_workdir),
+    #     run_deepsearch(input_query.topic)
+    # )
 
-    scrape_results: list[dict[str, Any]]
-    deepsearch_results: StructuredReport | None
+    # scrape_results: list[dict[str, Any]]
+    # deepsearch_results: StructuredReport | None
 
-    if not scrape_results and not deepsearch_results:
-        max_steps = 5
-        information = "No related information has been found yet."
+    # if not scrape_results and not deepsearch_results:
+    #     max_steps = 5
+    #     information = "No related information has been found yet."
 
-    else:
-        max_steps = 3
-        information = gather_info(scrape_results, deepsearch_results, docs_workdir)
+    # else:
+    #     max_steps = 3
+    #     information = gather_info(scrape_results, deepsearch_results, docs_workdir)
+
+    max_steps = 5
+    information = "No related information has been found yet."
 
     # Create task in database
     repo = get_task_repository()
@@ -343,7 +222,7 @@ async def build(
     # steps: List[StepV2] = await make_plan(title, expectation)
     steps: List[StepV2] = []
 
-    async for step in gen_plan(title, information, expectation, max_steps):
+    async for step in gen_plan_v2(title, information, expectation, max_steps):
         steps.append(step)
 
         # Create step in database
@@ -535,6 +414,7 @@ async def build(
             workdir,
             session_id,
             task_id,
+            input_query
         )
 
         logger.info(f"Task {task_id} ({expectation[:128]}...); Step output: {step_output.full}")
