@@ -94,7 +94,7 @@ def extract_body(**something) -> bytes:
 
     return None
 
-if ETERNALAI_MCP_PROXY_URL is not None:
+if ETERNALAI_MCP_PROXY_URL:
     DEBUG_MODE and print("Start patching", file=sys.stderr)
 
     try:

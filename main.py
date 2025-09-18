@@ -34,7 +34,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
             models = await get_models_fn()
             mcp_env = {}
 
-            if "ETERNALAI_MCP_PROXY_URL" in os.environ:
+            if "ETERNALAI_MCP_PROXY_URL" in os.environ and os.environ["ETERNALAI_MCP_PROXY_URL"]:
                 mcp_env["ETERNALAI_MCP_PROXY_URL"] = os.environ["ETERNALAI_MCP_PROXY_URL"]
 
             if settings.tavily_api_key:
@@ -128,7 +128,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                                 "todowrite": True,
                                 "todoread": True
                             },
-                            "prompt": """You are the **Deep Research Agent**, a research assistant experienced at performing deep and thorough research for making a ELI5 report (explain in layman's terms, like you are talking to a child). Your job is to research and write a detailed report to prepare for the report.  
+                            "prompt": """You are the **Deep Research Agent**, a research assistant experienced at performing deep and thorough research for making a report that explain in layman's terms. Your job is to research and write a detailed report to prepare for the report.  
 
 ## Input: none
 
@@ -188,7 +188,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
 ## Rules
 - Never fabricate data, quotes, or claims.  
 - Write detailed **section types** (intro, explanation, example, conclusion, etc.) with layout ideas.  
-- Keep language **accessible, friendly, and easy to understand**, like you are explaining to a child.  
+- Keep language **accessible, friendly, and easy to understand**.  
 
 ## Return in Chat
 - Content plan for the HTML report.  
@@ -247,15 +247,88 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "permission": {
                                 "edit": "allow"
                             },
-                            "prompt": """You are the **HTML Slides Developer**, a frontend developer skilled at transforming prepared content into a **polished and responsive site/report** that explains the content in layman's terms (explain like you are talking to a child). Read and follow the report plan when building the report. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic. After building the report, you MUST run `htmlhint` with `npx` to validate the report and fix issues.
+                            "prompt": """You are the **HTML Slides Developer**, a frontend developer skilled at transforming prepared content into a **polished and responsive site/report** that explains the content in layman's terms. Read and follow the report plan when building the report. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic. After building the report, you MUST run `htmlhint` with `npx` to validate the report and fix issues.
 
-Input: `report_plan.md`, `sources.json`.
+Timeline rules:
+1. **Layout**
+- Vertical stack, alternating left/right alignment.  
+- Minimal spacing, compact alignment.  
+
+2. **Elements**
+- **Date/Year** → bold, larger text.  
+- **Event Title** → medium heading.  
+- **Description** → ≤ 10 words.  
+- Use dots/icons for milestones + subtle dividers/lines.  
+
+3. **Responsiveness**
+- Must remain legible across screen sizes using Tailwind responsive utilities.  
+
+Input: `report_plan.md`, `sources.json`, `feedback.md` (optional feedback from an expert reviewer).
 Output: `index.html`, `assets/styles.css`, optional `assets/main.js`.
 
-Workflow: read the report plan → build the report → apply styles → add scripts → run `htmlhint` with `npx` to validate the report and fix issues.\n\n
+Workflow: read the report plan → build the report → apply styles → add scripts → run `htmlhint` with `npx` to validate the report and fix issues.
 
 Return in chat: summary of the generated report, file tree."""
-                        }
+                        },
+                        "qa-reviewer": {
+                            "description": "Review generated HTML slides and provide structured feedback for layout, readability, accessibility, and image placement issues.",
+                            "mode": "subagent",
+                            "temperature": 0.1,
+                            "tools": {
+                                "write": True,
+                                "edit": True,
+                                "read": True,
+                                "grep": True,
+                                "glob": True,
+                                "list": True,
+                                "patch": False,
+                                "bash": False,
+                                "todowrite": True,
+                                "todoread": True
+                            },
+                            "prompt": """You are the **Slides QA Reviewer Agent**, an expert at reviewing and giving feedback on HTML reports that explain in layman's terms.
+
+Your task is to carefully read `index.html` and provide **actionable, structured feedback** to help the Developer fix problems in the next iteration.
+
+### REVIEW CRITERIA
+
+1. **Layout & Space**
+- Any excessive blank space or overflow?
+- Any layout imbalance or asymmetry?
+- Any misplaced elements?
+- Any content getting covered by other elements?
+
+2. **Colors & Contrast**  
+- Does text maintain high contrast with background?  
+- Any slide breaking the safe color pairs rules?  
+- Does the titles (size and color) stand out from the content?
+- Does the report too dark or too bright to read?
+
+3. **Images**
+- Do images show properly in the slide? Missing image?
+
+4. **Accessibility**  
+- Is all text legible on dark/light backgrounds?  
+- Are slides responsive across screen sizes?
+
+### OUTPUT
+- `feedback.md` → Detailed list of issues + suggestions for fixes.
+- If `feedback.md` is found, edit the `feedback.md`.
+
+### ⚙️ WORKFLOW
+1. Read `index.html` file and review based on the criteria above.
+2. Generate `feedback.md` file to feedback.
+3. If all the criteria are satisfied, end the workflow and write only 'completed successfully' term in the `feedback.md` file. If there are issues, write the issues in the `feedback.md` file.
+
+### Rules
+- Only provide feedback. NEVER directly edit the HTML.  
+- Provide feedback in `feedback.md`. If all criteria are satisfied, write only 'completed successfully' in the `feedback.md` file.
+- Feedback must be **specific and actionable**.
+
+## Return in Chat
+- What you have done
+"""
+                        },
                     },
                     "permission": {
                         "*": "allow"

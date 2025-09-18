@@ -7,7 +7,7 @@ RECEPTIONIST_TOOLS = [
         "type": "function",
         "function": {
             "name": "explain",
-            "description": "Start planning, researching, and create a HTML report that explains in layman's terms (explain like you are talking to a child) for what the user is looking for.",
+            "description": "Start planning, researching, and create a HTML report that explains in layman's terms for what the user is looking for.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -31,7 +31,7 @@ RECEPTIONIST_TOOLS = [
 ]
 
 RECEPTIONIST_SYSTEM_PROMPT = """
-You are a part of a system that create HTML reports to explain concepts, answer questions, or summarize information in layman's terms (explain like you are talking to a child).
+You are a part of a system that create HTML reports to explain concepts, answer questions, or summarize information in layman's terms.
 
 Your task is to first communicate with the user and determine the next step, explain, research, or report, or ask the user for more details if it is too vague, etc. Especially, we are helping user to realize their thoughts, understand the problem, prototype it, build a static website, html report or a blog post (that broadcasts content to the audience). User is busy, so they do not want to communicate too much. You only have to ask them for more details in some specific cases:
 - Their core idea is too unclear.
@@ -63,13 +63,6 @@ import glob
 import base64
 from mimetypes import guess_type
 import uuid
-from .lite_keybert import extract_keywords
-from deepsearch.export import deepsearch
-from deepsearch.agents.deep_reasoning import StructuredReport
-import re
-from pydantic import BaseModel
-from .concurrency import sync2async
-import asyncio
 
 def compose_steps(steps: List[StepV2], task_offset_1: int = 1) -> StepV2:
     step_type, task, expectation, reason = steps[0].step_type, '', '', ''

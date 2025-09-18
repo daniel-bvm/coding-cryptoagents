@@ -30,7 +30,7 @@ If no more are needed, just return: <done/> (no need to explain anything).
 """
 
 ONE_SHOT_TEMPLATE = """
-You are a planning assistant for generating a professional HTML report that explains in layman's terms (explain like you are talking to a child) for what the user is looking for. Generate a complete plan as a list of steps. Each step must be one of: research (deep research for required information), plan (plan report structure), build (create the main index.html). The plan should have at most {max_steps} steps. Do not suggest specific content of each step, only give high-level instructions of what to do.
+You are a planning assistant for generating a professional HTML report that explains in layman's terms for what the user is looking for. Generate a complete plan as a list of steps. Each step must be one of: research (deep research for required information), plan (plan report structure), build (create the main index.html), feedback (review index.html and iteratively fix issues based on feedback). The plan should have at most {max_steps} steps. Do not suggest specific content of each step, only give high-level instructions of what to do.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
@@ -44,15 +44,21 @@ Strict anti-hallucination rules:
 - For LaTeX sources: preserve equations verbatim and plan to render them via MathJax/KaTeX in HTML.
 - For any content: maintain original meaning; avoid interpretations not explicitly supported by sources.
 
-The plan should strictly follow the 2-steps process below:
+The plan should strictly follow the 4-steps process below:
 1) Content Preparation (research): deep research for required information and write a detailed report.
 2) Report Planning (plan): plan the structure and content of the report.
 3) HTML Generation and Review (finalize): read the report and build a professional, visual stunning, rich of meaningful content HTML report with proper formatting, styling, and image integration.
+4) Review and Fix: (feedback)
+    4.1) Review and Feedback : Review the index.html file and provide feedback to the developer agent to fix the issues based on the feedback.
+    4.2) Edit the index.html file to fix the issues till the feedback is satisfied.
+    4.3) Review and Feedback again till there is no more issues or all the criteria are satisfied.
+
 
 Step-specific deliverables:
 - Step 1 (Deep Research): `gathered_information.md` (report), `sources.json`
 - Step 2 (Report Planning): `report_plan.md`
-- Step 3 (HTML Generation): `index.html` files (HTML report)
+- Step 3 (HTML Generation): `index.html` file (HTML report)
+- Step 4 (Review and Fix): `feedback.md`, `index.html` file (HTML report)
 
 Use the user's tone of voice for connective prose only;
 
@@ -64,7 +70,7 @@ The user wants:
 Generate the complete plan as a JSON array of steps. Each step should have: "reason", "task", "expectation", "step_type".
 
 Respond in JSON format: [
-  {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "research/plan/build" }},
+  {{ "reason": "...", "task": "...", "expectation": "...", "step_type": "research/plan/build/feedback" }},
   ...
 ]
 
@@ -141,6 +147,9 @@ async def gen_plan_v2(title: str, information: str, user_request: str, max_steps
     retry = 0
     seed = NOT_GIVEN
 
+    search_results = await search(title)
+    search_context = await format_web_search_context(search_results)
+
     while retry < MAX_RETRY:        
         prompt = ONE_SHOT_TEMPLATE.format(
             user_request=user_request,
@@ -149,16 +158,13 @@ async def gen_plan_v2(title: str, information: str, user_request: str, max_steps
             current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             note=error_note,
         )
-
-        search_results = await search(title)
-        search_context = await format_web_search_context(search_results)
-        prompt = prompt + search_context
+        final_prompt = prompt + search_context
 
         response = ''
 
         async with client.chat.completions.stream(
             model=settings.llm_model_id,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{"role": "user", "content": final_prompt}],
             seed=seed,
         ) as stream:
             async for event in stream:
@@ -175,8 +181,8 @@ async def gen_plan_v2(title: str, information: str, user_request: str, max_steps
 
             if step_list[0].step_type != 'research':
                 error_note += "The first step must be a research step\n"
-            if step_list[-1].step_type != 'build':
-                error_note += "The last step must be a build step\n"
+            if step_list[-1].step_type != 'feedback':
+                error_note += "The last step must be a feedback step\n"
 
             if error_note:
                 raise Exception(error_note)
