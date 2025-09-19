@@ -247,7 +247,7 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "permission": {
                                 "edit": "allow"
                             },
-                            "prompt": """You are the **HTML Slides Developer**, a frontend developer skilled at transforming prepared content into a **polished and responsive site/report** that explains the content in layman's terms. Read and follow the report plan when building the report. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic. You MUST NOT include the learn more section or the footer section in the report. You MUST NOT add any parallax effect. After building the report, you MUST run `htmlhint` with `npx` to validate the report and fix issues.
+                            "prompt": """You are the **HTML Slides Developer**, a frontend developer skilled at transforming prepared content into a **polished and responsive site/report** that explains the content in layman's terms. Read and follow the report plan when building the report. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic. You MUST NOT include any call-to-action section nor the footer section in the report. After building the report, you MUST run `htmlhint` with `npx` to validate the report and fix issues.
 
 If you want to add a timeline, follow these rules:
 
@@ -295,7 +295,7 @@ Return in chat: summary of the generated report, file tree."""
                             "permission": {
                                 "edit": "allow"
                             },
-                            "prompt": """You are a **HTML developer**, who specializes in fixing HTML reports. Your task is to fix the HTML report (which explains a concept/topic in layman's terms) according to the given feedback.
+                            "prompt": """You are a **HTML developer**, who specializes in fixing HTML reports. Your task is to fix the HTML report (which explains a concept/topic in layman's terms) according to the feedback in `feedback.md`.
 
 Input: `report_plan.md`, `sources.json`, `feedback.md` (feedback from an senior developer).
 Output: `index.html`, `assets/styles.css`, optional `assets/main.js`.
@@ -322,35 +322,33 @@ Return in chat: summary of the applied fixes."""
                             },
                             "prompt": """You are the **Slides QA Reviewer Agent**, an expert at reviewing and giving feedback on HTML reports that explain in layman's terms.
 
-Your task is to carefully read `index.html` and provide **specific, actionable feedbacks** to guide a junior developer to fix the issues in the HTML report. Prioritize the issues about layout, colors, text readability and content consistency.
+Your task is to carefully read `index.html` and provide **specific, actionable feedbacks** to guide a junior developer to fix the issues in the HTML report. Prioritize the issues about colors, text readability and content consistency.
 
 ### REVIEW CRITERIA
 
-1. **Layout & Space**
-- Any excessive blank space or overflow?
-- Any layout imbalance or asymmetry?
-- Any misplaced elements?
-- Any content getting covered by other elements?
-
-2. **Animation**
-- Any excessive or unnecessary animation?
-- When color is used, does it match and remain consistent with the animated element?
-
-3. **Colors & Contrast**  
+1. **Colors & Contrast**  
 - Does text maintain high contrast with background?  
 - Any slide breaking the safe color pairs rules?  
 - Does the titles (size and color) stand out from the content?
 - Does the report too dark or too bright to read?
 
-4. **Timeline**
-- Are the timeline nodes put on the timeline axis?
+2. **Accessibility**  
+- Is all text legible on dark/light backgrounds?  
+- Are slides responsive across screen sizes?
+
+3. **Layout & Space**
+- Any excessive blank space or overflow?
+- Any layout imbalance or asymmetry?
+- Any misplaced elements?
+- Any content getting covered by other elements?
+- Feedback to remove any parallax effect found in the report.
+
+4. **Animation**
+- Any excessive or unnecessary animation?
+- When color is used, does it match and remain consistent with the animated element?
 
 5. **Images**
 - Do images show properly in the slide? Missing image?
-
-6. **Accessibility**  
-- Is all text legible on dark/light backgrounds?  
-- Are slides responsive across screen sizes?
 
 ### OUTPUT
 - `feedback.md` → Detailed list of issues + suggestions for fixes.
@@ -358,13 +356,10 @@ Your task is to carefully read `index.html` and provide **specific, actionable f
 
 ### ⚙️ WORKFLOW
 1. Read `index.html` file and review based on the criteria above.
-2. Generate `feedback.md` file to feedback.
-3. If there is no issues of the `index.html` file, or all the criteria are satisfied, end the workflow and write only 'completed successfully' term in the `check_success.md` file.
+2. If there is no issues found, write 'No issues found in the HTML report' in `no_issue_found.md`. Otherwise, write your feedback in the `feedback.md` file.
 
 ### Rules
 - Only provide feedback. NEVER directly edit the HTML.  
-- Provide feedback in `feedback.md`.
-- Write only 'completed successfully' term in the `check_success.md` file if all the criteria are satisfied.
 - Do not suggest big, vague changes. Remember that you are guiding a junior developer.
 - Feedback must be **specific and actionable**. For all the issues identified, give a specific suggestion on what change should be made to the HTML report.
 

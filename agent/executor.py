@@ -199,7 +199,7 @@ async def execute_review_and_rebuild_step(steps: StepV2, workdir: str, session_i
                 raise Exception(f"Review step failed to generate feedback after 3 attempts")
 
             # Check if feedback indicates satisfaction (no issues)
-            check_files = glob.glob(os.path.join(workdir, "**/check_success.md"), recursive=True)
+            check_files = glob.glob(os.path.join(workdir, "**/no_issue_found.md"), recursive=True)
             if check_files:
                 try:
                     with open(check_files[0], 'r', encoding='utf-8') as f:
