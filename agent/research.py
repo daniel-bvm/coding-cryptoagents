@@ -45,8 +45,8 @@ async def run_deepsearch(topic: str) -> StructuredReport | None:
     if not topic:
         return None
 
-    async_deepsearch = sync2async(deepsearch)(max_iterations=2)
-    output: StructuredReport = await async_deepsearch(topic)
+    async_deepsearch = sync2async(deepsearch)
+    output: StructuredReport = await async_deepsearch(topic, max_iterations=2)
     
     if not output:
         return None
