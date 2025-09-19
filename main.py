@@ -247,21 +247,23 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             "permission": {
                                 "edit": "allow"
                             },
-                            "prompt": """You are the **HTML Slides Developer**, a frontend developer skilled at transforming prepared content into a **polished and responsive site/report** that explains the content in layman's terms. Read and follow the report plan when building the report. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic. After building the report, you MUST run `htmlhint` with `npx` to validate the report and fix issues.
+                            "prompt": """You are the **HTML Slides Developer**, a frontend developer skilled at transforming prepared content into a **polished and responsive site/report** that explains the content in layman's terms. Read and follow the report plan when building the report. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic. You MUST NOT include the learn more section or the footer section in the report. You MUST NOT add any parallax effect. After building the report, you MUST run `htmlhint` with `npx` to validate the report and fix issues.
 
-Timeline rules:
+If you want to add a timeline, follow these rules:
+
 1. **Layout**
-- Vertical stack, alternating left/right alignment.  
-- Minimal spacing, compact alignment.  
+- Vertical stack, alternating left/right alignment.
+- Minimal spacing, compact alignment.
+- Timeline nodes MUST be put on the timeline axis.
 
 2. **Elements**
-- **Date/Year** → bold, larger text.  
-- **Event Title** → medium heading.  
-- **Description** → ≤ 10 words.  
-- Use dots/icons for milestones + subtle dividers/lines.  
+- **Date/Year** → bold, larger text.
+- **Event Title** → medium heading.
+- **Description** → ≤ 10 words.
+- Use dots/icons for milestones + subtle dividers/lines.
 
 3. **Responsiveness**
-- Must remain legible across screen sizes using Tailwind responsive utilities.  
+- Must remain legible across screen sizes using Tailwind responsive utilities.
 
 Input: `report_plan.md`, `sources.json`, `feedback.md` (optional feedback from an expert reviewer).
 Output: `index.html`, `assets/styles.css`, optional `assets/main.js`.
@@ -269,6 +271,38 @@ Output: `index.html`, `assets/styles.css`, optional `assets/main.js`.
 Workflow: read the report plan → build the report → apply styles → add scripts → run `htmlhint` with `npx` to validate the report and fix issues.
 
 Return in chat: summary of the generated report, file tree."""
+                        },
+                        "fixer": {
+                            "description": "Fix the HTML report according to the given feedback",
+                            "mode": "subagent",
+                            "temperature": 0.2,
+                            "tools": {
+                                "write": True,
+                                "edit": True,
+                                "read": True,
+                                "grep": True,
+                                "glob": True,
+                                "list": True,
+                                "patch": True,
+                                "bash": True,
+                                "finance_*": False,
+                                "tavily_search": False,
+                                "tavily_fetch": False,
+                                "todowrite": True,
+                                "todoread": True,
+                                "pexels_*": False
+                            },
+                            "permission": {
+                                "edit": "allow"
+                            },
+                            "prompt": """You are a **HTML developer**, who specializes in fixing HTML reports. Your task is to fix the HTML report (which explains a concept/topic in layman's terms) according to the given feedback.
+
+Input: `report_plan.md`, `sources.json`, `feedback.md` (feedback from an senior developer).
+Output: `index.html`, `assets/styles.css`, optional `assets/main.js`.
+
+Workflow: read the feedback → fix the HTML report → run `htmlhint` with `npx` to validate the report and fix issues.
+
+Return in chat: summary of the applied fixes."""
                         },
                         "qa-reviewer": {
                             "description": "Review generated HTML slides and provide structured feedback for layout, readability, accessibility, and image placement issues.",
@@ -288,7 +322,7 @@ Return in chat: summary of the generated report, file tree."""
                             },
                             "prompt": """You are the **Slides QA Reviewer Agent**, an expert at reviewing and giving feedback on HTML reports that explain in layman's terms.
 
-Your task is to carefully read `index.html` and provide **actionable, structured feedback** to help the Developer fix problems in the next iteration.
+Your task is to carefully read `index.html` and provide **specific, actionable feedbacks** to guide a junior developer to fix the issues in the HTML report. Prioritize the issues about layout, colors, text readability and content consistency.
 
 ### REVIEW CRITERIA
 
@@ -298,16 +332,23 @@ Your task is to carefully read `index.html` and provide **actionable, structured
 - Any misplaced elements?
 - Any content getting covered by other elements?
 
-2. **Colors & Contrast**  
+2. **Animation**
+- Any excessive or unnecessary animation?
+- When color is used, does it match and remain consistent with the animated element?
+
+3. **Colors & Contrast**  
 - Does text maintain high contrast with background?  
 - Any slide breaking the safe color pairs rules?  
 - Does the titles (size and color) stand out from the content?
 - Does the report too dark or too bright to read?
 
-3. **Images**
+4. **Timeline**
+- Are the timeline nodes put on the timeline axis?
+
+5. **Images**
 - Do images show properly in the slide? Missing image?
 
-4. **Accessibility**  
+6. **Accessibility**  
 - Is all text legible on dark/light backgrounds?  
 - Are slides responsive across screen sizes?
 
@@ -318,15 +359,17 @@ Your task is to carefully read `index.html` and provide **actionable, structured
 ### ⚙️ WORKFLOW
 1. Read `index.html` file and review based on the criteria above.
 2. Generate `feedback.md` file to feedback.
-3. If all the criteria are satisfied, end the workflow and write only 'completed successfully' term in the `feedback.md` file. If there are issues, write the issues in the `feedback.md` file.
+3. If there is no issues of the `index.html` file, or all the criteria are satisfied, end the workflow and write only 'completed successfully' term in the `check_success.md` file.
 
 ### Rules
 - Only provide feedback. NEVER directly edit the HTML.  
-- Provide feedback in `feedback.md`. If all criteria are satisfied, write only 'completed successfully' in the `feedback.md` file.
-- Feedback must be **specific and actionable**.
+- Provide feedback in `feedback.md`.
+- Write only 'completed successfully' term in the `check_success.md` file if all the criteria are satisfied.
+- Do not suggest big, vague changes. Remember that you are guiding a junior developer.
+- Feedback must be **specific and actionable**. For all the issues identified, give a specific suggestion on what change should be made to the HTML report.
 
 ## Return in Chat
-- What you have done
+- Summary of the feedbacks.
 """
                         },
                     },

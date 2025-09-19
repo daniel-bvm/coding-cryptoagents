@@ -179,9 +179,15 @@ async def execute_review_and_rebuild_step(steps: StepV2, workdir: str, session_i
                 )
 
                 review_output = strip_thinking_content(review_output).strip()
-                has_feedback_files = len(glob.glob(os.path.join(workdir, "**/Feedback.md"), recursive=True)) > 0
+                feedback_files = glob.glob(os.path.join(workdir, "**/Feedback.md"), recursive=True)
+                has_feedback_files = len(feedback_files) > 0
                 
                 if review_output and has_feedback_files:
+                    with open(os.path.join(settings.opencode_session_directory, task_id, f"feedback_{iteration}.md"), "w", encoding="utf-8") as f_out:
+                        with open(feedback_files[0], "r", encoding="utf-8") as f_in:
+                            feedback_content = f_in.read()
+                        f_out.write(feedback_content)
+
                     feedback_generated = True
                     final_output += f"Iteration {iteration} - Review: {review_output}\n"
                     break
@@ -217,7 +223,7 @@ async def execute_review_and_rebuild_step(steps: StepV2, workdir: str, session_i
                 logger.info(f"Rebuild attempt {i+1} of 3")
 
                 rebuild_output = await client.query(
-                    agent="developer",
+                    agent="fixer",
                     system="",
                     message=rebuild_attempt_msg,
                     session_id=session_id_rebuild,
