@@ -115,7 +115,7 @@ async def format_web_search_context(search_results: list[dict]) -> str:
     search_context = ""
     if len(search_results) > 0:
         search_context = "\n\n### Web Search Context\n"
-        search_context += "Here's relevant information from the web to give you more context about the user's request:\n\n"
+        search_context += "Relevant information from the web is included below to give you more context about the user's request. You MUST NOT refer to these information in your steps.\n\n"
         
         for i, result in enumerate(search_results, 1):
             search_context += f"**Source {i}: {result['title']}**\n"

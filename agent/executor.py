@@ -9,6 +9,7 @@ from agent.research import gather_info, QueryInput, run_deepsearch, scrape
 from agent.utils import strip_thinking_content
 import asyncio
 import os
+import shutil
 
 logger = logging.getLogger(__name__)
 from typing import Optional, Literal
@@ -18,49 +19,52 @@ PLANNING_SYSTEM_PROMPT = """Your task is to collect information that needed to r
 BUILD_SYSTEM_PROMPT = """Your task is to build the project, a static site or a blog post based on the plan. Strictly, follow the plan step-by-step, do not take any extra steps. Do not ask again for confirmation, just do it your way. Code and assets must be written into files. Your final output should be short, talk about what you have done (no code explanation in detail is required)."""
 
 async def execute_research_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None, task_id: str = None, input_query: QueryInput = None) -> ClaudeCodeStepOutput:
-    scrape_results, deepsearch_results = await asyncio.gather(
-        scrape(input_query.urls, workdir),
-        run_deepsearch(input_query.topic)
-    )
+    # scrape_results, deepsearch_results = await asyncio.gather(
+    #     scrape(input_query.urls, workdir),
+    #     run_deepsearch(input_query.topic)
+    # )
 
-    scrape_results: list[dict[str, Any]]
-    deepsearch_results: StructuredReport | None
+    # scrape_results: list[dict[str, Any]]
+    # deepsearch_results: StructuredReport | None
 
-    save_path = os.path.join(workdir, 'gathered_information.md')
-    if not scrape_results and not deepsearch_results:
-        scratchpad = "No related information has been found yet."
-    else:
-        scratchpad = gather_info(scrape_results, deepsearch_results, save_path)
+    # save_path = os.path.join(workdir, 'gathered_information.md')
+    # if not scrape_results and not deepsearch_results:
+    #     scratchpad = "No related information has been found yet."
+    # else:
+    #     scratchpad = gather_info(scrape_results, deepsearch_results, save_path)
 
-    # async with OpenCodeSDKClient(workdir) as client:
-    #     for i, msg in enumerate([steps.task, 'Seems you faced an issue, please try again.', 'One last try']):
-    #         logger.info(f"Try {i+1} of 3: {msg}")
+    async with OpenCodeSDKClient(workdir) as client:
+        for i, msg in enumerate([steps.task, 'Seems you faced an issue, please try again.', 'One last try']):
+            logger.info(f"Try {i+1} of 3: {msg}")
 
-    #         output = await client.query(
-    #             agent="deep-research",
-    #             system=PLANNING_SYSTEM_PROMPT,
-    #             message=msg,
-    #             session_id=session_id,
-    #             model_id=settings.llm_model_id,
-    #             task_id=task_id,
-    #         )
+            output = await client.query(
+                agent="deep-research",
+                system=PLANNING_SYSTEM_PROMPT,
+                message=msg,
+                session_id=session_id,
+                model_id=settings.llm_model_id,
+                task_id=task_id,
+            )
 
-    #         output = strip_thinking_content(output).strip()
+            output = strip_thinking_content(output).strip()
 
-    #         if output:
-    #             break
+            has_gathered_information_files = len(glob.glob(os.path.join(workdir, "**/gathered_information.md"), recursive=True)) > 0
 
-    #         if i < 2:
-    #             await asyncio.sleep(2 ** (i + 2)) # wait for 4, 8, 16 seconds, wait until service available back
+            if output and has_gathered_information_files:
+                break
 
-    # if not output:
-    #     raise Exception(f"Research step {steps.id} failed to generate any output")
+            if i < 2:
+                await asyncio.sleep(2 ** (i + 2)) # wait for 4, 8, 16 seconds, wait until service available back
+
+    if not output:
+        raise Exception(f"Research step {steps.id} failed to generate any output")
 
     return ClaudeCodeStepOutput(
         step_id=steps.id,
-        full=scratchpad,
+        full=output,
         session_id=session_id
     )
+
 
 async def execute_plan_step(steps: StepV2, workdir: str, session_id: Optional[Union[int, str]] = None, task_id: str = None, input_query: QueryInput = None) -> ClaudeCodeStepOutput:
 
@@ -160,6 +164,8 @@ async def execute_review_and_rebuild_step(steps: StepV2, workdir: str, session_i
     
     async with OpenCodeSDKClient(workdir) as client:
         while iteration < max_iterations:
+            save_dir = os.path.join(settings.opencode_session_directory, task_id)
+
             iteration += 1
             logger.info(f"Review and rebuild iteration {iteration}/{max_iterations}")
             
@@ -169,8 +175,12 @@ async def execute_review_and_rebuild_step(steps: StepV2, workdir: str, session_i
                 session_id_review = await client.create_session("Reviewing...")
                 logger.info(f"Review attempt {i+1} of 3: {msg}")
 
+                if iteration > 1:
+                    feedback_files = glob.glob(os.path.join(workdir, "**/Feedback.md"), recursive=True)
+                    shutil.move(feedback_files[0], os.path.join(workdir, "old_feedback.md"))
+
                 review_output = await client.query(
-                    agent="qa-reviewer",
+                    agent="qa-reviewer-1" if iteration == 1 else "qa-reviewer-2",
                     system="",
                     message=msg,
                     session_id=session_id_review,
@@ -183,10 +193,7 @@ async def execute_review_and_rebuild_step(steps: StepV2, workdir: str, session_i
                 has_feedback_files = len(feedback_files) > 0
                 
                 if review_output and has_feedback_files:
-                    with open(os.path.join(settings.opencode_session_directory, task_id, f"feedback_{iteration}.md"), "w", encoding="utf-8") as f_out:
-                        with open(feedback_files[0], "r", encoding="utf-8") as f_in:
-                            feedback_content = f_in.read()
-                        f_out.write(feedback_content)
+                    shutil.copy(feedback_files[0], os.path.join(save_dir, f"feedback_{iteration}.md"))
 
                     feedback_generated = True
                     final_output += f"Iteration {iteration} - Review: {review_output}\n"
@@ -202,6 +209,7 @@ async def execute_review_and_rebuild_step(steps: StepV2, workdir: str, session_i
             check_files = glob.glob(os.path.join(workdir, "**/no_issue_found.md"), recursive=True)
             if check_files:
                 try:
+                    shutil.copy(check_files[0], os.path.join(save_dir, f"no_issue_found_{iteration}.md"))
                     with open(check_files[0], 'r', encoding='utf-8') as f:
                         feedback_content = f.read().lower()
                     
@@ -236,10 +244,12 @@ async def execute_review_and_rebuild_step(steps: StepV2, workdir: str, session_i
                 # Check if index.html still exists and was modified
                 index_files = glob.glob(os.path.join(workdir, "**/index.html"), recursive=True)
                 if rebuild_output and index_files:
-                    with open(os.path.join(settings.opencode_session_directory, task_id, f"index_{iteration}.html"), "w", encoding="utf-8") as f_out:
-                        with open(index_files[0], "r", encoding="utf-8") as f_in:
-                            html_content = f_in.read()
-                        f_out.write(html_content)
+                    fixes_files = glob.glob(os.path.join(workdir, "**/fixes.md"), recursive=True)
+
+                    shutil.copy(index_files[0], os.path.join(save_dir, f"index_{iteration}.html"))
+                    if len(fixes_files) > 0:
+                        shutil.copy(fixes_files[0], os.path.join(save_dir, f"fixes_{iteration}.md"))
+
                     rebuild_success = True
                     final_output += f"Iteration {iteration} - Rebuild: {rebuild_output}\n"
                     break

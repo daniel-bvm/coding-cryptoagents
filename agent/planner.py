@@ -30,7 +30,7 @@ If no more are needed, just return: <done/> (no need to explain anything).
 """
 
 ONE_SHOT_TEMPLATE = """
-You are a planning assistant for generating a professional HTML report that explains in layman's terms for what the user is looking for. Generate a complete plan as a list of steps. Each step must be one of: research (deep research for required information), plan (plan report structure), build (create the main index.html), feedback (review index.html and iteratively fix issues based on feedback). The plan should have at most {max_steps} steps. Do not suggest specific content of each step, only give high-level instructions of what to do.
+You are a planning assistant for generating a professional HTML report that explains what the user is looking for in layman's terms (explain in simple, everyday language, use anologies or visualizations when applicable). Generate a complete plan as a list of steps. Each step must be one of: research (deep research for required information), plan (plan report structure), build (create the main index.html), feedback (review index.html). The plan should have at most {max_steps} steps. Do not suggest specific content of each step, only give high-level instructions of what to do.
 
 Content types and handling:
 - LaTeX research papers: Extract exact text, equations (use MathJax/KaTeX), figures, tables, citations from .bib files
@@ -48,17 +48,13 @@ The plan should strictly follow the 4-steps process below:
 1) Content Preparation (research): deep research for required information and write a detailed report.
 2) Report Planning (plan): plan the structure and content of the report.
 3) HTML Generation and Review (finalize): read the report and build a professional, visual stunning, rich of meaningful content HTML report with proper formatting, styling, and image integration.
-4) Review and Fix: (feedback)
-    4.1) Review and Feedback : Review the index.html file and provide feedback to the developer agent to fix the issues based on the feedback.
-    4.2) Edit the index.html file to fix the issues till the feedback is satisfied.
-    4.3) Review and Feedback again till there is no more issues or all the criteria are satisfied.
-
+4) Feedback: Review the index.html file and provide feedback to the developer agent to fix the issues based on the feedback.
 
 Step-specific deliverables:
 - Step 1 (Deep Research): `gathered_information.md` (report), `sources.json`
 - Step 2 (Report Planning): `report_plan.md`
 - Step 3 (HTML Generation): `index.html` file (HTML report)
-- Step 4 (Review and Fix): `feedback.md`, `index.html` file (HTML report)
+- Step 4 (Feedback): `feedback.md`, `index.html` file (HTML report)
 
 Use the user's tone of voice for connective prose only;
 
