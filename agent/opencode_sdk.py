@@ -119,7 +119,7 @@ async def wait_until_port_is_ready_to_connect(port: int, process: asyncio.subpro
                 if process.returncode is not None:
                     raise RuntimeError(f"OpenCode server process exited with code {process.returncode}")
 
-                resp = await client.get(f"http://localhost:{port}/app", timeout=httpx.Timeout(5,  connect=5))
+                resp = await client.get(f"http://localhost:{port}/config", timeout=httpx.Timeout(5,  connect=5))
                 assert resp.status_code == 200, f"Failed to connect to OpenCode: {resp.status_code} {resp.text}"
                 return True
             except Exception as e:
