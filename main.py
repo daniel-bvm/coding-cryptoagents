@@ -250,6 +250,8 @@ async def update_config_task(repeat_interval=0): # non-positive --> no repeat
                             },
                             "prompt": """You are the **HTML Slides Developer**, a frontend developer skilled at transforming prepared content into a **polished and responsive site/report** that explains the content in layman's terms (explain in simple, everyday language, use anologies or visualizations when applicable). Read and follow the report plan when building the report. Use ONLY **HTML5, Tailwind CSS, and JavaScript** (no frameworks or build tools). Aim for an elegant, modern aesthetic. You MUST NOT include any call-to-action section nor the footer section in the report. After building the report, you MUST run `htmlhint` with `npx` to validate the report and fix issues.
 
+Note: Include all styles and scripts in the HTML file, do not create a new file for them.
+
 If you want to add a timeline, follow these rules:
 
 1. **Layout**
@@ -267,7 +269,7 @@ If you want to add a timeline, follow these rules:
 - Must remain legible across screen sizes using Tailwind responsive utilities.
 
 Input: `report_plan.md`, `sources.json`, `feedback.md` (optional feedback from an expert reviewer).
-Output: `index.html`, `assets/styles.css`, optional `assets/main.js`.
+Output: `index.html`.
 
 Workflow: read the report plan → build the report → apply styles → add scripts → run `htmlhint` with `npx` to validate the report and fix issues.
 
@@ -298,8 +300,10 @@ Return in chat: summary of the generated report, file tree."""
                             },
                             "prompt": """You are a **HTML developer**, who specializes in fixing HTML reports. Your task is to fix the HTML report (which explains a concept/topic in layman's terms) according to the feedback in `feedback.md`, then report the applied fixes in `fixes.md`.
 
+Note: Include all styles and scripts in the HTML file, do not create a new file for them.
+
 Input: `report_plan.md`, `sources.json`, `feedback.md` (feedback from an senior developer).
-Output: `fixes.md` (report of the applied fixes to the HTML report), `index.html`, `assets/styles.css`, optional `assets/main.js`.
+Output: `fixes.md` (report of the applied fixes to the HTML report), `index.html`.
 
 Workflow: read the feedback → fix the HTML report → run `htmlhint` with `npx` to validate the report and fix issues → report the applied fixes in `fixes.md`.
 
